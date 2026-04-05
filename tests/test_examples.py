@@ -69,9 +69,11 @@ def _invalid_project_fixtures() -> list[Path]:
         "project_mode_switch_unconnected.yaml",
         "project_unused_mode_group.yaml",
         "project_sr_n_to_1_warning.yaml",
+        "project_sr_read_unconnected.yaml",
         "project_sr_consumer_faster.yaml",
         "project_sr_producer_faster.yaml",
         "project_sr_timing_equal.yaml",
+        "project_sr_write_unconnected.yaml",
         "project_sr_one_to_many_valid.yaml",
     }
     fixtures = [
@@ -497,15 +499,13 @@ def test_error_project_fails_validation() -> None:
         load_and_validate_aggregator(ERROR_PROJECT)
 
 
-def test_mixed_warning_and_error_project_fails_and_reports_both_severities() -> None:
+def test_mixed_warning_project_passes_and_reports_warnings() -> None:
     project = load_aggregator(MIXED_PROJECT)
     report = build_semantic_report(project, ruleset="core")
 
-    assert report.error_findings()
+    assert report.error_findings() == []
     assert any(finding.severity == FindingSeverity.WARNING for finding in report.findings)
-
-    with pytest.raises(ValidationError):
-        load_and_validate_aggregator(MIXED_PROJECT)
+    load_and_validate_aggregator(MIXED_PROJECT)
 
 
 def test_cli_validate_verbose_includes_case_name() -> None:
@@ -649,7 +649,7 @@ def test_cli_validate_error_project_shows_error_and_fails() -> None:
     assert "errors: " in result.stdout
 
 
-def test_cli_validate_mixed_project_shows_both_severities_and_fails() -> None:
+def test_cli_validate_mixed_project_shows_warnings_and_succeeds() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "arforge.cli", "validate", str(MIXED_PROJECT)],
         cwd=REPO_ROOT,
@@ -657,8 +657,8 @@ def test_cli_validate_mixed_project_shows_both_severities_and_fails() -> None:
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 2, result.stdout + result.stderr
-    assert "ERROR CORE-041-SR-READ-UNCONNECTED" in result.stdout
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "WARNING CORE-041-SR-READ-UNCONNECTED" in result.stdout
     assert "WARNING CORE-041-SR-REQUIRES-NO-INCOMING" in result.stdout
 
 
@@ -666,7 +666,7 @@ def test_validation_report_summary_counts_are_grouped_by_severity() -> None:
     project = load_aggregator(MIXED_PROJECT)
     report = build_semantic_report(project, ruleset="core")
 
-    assert report.severity_counts() == {"error": 3, "warning": 2, "info": 0}
+    assert report.severity_counts() == {"error": 0, "warning": 5, "info": 0}
 
 
 def test_main_example_has_no_declared_unused_port_findings() -> None:
@@ -1024,8 +1024,6 @@ def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
         ("project_struct_duplicate_field_names.yaml", "CORE-010-STRUCT-DUPLICATE-FIELD"),
         ("project_struct_unknown_nested_type.yaml", "CORE-010-STRUCT-UNKNOWN-TYPE"),
         ("project_sr_duplicate_port_pair.yaml", "CORE-040-SR-DUPLICATE-PORT-PAIR"),
-        ("project_sr_read_unconnected.yaml", "CORE-041-SR-READ-UNCONNECTED"),
-        ("project_sr_write_unconnected.yaml", "CORE-041-SR-WRITE-UNCONNECTED"),
         ("project_mode_group_duplicate_modes.yaml", "CORE-012-MDG-DUPLICATE-MODE"),
         ("project_mode_group_bad_initial_mode.yaml", "CORE-013-MDG-INITIAL-MODE"),
         ("project_mode_switch_interface_unknown_mode_group.yaml", "CORE-010-MS-UNKNOWN-MODE-GROUP-REF"),
@@ -1040,6 +1038,23 @@ def test_data_receive_event_invalid_fixtures_emit_expected_codes(fixture_name: s
     report = build_semantic_report(project, ruleset="core")
     error_codes = {finding.code for finding in report.error_findings()}
     assert expected_code in error_codes
+
+
+@pytest.mark.parametrize(
+    ("fixture_name", "expected_warning"),
+    [
+        ("project_sr_read_unconnected.yaml", "CORE-041-SR-READ-UNCONNECTED"),
+        ("project_sr_write_unconnected.yaml", "CORE-041-SR-WRITE-UNCONNECTED"),
+    ],
+)
+def test_sr_connectivity_warning_only_fixtures_emit_expected_usage_warnings(
+    fixture_name: str,
+    expected_warning: str,
+) -> None:
+    project = load_aggregator(INVALID_DIR / fixture_name)
+    report = build_semantic_report(project, ruleset="core")
+    warning_codes = {finding.code for finding in report.findings if finding.severity == "warning"}
+    assert expected_warning in warning_codes
 
 
 @pytest.mark.parametrize(

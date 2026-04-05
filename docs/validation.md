@@ -112,7 +112,7 @@ Checks every connector in the system composition.
 - duplicate port pairs are rejected
 
 ### CORE-041 - SenderReceiverConnectivity
-Checks SR port connectivity and runnable usage against each other. A `provides` SR port with no outgoing connector is an error. A `requires` SR port that a runnable reads from but has no incoming connector is an error. Ports that are connected but not used by any runnable produce warnings. Severity: **error or warning**, depending on the specific finding.
+Checks SR port connectivity and runnable usage against each other. A `provides` SR port with no outgoing connector produces a warning. A `requires` SR port that a runnable reads from but has no incoming connector produces a warning. Severity: **warning**.
 
 ### CORE-042 - SenderReceiverUsage
 Warns when connected SR ports are never accessed by any runnable. These are design quality warnings. Severity: **warning**.
