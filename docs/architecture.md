@@ -16,7 +16,7 @@ merged raw input
 model build
      -> typed internal model
 semantic validation
-     -> ValidationResult with sorted findings
+     -> ValidationReport with sorted findings
 rendered output generation  (only if no error findings)
      ->
 output files
@@ -36,19 +36,20 @@ Project loading. Resolves the manifest path, expands glob patterns, parses YAML 
 Internal data model. Converts the merged raw input into a typed internal representation. The model is what semantic validation and the rendering backends operate on - not raw dicts.
 
 **`arforge/semantic_validation.py`**
-Validation runner, finding model, and validation context. Defines `Finding`, `ValidationResult`, `ValidationCase`, and the indexes used by individual cases (port lookup by name, interface lookup by type, etc.). Runs cases in sorted order. Sorts findings deterministically.
+Validation runner, finding model, and validation context. Defines `Finding`, `ValidationReport`, `ValidationCase`, and the indexes used by individual cases (port lookup by name, interface lookup by type, etc.). Runs cases in sorted order. Sorts findings deterministically.
 
 **`arforge/validation/cases/`**
 Domain-organized semantic validation case implementations. Each module covers a specific area of the AUTOSAR model:
 
 | Module | Domain |
 |---|---|
-| `common.py` | Global uniqueness, base type metadata |
-| `types.py` | Interface semantics, application constraints |
+| `common.py` | Global uniqueness |
+| `interfaces.py` | Interface semantics |
+| `types.py` | Base type metadata, application constraints |
 | `modes.py` | Mode declaration group structure, initial mode, unused groups |
 | `swc.py` | SWC structure, port references, runnable access, ComSpec, events |
 | `system.py` | System instance types, connection semantics |
-| `connectivity.py` | SR/CS/MS port connectivity, usage analysis, declared port usage |
+| `connectivity.py` | SR/CS/MS port connectivity, multiplicity analysis, usage analysis, declared port usage |
 | `timing.py` | SR timing mismatch analysis |
 
 **`arforge/validation_cases.py`**
@@ -81,7 +82,7 @@ Each semantic rule is a `ValidationCase` subclass with:
 
 - a stable `case_id` (`CORE-XXX`)
 - a `name` and `description`
-- a `validate(model, context)` method that returns a list of `Finding` objects
+- a `run(ctx)` method that returns a list of `Finding` objects
 
 Cases are independent. They do not call each other. The runner executes them in sorted order by code, making execution order deterministic regardless of registration order.
 

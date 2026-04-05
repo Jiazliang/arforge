@@ -1,0 +1,17 @@
+# ARForge: Software Component Type
+# Support SWC for sender-receiver multiplicity fixtures.
+swc:
+  name: "SrRequester"
+  category: "application"
+  runnables:
+    - name: "Runnable_ReadVehicleSpeed"
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Rp_VehicleSpeed"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "explicit"

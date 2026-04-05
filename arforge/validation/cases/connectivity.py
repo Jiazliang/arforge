@@ -17,7 +17,7 @@ class SrPortConnectivityCase(ValidationCase):
     name = "SenderReceiverConnectivity"
     description = "Checks sender-receiver port connectivity against instantiated components and runnable behavior."
     tags = ("core", "system", "connections", "runnables", "sender-receiver")
-    default_severity = "error"
+    default_severity = "warning"
 
     def applicability(self, ctx: ValidationContext) -> tuple[bool, str | None]:
         if not ctx.project.system.composition.components:
@@ -142,6 +142,70 @@ class SrPortUsageCase(ValidationCase):
                             code="CORE-042-SR-CONNECTED-REQUIRES-UNUSED",
                         )
                     )
+
+        return findings
+
+
+class SrMultiplicityCase(ValidationCase):
+    case_id = "CORE-045"
+    name = "SenderReceiverMultiplicity"
+    description = "Detects sender-receiver requires ports that are connected to multiple providers."
+    tags = ("core", "system", "connections", "sender-receiver", "multiplicity")
+    default_severity = "warning"
+
+    def applicability(self, ctx: ValidationContext) -> tuple[bool, str | None]:
+        if not ctx.project.system.composition.connectors:
+            return False, "no system connectors defined"
+        has_sr_ports = any(
+            port.interfaceType == "senderReceiver"
+            for swc in ctx.project.swcs
+            for port in swc.ports
+        )
+        if not has_sr_ports:
+            return False, "no senderReceiver ports defined"
+        return True, None
+
+    def run(self, ctx: ValidationContext) -> List[Finding]:
+        req_port_to_providers: dict[tuple[str, str], set[tuple[str, str]]] = {}
+
+        for connector in sorted(
+            ctx.project.system.composition.connectors,
+            key=lambda c: (c.from_instance, c.from_port, c.to_instance, c.to_port),
+        ):
+            provider_swc = ctx.find_instance_swc(connector.from_instance)
+            requester_swc = ctx.find_instance_swc(connector.to_instance)
+            if provider_swc is None or requester_swc is None:
+                continue
+
+            provider_port = ctx.find_swc_port(provider_swc.name, connector.from_port)
+            requester_port = ctx.find_swc_port(requester_swc.name, connector.to_port)
+            if provider_port is None or requester_port is None:
+                continue
+            if provider_port.interfaceType != "senderReceiver" or requester_port.interfaceType != "senderReceiver":
+                continue
+            if provider_port.direction != "provides" or requester_port.direction != "requires":
+                continue
+            if provider_port.interfaceRef != requester_port.interfaceRef:
+                continue
+
+            req_port_to_providers.setdefault(
+                (connector.to_instance, connector.to_port),
+                set(),
+            ).add((connector.from_instance, connector.from_port))
+
+        findings: List[Finding] = []
+        for (instance_name, port_name), providers in sorted(req_port_to_providers.items()):
+            if len(providers) <= 1:
+                continue
+
+            provider_refs = sorted(f"{provider_instance}.{provider_port}" for provider_instance, provider_port in providers)
+            findings.append(
+                self.finding(
+                    f"SenderReceiver requires port '{instance_name}.{port_name}' is connected to multiple providers: "
+                    f"{provider_refs}. AUTOSAR allows this, but arbitration semantics may be unclear.",
+                    code="CORE-045-SR-N-TO-1",
+                )
+            )
 
         return findings
 
@@ -288,7 +352,7 @@ class CsPortUsageCase(ValidationCase):
 
 
 class ModeSwitchConnectivityCase(ValidationCase):
-    case_id = "CORE-045"
+    case_id = "CORE-046"
     name = "ModeSwitchConnectivity"
     description = "Checks mode-switch instantiated-port connectivity against connectors."
     tags = ("core", "system", "connections", "mode-switch")
@@ -327,14 +391,14 @@ class ModeSwitchConnectivityCase(ValidationCase):
                     findings.append(
                         self.finding(
                             f"ModeSwitch provides port '{port_ref}' has no outgoing connector.",
-                            code="CORE-045-MS-PROVIDES-NO-OUTGOING",
+                            code="CORE-046-MS-PROVIDES-NO-OUTGOING",
                         )
                     )
                 if port.direction == "requires" and not connectivity.incoming_connectors:
                     findings.append(
                         self.finding(
                             f"ModeSwitch requires port '{port_ref}' has no incoming connector.",
-                            code="CORE-045-MS-REQUIRES-NO-INCOMING",
+                            code="CORE-046-MS-REQUIRES-NO-INCOMING",
                         )
                     )
 
@@ -342,7 +406,7 @@ class ModeSwitchConnectivityCase(ValidationCase):
 
 
 class DeclaredPortUsageCase(ValidationCase):
-    case_id = "CORE-046"
+    case_id = "CORE-047"
     name = "DeclaredPortUsage"
     description = "Checks whether declared SWC ports are ever used by runnable behavior, even before system connectors exist."
     tags = ("core", "swc", "runnables", "usage", "analysis")
@@ -376,14 +440,14 @@ class DeclaredPortUsageCase(ValidationCase):
                         findings.append(
                             self.finding(
                                 f"SenderReceiver provides port '{port_ref}' is declared but no runnable writes to it.",
-                                code="CORE-046-SR-PROVIDES-DECLARED-UNUSED",
+                                code="CORE-047-SR-PROVIDES-DECLARED-UNUSED",
                             )
                         )
                     if port.direction == "requires" and not usage.reads and not usage.data_receive_events:
                         findings.append(
                             self.finding(
                                 f"SenderReceiver requires port '{port_ref}' is declared but no runnable reads from it and no dataReceiveEvent references it.",
-                                code="CORE-046-SR-REQUIRES-DECLARED-UNUSED",
+                                code="CORE-047-SR-REQUIRES-DECLARED-UNUSED",
                             )
                         )
                     continue
@@ -393,14 +457,14 @@ class DeclaredPortUsageCase(ValidationCase):
                         findings.append(
                             self.finding(
                                 f"ClientServer requires port '{port_ref}' is declared but no runnable call uses it.",
-                                code="CORE-046-CS-REQUIRES-DECLARED-UNUSED",
+                                code="CORE-047-CS-REQUIRES-DECLARED-UNUSED",
                             )
                         )
                     if port.direction == "provides" and not usage.operation_invoked_events:
                         findings.append(
                             self.finding(
                                 f"ClientServer provides port '{port_ref}' is declared but no runnable operationInvokedEvent binds any exposed operation on it.",
-                                code="CORE-046-CS-PROVIDES-DECLARED-UNUSED",
+                                code="CORE-047-CS-PROVIDES-DECLARED-UNUSED",
                             )
                         )
                     continue
@@ -412,7 +476,7 @@ class DeclaredPortUsageCase(ValidationCase):
                     findings.append(
                         self.finding(
                             f"ModeSwitch requires port '{port_ref}' is declared but no runnable modeSwitchEvents uses it.",
-                            code="CORE-046-MS-REQUIRES-DECLARED-UNUSED",
+                            code="CORE-047-MS-REQUIRES-DECLARED-UNUSED",
                         )
                     )
                 # Provider-side mode behavior is not modeled in ARForge yet, so we intentionally
@@ -422,7 +486,7 @@ class DeclaredPortUsageCase(ValidationCase):
 
 
 class ModeSwitchUsageCase(ValidationCase):
-    case_id = "CORE-047"
+    case_id = "CORE-048"
     name = "ModeSwitchUsage"
     description = "Checks whether connected mode-switch requires ports are actually used by runnable modeSwitchEvents."
     tags = ("core", "system", "connections", "runnables", "mode-switch", "usage")
@@ -452,7 +516,7 @@ class ModeSwitchUsageCase(ValidationCase):
                         self.finding(
                             f"Connected modeSwitch requires port '{connectivity.instance_name}.{analysis.port.name}' "
                             "is not used by any runnable modeSwitchEvents.",
-                            code="CORE-047-MS-CONNECTED-REQUIRES-UNUSED",
+                            code="CORE-048-MS-CONNECTED-REQUIRES-UNUSED",
                         )
                     )
 
