@@ -10,7 +10,7 @@ The full pipeline in one line:
 YAML inputs -> schema validation -> semantic validation -> internal model -> rendered outputs
 ```
 
-Everything that can be checked before generation is checked before generation. The ARXML and generated artifacts you get out have already passed 191 semantic rules.
+Everything that can be checked before generation is checked before generation. The ARXML and generated artifacts you get out have already passed semantic validation.
 
 ## The problem it solves
 

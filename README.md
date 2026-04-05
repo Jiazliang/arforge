@@ -170,7 +170,7 @@ Start with [docs/index.md](docs/index.md).
 | [Overview](docs/overview.md) | What ARForge does and where it fits in a workflow |
 | [Project Structure](docs/project-structure.md) | Project manifest, scaffold layout, and build output |
 | [Modeling Concepts](docs/modeling-concepts.md) | Full YAML modeling reference with examples |
-| [Validation](docs/validation.md) | All 192 finding codes explained |
+| [Validation](docs/validation.md) | Validation rule families and severities |
 | [CLI](docs/cli.md) | All commands and options |
 | [Architecture](docs/architecture.md) | Internal pipeline, for contributors |
 | [Roadmap](docs/roadmap.md) | Current capabilities and planned features |

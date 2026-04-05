@@ -20,7 +20,7 @@ python -m arforge.cli init <path> [options]
 
 | Option | Description |
 |---|---|
-| `--name NAME` | System name used in scaffolded files. Defaults to the directory name. |
+| `--name NAME` | System name used in scaffolded files. Defaults to `DemoSystem`. |
 | `--no-example` | Create the directory structure without the runnable example SWCs and interfaces. |
 | `--force` | Allow scaffolding into an existing non-empty directory. |
 
@@ -75,10 +75,12 @@ python -m arforge.cli validate examples/autosar.project.yaml || exit 1
 **Output format:**
 
 ```
-[ERROR]   CORE-022-READ-UNKNOWN-PORT   Runnable 'Runnable_UseSpeed': read references unknown port 'Rp_Missing'
-[WARNING] CORE-050                     SR consumer 'SpeedConsumer_1.Rp_VehicleSpeed' runs faster than producer
-
-Summary: 1 error, 1 warning, 0 info
+ERROR CORE-022-READ-UNKNOWN-PORT Runnable 'Runnable_UseSpeed': read references unknown port 'Rp_Missing'
+WARNING CORE-050 SR consumer 'SpeedConsumer_1.Rp_VehicleSpeed' runs faster than producer
+summary:
+ - errors: 1
+ - warnings: 1
+ - infos: 0
 ```
 
 ---
