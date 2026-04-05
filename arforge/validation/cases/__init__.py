@@ -16,6 +16,7 @@ from .connectivity import (
     DeclaredPortUsageCase,
     ModeSwitchConnectivityCase,
     ModeSwitchUsageCase,
+    SrMultiplicityCase,
     SrPortConnectivityCase,
     SrPortUsageCase,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "RunnableAccessSemanticCase",
     "RunnableRaisedErrorCase",
     "RunnableTriggerPolicyCase",
+    "SrMultiplicityCase",
     "SrConsumerFasterThanProducerCase",
     "SrPortConnectivityCase",
     "SrPortUsageCase",
@@ -96,6 +98,7 @@ def core_validation_cases() -> List[ValidationCase]:
         SrPortUsageCase(),
         CsPortConnectivityCase(),
         CsPortUsageCase(),
+        SrMultiplicityCase(),
         ModeSwitchConnectivityCase(),
         DeclaredPortUsageCase(),
         ModeSwitchUsageCase(),

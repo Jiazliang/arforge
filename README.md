@@ -19,7 +19,7 @@ AUTOSAR SWC design in GUI-based tools is expensive, opaque, and hostile to versi
 | | |
 |---|---|
 | **Text-first design** | SWCs, compositions, interfaces, modes, and types — all in human-readable YAML |
-| **Semantic validation** | 191 stable finding codes across all supported constructs. Catches design problems before export |
+| **Semantic validation** | 192 stable finding codes across all supported constructs. Catches design problems before export |
 | **Clean ARXML export** | Deterministic, ordered output — git diffs on generated files are actually readable |
 | **CI-ready CLI** | Validate and export in a pipeline with no GUI dependency or license server |
 | **VS Code integration** | YAML schema autocomplete, inline diagnostics, and task runner built in |
@@ -45,7 +45,7 @@ Current implementation targets a practical AUTOSAR Classic 4.2 subset:
 | **SWC types** | Provides/requires ports, runnables, `TimingEvent`, `InitEvent`, `OperationInvokedEvent`, `DataReceiveEvent`, `ModeSwitchEvent` |
 | **Runnable access** | `reads`, `writes`, `calls`, `raisesErrors` — all validated against port direction and interface kind |
 | **System composition** | Component prototypes, SWC type references, port-level assembly connectors for SR, CS, and mode-switch |
-| **Validation** | 191 stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
+| **Validation** | 192 stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
 | **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering |
 | **Code skeletons** | Template-driven C `.h` / `.c` starter files generated from validated SWC models |
 | **Diagrams** | Unified `generate diagram` command for PlantUML architecture views |
@@ -170,7 +170,7 @@ Start with [docs/index.md](docs/index.md).
 | [Overview](docs/overview.md) | What ARForge does and where it fits in a workflow |
 | [Project Structure](docs/project-structure.md) | Project manifest, scaffold layout, and build output |
 | [Modeling Concepts](docs/modeling-concepts.md) | Full YAML modeling reference with examples |
-| [Validation](docs/validation.md) | All 191 finding codes explained |
+| [Validation](docs/validation.md) | All 192 finding codes explained |
 | [CLI](docs/cli.md) | All commands and options |
 | [Architecture](docs/architecture.md) | Internal pipeline, for contributors |
 | [Roadmap](docs/roadmap.md) | Current capabilities and planned features |

@@ -1,0 +1,22 @@
+# ARForge: Project fixture
+# Exercises sender-receiver n:1 communication as a warning-only case.
+autosar:
+  version: "4.2"
+  rootPackage: "DEMO"
+
+inputs:
+  baseTypes: "support/base_types.yaml"
+  implementationDataTypes: "support/implementation_types.yaml"
+  applicationDataTypes: "support/application_types.yaml"
+  units:
+    - "support/units.yaml"
+  compuMethods:
+    - "support/compu_methods.yaml"
+  modeDeclarationGroups:
+    - "../modes/*.yaml"
+  interfaces:
+    - "../interfaces/*.yaml"
+  swcs:
+    - "support/SrProvider.yaml"
+    - "support/SrRequester.yaml"
+  system: "support/system_sr_n_to_1.yaml"

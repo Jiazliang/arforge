@@ -47,6 +47,8 @@ MIXED_PROJECT = INVALID_DIR / "project_sr_read_unconnected.yaml"
 CS_SERVER_WARNING_PROJECT = INVALID_DIR / "project_cs_server_oie_unconnected.yaml"
 UNUSED_MODE_GROUP_PROJECT = INVALID_DIR / "project_unused_mode_group.yaml"
 CONNECTED_UNUSED_MODE_SWITCH_PROJECT = INVALID_DIR / "project_connected_mode_switch_port_unused.yaml"
+SR_ONE_TO_MANY_PROJECT = INVALID_DIR / "project_sr_one_to_many_valid.yaml"
+SR_N_TO_1_PROJECT = INVALID_DIR / "project_sr_n_to_1_warning.yaml"
 
 
 def _is_project_fixture(path: Path) -> bool:
@@ -56,7 +58,7 @@ def _is_project_fixture(path: Path) -> bool:
 
 
 def _invalid_project_fixtures() -> list[Path]:
-    warning_only = {
+    non_error_fixtures = {
         "project_connected_sr_port_unused.yaml",
         "project_cs_server_oie_unconnected.yaml",
         "project_declared_unused_cs_provides.yaml",
@@ -66,14 +68,16 @@ def _invalid_project_fixtures() -> list[Path]:
         "project_connected_mode_switch_port_unused.yaml",
         "project_mode_switch_unconnected.yaml",
         "project_unused_mode_group.yaml",
+        "project_sr_n_to_1_warning.yaml",
         "project_sr_consumer_faster.yaml",
         "project_sr_producer_faster.yaml",
         "project_sr_timing_equal.yaml",
+        "project_sr_one_to_many_valid.yaml",
     }
     fixtures = [
         p
         for p in sorted(INVALID_DIR.glob("*.yaml"))
-        if _is_project_fixture(p) and p.name not in warning_only
+        if _is_project_fixture(p) and p.name not in non_error_fixtures
     ]
     return fixtures
 
@@ -557,6 +561,58 @@ def test_cli_validate_warning_only_project_shows_warning_and_succeeds() -> None:
     assert "warnings: 2" in result.stdout
 
 
+def test_sr_one_to_many_project_passes_without_multiplicity_warning() -> None:
+    project = load_and_validate_aggregator(SR_ONE_TO_MANY_PROJECT)
+    report = build_semantic_report(project, ruleset="core")
+    warning_codes = {finding.code for finding in report.findings if finding.severity == FindingSeverity.WARNING}
+
+    assert report.error_findings() == []
+    assert "CORE-045-SR-N-TO-1" not in warning_codes
+
+
+def test_sr_n_to_1_project_passes_validation_and_reports_warning() -> None:
+    project = load_and_validate_aggregator(SR_N_TO_1_PROJECT)
+    report = build_semantic_report(project, ruleset="core")
+
+    assert report.error_findings() == []
+    multiplicity_findings = [finding for finding in report.findings if finding.code == "CORE-045-SR-N-TO-1"]
+    assert len(multiplicity_findings) == 1
+    assert multiplicity_findings[0].severity == FindingSeverity.WARNING
+    assert multiplicity_findings[0].message == (
+        "SenderReceiver requires port 'SrRequester_1.Rp_VehicleSpeed' is connected to multiple providers: "
+        "['SrProvider_1.Pp_VehicleSpeed', 'SrProvider_2.Pp_VehicleSpeed']. "
+        "AUTOSAR allows this, but arbitration semantics may be unclear."
+    )
+
+
+def test_cli_validate_sr_n_to_1_project_warns_and_succeeds() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "arforge.cli", "validate", str(SR_N_TO_1_PROJECT)],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "WARNING CORE-045-SR-N-TO-1" in result.stdout
+    assert "SrRequester_1.Rp_VehicleSpeed" in result.stdout
+    assert "errors: 0" in result.stdout
+    assert "warnings: 1" in result.stdout
+
+
+def test_cli_validate_sr_n_to_1_verbose_includes_case_and_finding_count() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "arforge.cli", "validate", str(SR_N_TO_1_PROJECT), "-v"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "CORE-045 SenderReceiverMultiplicity RUN OK" in result.stdout
+    assert "findings=1" in result.stdout
+
+
 def test_cs_server_unconnected_binding_passes_validation_and_reports_warning() -> None:
     project = load_and_validate_aggregator(CS_SERVER_WARNING_PROJECT)
     report = build_semantic_report(project, ruleset="core")
@@ -618,11 +674,11 @@ def test_main_example_has_no_declared_unused_port_findings() -> None:
     report = build_semantic_report(project, ruleset="core")
     warning_codes = {finding.code for finding in report.findings if finding.severity == "warning"}
 
-    assert "CORE-046-SR-PROVIDES-DECLARED-UNUSED" not in warning_codes
-    assert "CORE-046-SR-REQUIRES-DECLARED-UNUSED" not in warning_codes
-    assert "CORE-046-CS-PROVIDES-DECLARED-UNUSED" not in warning_codes
-    assert "CORE-046-CS-REQUIRES-DECLARED-UNUSED" not in warning_codes
-    assert "CORE-046-MS-REQUIRES-DECLARED-UNUSED" not in warning_codes
+    assert "CORE-047-SR-PROVIDES-DECLARED-UNUSED" not in warning_codes
+    assert "CORE-047-SR-REQUIRES-DECLARED-UNUSED" not in warning_codes
+    assert "CORE-047-CS-PROVIDES-DECLARED-UNUSED" not in warning_codes
+    assert "CORE-047-CS-REQUIRES-DECLARED-UNUSED" not in warning_codes
+    assert "CORE-047-MS-REQUIRES-DECLARED-UNUSED" not in warning_codes
 
 
 def test_main_example_has_no_connected_unused_mode_switch_requires_warning() -> None:
@@ -630,7 +686,7 @@ def test_main_example_has_no_connected_unused_mode_switch_requires_warning() -> 
     report = build_semantic_report(project, ruleset="core")
     warning_codes = {finding.code for finding in report.findings if finding.severity == "warning"}
 
-    assert "CORE-047-MS-CONNECTED-REQUIRES-UNUSED" not in warning_codes
+    assert "CORE-048-MS-CONNECTED-REQUIRES-UNUSED" not in warning_codes
 
 
 def test_main_example_has_no_unused_mode_declaration_group_warning() -> None:
@@ -675,7 +731,7 @@ def test_connected_unused_mode_switch_project_passes_validation_and_reports_warn
 
     assert report.error_findings() == []
     connected_findings = [
-        finding for finding in report.findings if finding.code == "CORE-047-MS-CONNECTED-REQUIRES-UNUSED"
+        finding for finding in report.findings if finding.code == "CORE-048-MS-CONNECTED-REQUIRES-UNUSED"
     ]
     assert len(connected_findings) == 1
     assert connected_findings[0].severity == FindingSeverity.WARNING
@@ -693,7 +749,7 @@ def test_cli_validate_connected_unused_mode_switch_warns_and_succeeds() -> None:
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "WARNING CORE-047-MS-CONNECTED-REQUIRES-UNUSED" in result.stdout
+    assert "WARNING CORE-048-MS-CONNECTED-REQUIRES-UNUSED" in result.stdout
     assert "SpeedDisplay_1.Rp_PowerState" in result.stdout
     assert "errors: 0" in result.stdout
 
@@ -989,13 +1045,14 @@ def test_data_receive_event_invalid_fixtures_emit_expected_codes(fixture_name: s
 @pytest.mark.parametrize(
     ("fixture_name", "expected_warning"),
     [
-        ("project_declared_unused_sr_provides.yaml", "CORE-046-SR-PROVIDES-DECLARED-UNUSED"),
-        ("project_connected_sr_port_unused.yaml", "CORE-046-SR-REQUIRES-DECLARED-UNUSED"),
-        ("project_declared_unused_cs_requires.yaml", "CORE-046-CS-REQUIRES-DECLARED-UNUSED"),
-        ("project_declared_unused_cs_provides.yaml", "CORE-046-CS-PROVIDES-DECLARED-UNUSED"),
-        ("project_declared_unused_mode_requires.yaml", "CORE-046-MS-REQUIRES-DECLARED-UNUSED"),
-        ("project_connected_mode_switch_port_unused.yaml", "CORE-047-MS-CONNECTED-REQUIRES-UNUSED"),
+        ("project_declared_unused_sr_provides.yaml", "CORE-047-SR-PROVIDES-DECLARED-UNUSED"),
+        ("project_connected_sr_port_unused.yaml", "CORE-047-SR-REQUIRES-DECLARED-UNUSED"),
+        ("project_declared_unused_cs_requires.yaml", "CORE-047-CS-REQUIRES-DECLARED-UNUSED"),
+        ("project_declared_unused_cs_provides.yaml", "CORE-047-CS-PROVIDES-DECLARED-UNUSED"),
+        ("project_declared_unused_mode_requires.yaml", "CORE-047-MS-REQUIRES-DECLARED-UNUSED"),
+        ("project_connected_mode_switch_port_unused.yaml", "CORE-048-MS-CONNECTED-REQUIRES-UNUSED"),
         ("project_unused_mode_group.yaml", "CORE-014-MDG-DECLARED-UNUSED"),
+        ("project_sr_n_to_1_warning.yaml", "CORE-045-SR-N-TO-1"),
         ("project_sr_read_unconnected.yaml", "CORE-041-SR-REQUIRES-NO-INCOMING"),
         ("project_sr_write_unconnected.yaml", "CORE-041-SR-PROVIDES-NO-OUTGOING"),
         ("project_cs_call_unconnected.yaml", "CORE-044-CS-REQUIRES-NO-CONNECTOR"),
@@ -1015,8 +1072,8 @@ def test_open_mode_switch_ports_emit_connectivity_warnings() -> None:
     report = build_semantic_report(project, ruleset="core")
     warning_codes = {finding.code for finding in report.findings if finding.severity == "warning"}
 
-    assert "CORE-045-MS-PROVIDES-NO-OUTGOING" in warning_codes
-    assert "CORE-045-MS-REQUIRES-NO-INCOMING" in warning_codes
+    assert "CORE-046-MS-PROVIDES-NO-OUTGOING" in warning_codes
+    assert "CORE-046-MS-REQUIRES-NO-INCOMING" in warning_codes
 
 
 def test_sr_timing_equal_fixture_has_no_timing_mismatch_findings() -> None:

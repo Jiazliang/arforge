@@ -254,7 +254,7 @@ In exported ARXML, `implicit` and `explicit` receiver ports remain nonqueued, bu
 
 **Mode-switch ports** do not support ComSpec.
 
-Ports that are declared but never used by any runnable produce `CORE-046` warnings. This applies to all interface kinds and both port directions.
+Ports that are declared but never used by any runnable produce `CORE-047` warnings. This applies to all interface kinds and both port directions.
 
 ### Runnables and events
 

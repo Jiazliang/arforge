@@ -1,0 +1,18 @@
+# ARForge: System composition
+# Support system for sender-receiver 1:n multiplicity coverage.
+system:
+  name: "DemoSystem"
+  composition:
+    name: "Composition_DemoSystem"
+    components:
+      - name: "SrProvider_1"
+        typeRef: "SrProvider"
+      - name: "SrRequester_1"
+        typeRef: "SrRequester"
+      - name: "SrRequester_2"
+        typeRef: "SrRequester"
+    connectors:
+      - from: "SrProvider_1.Pp_VehicleSpeed"
+        to: "SrRequester_1.Rp_VehicleSpeed"
+      - from: "SrProvider_1.Pp_VehicleSpeed"
+        to: "SrRequester_2.Rp_VehicleSpeed"

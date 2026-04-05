@@ -1,0 +1,15 @@
+# ARForge: Software Component Type
+# Support SWC for sender-receiver multiplicity fixtures.
+swc:
+  name: "SrProvider"
+  category: "service"
+  runnables:
+    - name: "Runnable_PublishVehicleSpeed"
+      timingEventMs: 10
+      writes:
+        - port: "Pp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Pp_VehicleSpeed"
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"

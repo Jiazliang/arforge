@@ -51,12 +51,13 @@ ARForge currently provides a complete SWC design and generation pipeline for AUT
 ### Validation
 
 - two-stage validation: JSON Schema + semantic
-- 191 stable `CORE-*` finding codes organized in domain modules
+- 192 stable `CORE-*` finding codes organized in domain modules
 - three severity levels: `error`, `warning`, `info`
 - connectivity validation for SR, CS, and mode-switch ports
 - port usage analysis - warnings for connected but unused ports
-- declared port usage analysis (`CORE-046`) - warns when SWC ports are never accessed by any runnable, independent of system connectors
-- mode-switch usage analysis (`CORE-047`) - warns when connected mode-switch ports are never used by runnable `modeSwitchEvents`
+- sender-receiver multiplicity analysis (`CORE-045`) - warns when multiple providers feed the same SR requires port
+- declared port usage analysis (`CORE-047`) - warns when SWC ports are never accessed by any runnable, independent of system connectors
+- mode-switch usage analysis (`CORE-048`) - warns when connected mode-switch ports are never used by runnable `modeSwitchEvents`
 - unused mode declaration group detection (`CORE-014`)
 - SR timing mismatch analysis - warns when consumer runs faster or slower than producer
 - deterministic finding order - stable CI output across runs
