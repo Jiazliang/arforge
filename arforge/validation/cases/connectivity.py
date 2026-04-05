@@ -17,7 +17,7 @@ class SrPortConnectivityCase(ValidationCase):
     name = "SenderReceiverConnectivity"
     description = "Checks sender-receiver port connectivity against instantiated components and runnable behavior."
     tags = ("core", "system", "connections", "runnables", "sender-receiver")
-    default_severity = "error"
+    default_severity = "warning"
 
     def applicability(self, ctx: ValidationContext) -> tuple[bool, str | None]:
         if not ctx.project.system.composition.components:
