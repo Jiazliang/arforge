@@ -90,6 +90,22 @@
         }
       },
       "additionalProperties": false
+    },
+    "delegationConnector": {
+      "type": "object",
+      "required": [
+        "inner",
+        "outer"
+      ],
+      "properties": {
+        "inner": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "outer": {
+          "$ref": "#/$defs/name"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "required": [
@@ -126,6 +142,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/connector"
+          }
+        },
+        "delegationConnectors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationConnector"
           }
         }
       },

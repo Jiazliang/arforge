@@ -1,0 +1,16 @@
+# ARForge: Invalid subcomposition fixture
+# Tests validation failure for a delegation connector with mismatched directions.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  description: "Reusable subcomposition with a direction-mismatched delegation connector."
+  ports:
+    - name: "Pp_VehicleSpeedOut"
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  connectors: []
+  delegationConnectors:
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Pp_VehicleSpeedOut"

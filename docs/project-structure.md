@@ -82,7 +82,22 @@ All paths are resolved relative to the manifest file. This means the manifest an
 
 **`swcs/`** - one file per atomic SWC type. Each file defines a single SWC type with its ports, runnables, events, and ComSpec.
 
-**`subcompositions/`** - reusable composition type definitions. Each file defines one subcomposition type with optional composition boundary ports, inner component prototypes, and internal assembly connectors. In this iteration, subcompositions may instantiate atomic SWCs only, and their boundary ports remain declarative until delegation connectors are added.
+**`subcompositions/`** - reusable composition type definitions. Each file defines one subcomposition type with optional composition boundary ports, inner component prototypes, internal assembly connectors, and optional `delegationConnectors` that map outer composition ports to inner component ports. Subcompositions may instantiate atomic SWCs only in the current hierarchy depth.
+
+```yaml
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  delegationConnectors:
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"
+```
 
 **`system.yaml`** - the top-level system composition. Declares component prototypes whose `typeRef` may target either an atomic SWC type or a subcomposition type. There is one system file per project.
 

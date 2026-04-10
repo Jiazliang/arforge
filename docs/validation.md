@@ -120,7 +120,19 @@ Checks subcomposition boundary port definitions.
 - composition port names must be unique within the subcomposition
 - `direction` must be `provides` or `requires`
 - `interfaceRef` must resolve to an existing senderReceiver, clientServer, or modeSwitch interface
-- open composition ports are allowed; this rule does not require any delegation mapping yet
+- open composition ports are allowed; this rule validates the port declarations themselves
+
+### CORE-034 - SubcompositionDelegationConnectors
+Checks delegation connectors inside each subcomposition.
+
+- `outer` must reference a declared subcomposition composition port
+- `inner` instance must exist inside the subcomposition
+- `inner` port must exist on the resolved atomic SWC type
+- outer and inner ports must have the same direction
+- outer and inner ports must reference the same interface
+- interface kind must be consistent (`senderReceiver`, `clientServer`, or `modeSwitch`)
+- duplicate delegation mappings are rejected
+- top-level connectors may only target declared subcomposition boundary ports, so undeclared inner-port bypass is rejected
 
 ### CORE-040 - ConnectionSemantics
 Checks every connector in the top-level system composition.

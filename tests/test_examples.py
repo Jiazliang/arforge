@@ -164,6 +164,10 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     assert [port.name for port in subcomposition.ports] == ["Rp_VehicleSpeedIn", "Pp_PowerStateOut"]
     assert next(port for port in subcomposition.ports if port.name == "Rp_VehicleSpeedIn").interfaceType == "senderReceiver"
     assert next(port for port in subcomposition.ports if port.name == "Pp_PowerStateOut").interfaceType == "modeSwitch"
+    assert [(connector.outer_port, connector.inner_ref) for connector in subcomposition.delegationConnectors] == [
+        ("Rp_VehicleSpeedIn", "SpeedDisplay_1.Rp_VehicleSpeed"),
+        ("Pp_PowerStateOut", "SpeedSensor_1.Pp_PowerState"),
+    ]
     assert project.system.description == (
         "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
     )
@@ -314,6 +318,8 @@ def test_generate_diagrams_contain_expected_smoke_fragments(
     assert "Pp_PowerStateOut" in subcomposition_text
     assert "Pp_VehicleSpeed" in subcomposition_text
     assert "Rp_VehicleSpeed" in subcomposition_text
+    assert "..[#2e8b57,bold].>" in subcomposition_text
+    assert "..[#8e44ad,bold,dashed].>" in subcomposition_text
     assert interface_name in interfaces_contracts_text
     assert "Mdg_PowerState" in interfaces_contracts_text
     assert "type__App_VehicleSpeed --> type__Impl_VehicleSpeed_U16 : impl" in interfaces_contracts_text
@@ -383,6 +389,10 @@ def test_subcomposition_diagram_view_contains_boundary_and_internal_instances() 
     assert [port.name for port in view.boundary_incoming_ports] == ["Rp_VehicleSpeedIn"]
     assert [port.name for port in view.boundary_outgoing_ports] == ["Pp_PowerStateOut"]
     assert [instance.name for instance in view.instances] == ["SpeedDisplay_1", "SpeedSensor_1"]
+    assert [(connector.source_id, connector.target_id) for connector in view.delegation_connectors] == [
+        ("SpeedDisplay_1__Rp_VehicleSpeed", "SubComposition_SpeedCluster__Rp_VehicleSpeedIn"),
+        ("SubComposition_SpeedCluster__Pp_PowerStateOut", "SpeedSensor_1__Pp_PowerState"),
+    ]
 
 
 def test_behavior_diagram_places_server_trigger_ports_in_incoming_lane() -> None:
@@ -892,6 +902,7 @@ def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: 
     assert system_xml.count("<COMPOSITION-SW-COMPONENT-TYPE>") == 2
     assert system_xml.count("<SW-COMPONENT-PROTOTYPE>") == 4
     assert system_xml.count("<ASSEMBLY-SW-CONNECTOR>") == 4
+    assert system_xml.count("<DELEGATION-SW-CONNECTOR>") == 2
     assert "<TYPE-TREF DEST=\"COMPOSITION-SW-COMPONENT-TYPE\">/DEMO/Components/SubComposition_SpeedCluster</TYPE-TREF>" in system_xml
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/DiagManager</TYPE-TREF>" in system_xml
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedSensor</TYPE-TREF>" in system_xml
@@ -902,6 +913,10 @@ def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: 
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in system_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_PowerState</TARGET-R-PORT-REF>" in system_xml
+    assert "<SHORT-NAME>DelegationConn_1</SHORT-NAME>" in system_xml
+    assert "<SHORT-NAME>DelegationConn_2</SHORT-NAME>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Rp_VehicleSpeedIn</OUTER-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Pp_PowerStateOut</OUTER-PORT-REF>" in system_xml
 
 
 def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) -> None:
@@ -1083,6 +1098,12 @@ def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
         ("project_subcomposition_nested_not_allowed.yaml", "CORE-031-NESTED-SUBCOMPOSITION"),
         ("project_subcomposition_duplicate_port_names.yaml", "CORE-033-PORT-DUPLICATE"),
         ("project_subcomposition_unknown_port_interface.yaml", "CORE-033-UNKNOWN-INTERFACE-REF"),
+        ("project_subcomposition_delegation_unknown_outer_port.yaml", "CORE-034-UNKNOWN-OUTER-PORT"),
+        ("project_subcomposition_delegation_unknown_inner_instance.yaml", "CORE-034-UNKNOWN-INNER-INSTANCE"),
+        ("project_subcomposition_delegation_unknown_inner_port.yaml", "CORE-034-UNKNOWN-INNER-PORT"),
+        ("project_subcomposition_delegation_direction_mismatch.yaml", "CORE-034-DIRECTION-MISMATCH"),
+        ("project_subcomposition_delegation_interface_mismatch.yaml", "CORE-034-INTERFACE-MISMATCH"),
+        ("project_subcomposition_delegation_duplicate.yaml", "CORE-034-DUPLICATE"),
     ],
 )
 def test_data_receive_event_invalid_fixtures_emit_expected_codes(fixture_name: str, expected_code: str) -> None:

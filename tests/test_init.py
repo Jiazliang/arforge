@@ -82,7 +82,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert "modes/power_state.yaml" in readme
     assert "interfaces/If_PowerState.yaml" in readme
     assert "subcompositions/subcomposition_speed_cluster.yaml" in readme
-    assert "composition boundary ports" in readme
+    assert "delegation connectors" in readme
     assert "python -m arforge.cli validate autosar.project.yaml" in readme
     assert "python -m arforge.cli export autosar.project.yaml --out build/out --split-by-swc" in readme
     assert "python -m arforge.cli generate code autosar.project.yaml --lang c --out build/code" in readme
@@ -108,7 +108,8 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert 'name: "Pp_PowerStateOut"' in subcomposition_yaml
     assert 'typeRef: "SpeedSensor"' in subcomposition_yaml
     assert 'typeRef: "SpeedDisplay"' in subcomposition_yaml
-    assert "composition boundary ports are declared but not delegated" in system_yaml
+    assert "delegation inside the reusable subcomposition" in system_yaml
+    assert 'delegationConnectors:' in subcomposition_yaml
     assert 'modeSwitchEvents:' in consumer_yaml
     assert 'mode: "ON"' in consumer_yaml
     assert 'description: "Vehicle speed value shared between the demo SWC types."' in application_types_yaml

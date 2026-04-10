@@ -40,6 +40,7 @@ from .swc import (
 from .system import (
     ConnectionSemanticCase,
     SubcompositionConnectionSemanticCase,
+    SubcompositionDelegationConnectorCase,
     SubcompositionPortDefinitionCase,
     SubcompositionTypeCase,
     SystemInstanceTypeCase,
@@ -75,6 +76,7 @@ __all__ = [
     "SwcPortInterfaceCase",
     "SwcStructureCase",
     "SubcompositionConnectionSemanticCase",
+    "SubcompositionDelegationConnectorCase",
     "SubcompositionPortDefinitionCase",
     "SubcompositionTypeCase",
     "SystemInstanceTypeCase",
@@ -104,6 +106,7 @@ def core_validation_cases() -> List[ValidationCase]:
         SystemInstanceTypeCase(),
         SubcompositionTypeCase(),
         SubcompositionPortDefinitionCase(),
+        SubcompositionDelegationConnectorCase(),
         SubcompositionConnectionSemanticCase(),
         ConnectionSemanticCase(),
         SrPortConnectivityCase(),

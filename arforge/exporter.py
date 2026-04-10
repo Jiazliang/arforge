@@ -13,6 +13,7 @@ from .model import (
     ComponentPrototype,
     Composition,
     Connection,
+    DelegationConnector,
     Interface,
     ModeDeclarationGroup,
     Operation,
@@ -198,12 +199,21 @@ def _sort_swc(swc: Swc) -> Swc:
     )
 
 
+def _delegation_sort_key(conn: DelegationConnector) -> tuple[str, str, str]:
+    return (
+        conn.outer_port,
+        conn.inner_instance,
+        conn.inner_port,
+    )
+
+
 def _sort_subcomposition(subcomposition: SubcompositionType) -> SubcompositionType:
     return replace(
         subcomposition,
         ports=sorted(subcomposition.ports, key=lambda port: port.name),
         components=sorted(subcomposition.components, key=lambda component: component.name),
         connectors=sorted(subcomposition.connectors, key=_connection_sort_key),
+        delegationConnectors=sorted(subcomposition.delegationConnectors, key=_delegation_sort_key),
     )
 
 
@@ -358,6 +368,20 @@ def _build_connections(project: Project) -> List[Dict[str, object]]:
     )
 
 
+def _build_delegation_connectors(subcomposition: SubcompositionType) -> List[Dict[str, object]]:
+    outer_ports_by_name = {port.name: port for port in subcomposition.ports}
+    return [
+        {
+            "outer_port": connector.outer_port,
+            "outer_direction": outer_ports_by_name[connector.outer_port].direction if connector.outer_port in outer_ports_by_name else "",
+            "inner_instance": connector.inner_instance,
+            "inner_port": connector.inner_port,
+            "short_name": f"DelegationConn_{idx}",
+        }
+        for idx, connector in enumerate(subcomposition.delegationConnectors, start=1)
+    ]
+
+
 def render_shared(project: Project, template_dir: Path, template_name: str = SHARED_TEMPLATE) -> str:
     env = _env(template_dir)
     tpl = env.get_template(template_name)
@@ -416,6 +440,7 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
             "ports": subcomposition.ports,
             "components": subcomposition.components,
             "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
+            "delegation_connectors": _build_delegation_connectors(subcomposition),
         }
         for subcomposition in project.subcompositions
     ]
@@ -477,6 +502,7 @@ def write_outputs_with_report(
                 "ports": subcomposition.ports,
                 "components": subcomposition.components,
                 "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
+                "delegation_connectors": _build_delegation_connectors(subcomposition),
             }
             for subcomposition in project.subcompositions
         ]

@@ -8,7 +8,7 @@ from typing import Dict, Iterable, List, Literal, Sequence
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .exporter import _safe_filename_stem, _sort_project_for_export
-from .model import ApplicationDataType, ComponentPrototype, Connection, Interface, ModeDeclarationGroup, Port, Project, SubcompositionType, Swc
+from .model import ApplicationDataType, ComponentPrototype, Connection, DelegationConnector, Interface, ModeDeclarationGroup, Port, Project, SubcompositionType, Swc
 
 
 DiagramFormat = Literal["plantuml"]
@@ -264,6 +264,14 @@ def _connector_style(source_port: Port | None) -> str:
     }.get(source_port.interfaceType, "[#666666]")
 
 
+def _delegation_connector_sort_key(connector: DelegationConnector) -> tuple[str, str, str]:
+    return (
+        connector.outer_port,
+        connector.inner_instance,
+        connector.inner_port,
+    )
+
+
 def _sorted_unique(items: Iterable[str]) -> List[str]:
     return sorted({item for item in items if item})
 
@@ -384,6 +392,7 @@ def _build_composition_diagram_view(
     boundary_ports: Sequence[Port],
     components: Sequence[ComponentPrototype],
     connectors: Sequence[Connection],
+    delegation_connectors: Sequence[DelegationConnector],
     swc_by_name: Dict[str, Swc],
     subcomposition_by_name: Dict[str, SubcompositionType],
 ) -> CompositionDiagramView:
@@ -421,6 +430,41 @@ def _build_composition_diagram_view(
             connector.target_id,
             connector.label,
         ),
+    )
+    delegation_connector_views: List[CompositionConnectorView] = []
+    if boundary_name is not None:
+        boundary_port_map = {port.name: port for port in boundary_ports}
+        component_map = {component.name: component for component in components}
+        for connector in sorted(delegation_connectors, key=_delegation_connector_sort_key):
+            boundary_port = boundary_port_map.get(connector.outer_port)
+            component = component_map.get(connector.inner_instance)
+            inner_port = None
+            if component is not None:
+                swc = swc_by_name.get(component.typeRef)
+                if swc is not None:
+                    inner_port = next((port for port in swc.ports if port.name == connector.inner_port), None)
+
+            reference_port = inner_port or boundary_port
+            line_style = _connector_style(reference_port)
+            if boundary_port is not None and boundary_port.direction == "provides":
+                source_id = _node_id(boundary_name, connector.outer_port)
+                target_id = _node_id(connector.inner_instance, connector.inner_port)
+            else:
+                source_id = _node_id(connector.inner_instance, connector.inner_port)
+                target_id = _node_id(boundary_name, connector.outer_port)
+
+            delegation_connector_views.append(
+                CompositionConnectorView(
+                    source_id=source_id,
+                    target_id=target_id,
+                    label="",
+                    line_style=line_style,
+                    direction_hint="down",
+                )
+            )
+    delegation_connector_views = sorted(
+        delegation_connector_views,
+        key=lambda connector: (connector.source_id, connector.target_id, connector.label),
     )
     rows = [
         CompositionRowView(
@@ -461,7 +505,7 @@ def _build_composition_diagram_view(
         instances=instances,
         row_links=row_links,
         assembly_connectors=assembly_connectors,
-        delegation_connectors=[],
+        delegation_connectors=delegation_connector_views,
     )
 
 
@@ -474,6 +518,7 @@ def _build_composition_view(project: Project) -> CompositionDiagramView:
         boundary_ports=[],
         components=project.system.composition.components,
         connectors=project.system.composition.connectors,
+        delegation_connectors=[],
         swc_by_name=swc_by_name,
         subcomposition_by_name={subcomposition.name: subcomposition for subcomposition in project.subcompositions},
     )
@@ -491,6 +536,7 @@ def _build_subcomposition_views(project: Project) -> List[CompositionDiagramView
                 boundary_ports=subcomposition.ports,
                 components=subcomposition.components,
                 connectors=subcomposition.connectors,
+                delegation_connectors=subcomposition.delegationConnectors,
                 swc_by_name=swc_by_name,
                 subcomposition_by_name={},
             )

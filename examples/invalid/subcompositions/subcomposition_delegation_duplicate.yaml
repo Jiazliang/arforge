@@ -1,0 +1,18 @@
+# ARForge: Invalid subcomposition fixture
+# Tests validation failure for duplicate delegation connectors.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  description: "Reusable subcomposition with duplicate delegation connectors."
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  connectors: []
+  delegationConnectors:
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"

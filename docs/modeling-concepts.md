@@ -403,15 +403,30 @@ subcomposition:
   connectors:
     - from: "SpeedSensor_1.Pp_VehicleSpeed"
       to: "SpeedDisplay_1.Rp_VehicleSpeed"
+  delegationConnectors:
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"
+    - inner: "SpeedSensor_1.Pp_PowerState"
+      outer: "Pp_PowerStateOut"
 ```
 
-In this first iteration:
+Composition ports and delegation connectors play different roles:
+
+- composition ports define the external API of the subcomposition
+- delegation connectors map that external API to specific inner component ports
+- `outer` references a declared subcomposition port
+- `inner` references an internal component instance port using `InstanceName.PortName`
+- outer and inner ports must match on direction, interface reference, and interface kind
+
+In the current iteration:
 
 - top-level `system.yaml` may instantiate atomic SWCs and subcomposition types
 - subcompositions may instantiate atomic SWCs only
 - subcompositions may declare their own external composition ports
+- subcompositions may wire those external ports to inner component ports with `delegationConnectors`
 - nested subcompositions are rejected by semantic validation (`CORE-031`)
-- delegation connectors are not modeled yet, so composition ports are not wired to inner SWC ports automatically
+- delegation connectors are the only supported way to expose inner functionality through the subcomposition boundary
+- direct top-level access to undeclared inner subcomposition ports is not supported
 
 ### What connectors do not carry
 

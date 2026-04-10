@@ -5,11 +5,11 @@ subcomposition:
   description: "Reusable subcomposition that contains the speed sensing and display flow."
   ports:
     - name: "Rp_VehicleSpeedIn"
-      description: "Required outer composition port reserved for future delegation from the system boundary."
+      description: "Required outer composition port delegated to the internal display receiver."
       direction: "requires"
       interfaceRef: "If_VehicleSpeed"
     - name: "Pp_PowerStateOut"
-      description: "Provided outer composition port reserved for future delegation to the system boundary."
+      description: "Provided outer composition port delegated from the internal sensor mode output."
       direction: "provides"
       interfaceRef: "If_PowerState"
   components:
@@ -32,3 +32,8 @@ subcomposition:
     - from: "SpeedSensor_1.Pp_PowerState"
       description: "Connects the ECU power-state mode to the display instance."
       to: "SpeedDisplay_1.Rp_PowerState"
+  delegationConnectors:
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"
+    - inner: "SpeedSensor_1.Pp_PowerState"
+      outer: "Pp_PowerStateOut"

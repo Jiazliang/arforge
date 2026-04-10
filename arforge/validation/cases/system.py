@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Iterable, List
 
-from ...model import ComponentPrototype, Connection
+from ...model import ComponentPrototype, Connection, DelegationConnector, Port
 from ...semantic_validation import Finding, ValidationCase, ValidationContext
 
 
@@ -22,6 +22,14 @@ def _connection_sort_key(connector: Connection) -> tuple[str, str, str, str, str
         connector.to_port,
         connector.dataElement or "",
         connector.operation or "",
+    )
+
+
+def _delegation_sort_key(connector: DelegationConnector) -> tuple[str, str, str]:
+    return (
+        connector.outer_port,
+        connector.inner_instance,
+        connector.inner_port,
     )
 
 
@@ -37,6 +45,10 @@ class _CompositionValidationSpec:
 
 def _component_map(components: Iterable[ComponentPrototype]) -> Dict[str, ComponentPrototype]:
     return {component.name: component for component in components}
+
+
+def _port_map(ports: Iterable[Port]) -> Dict[str, Port]:
+    return {port.name: port for port in ports}
 
 
 def _validate_component_types(ctx: ValidationContext, spec: _CompositionValidationSpec, case: ValidationCase) -> List[Finding]:
@@ -59,6 +71,44 @@ def _validate_component_types(ctx: ValidationContext, spec: _CompositionValidati
                     code=spec.nested_type_code,
                 )
             )
+    return findings
+
+
+def _validate_system_subcomposition_boundary_connectors(ctx: ValidationContext, case: ValidationCase) -> List[Finding]:
+    findings: List[Finding] = []
+    system_components = _component_map(ctx.project.system.composition.components)
+
+    for connector in sorted(ctx.project.system.composition.connectors, key=_connection_sort_key):
+        from_component = system_components.get(connector.from_instance)
+        to_component = system_components.get(connector.to_instance)
+        if from_component is None or to_component is None:
+            continue
+
+        from_subcomposition = ctx.find_subcomposition(from_component.typeRef)
+        to_subcomposition = ctx.find_subcomposition(to_component.typeRef)
+
+        if from_subcomposition is not None:
+            boundary_port = next((port for port in from_subcomposition.ports if port.name == connector.from_port), None)
+            if boundary_port is None:
+                findings.append(
+                    case.finding(
+                        f"System connector from '{connector.from_instance}.{connector.from_port}' bypasses the subcomposition boundary because "
+                        f"'{connector.from_port}' is not a declared composition port on '{from_component.typeRef}'.",
+                        code="CORE-034-BYPASS-FROM-BOUNDARY",
+                    )
+                )
+
+        if to_subcomposition is not None:
+            boundary_port = next((port for port in to_subcomposition.ports if port.name == connector.to_port), None)
+            if boundary_port is None:
+                findings.append(
+                    case.finding(
+                        f"System connector to '{connector.to_instance}.{connector.to_port}' bypasses the subcomposition boundary because "
+                        f"'{connector.to_port}' is not a declared composition port on '{to_component.typeRef}'.",
+                        code="CORE-034-BYPASS-TO-BOUNDARY",
+                    )
+                )
+
     return findings
 
 
@@ -322,7 +372,9 @@ class ConnectionSemanticCase(ValidationCase):
             allowed_component_type_kinds=("swc", "subcomposition"),
             unknown_type_code="CORE-030-UNKNOWN-COMPONENT-TYPE",
         )
-        return _validate_connectors(ctx, spec, self)
+        findings = _validate_system_subcomposition_boundary_connectors(ctx, self)
+        findings.extend(_validate_connectors(ctx, spec, self))
+        return findings
 
 
 class SubcompositionConnectionSemanticCase(ValidationCase):
@@ -398,6 +450,100 @@ class SubcompositionPortDefinitionCase(ValidationCase):
                         self.finding(
                             f"Internal mismatch: subcomposition port '{subcomposition.name}.{port.name}' interfaceType '{port.interfaceType}' != interface '{interface.type}'.",
                             code="CORE-033-INTERFACE-TYPE-MISMATCH",
+                        )
+                    )
+
+        return findings
+
+
+class SubcompositionDelegationConnectorCase(ValidationCase):
+    case_id = "CORE-034"
+    name = "SubcompositionDelegationConnectors"
+    description = "Checks subcomposition delegation connectors for resolvable outer and inner ports, matching direction/interface semantics, and duplicate mappings."
+    tags = ("core", "system", "subcomposition", "delegation")
+
+    def applicability(self, ctx: ValidationContext) -> tuple[bool, str | None]:
+        if not any(subcomposition.delegationConnectors for subcomposition in ctx.project.subcompositions):
+            return False, "no subcomposition delegation connectors defined"
+        return True, None
+
+    def run(self, ctx: ValidationContext) -> List[Finding]:
+        findings: List[Finding] = []
+
+        for subcomposition in sorted(ctx.project.subcompositions, key=lambda item: item.name):
+            components_by_name = _component_map(subcomposition.components)
+            outer_ports_by_name = _port_map(subcomposition.ports)
+            seen_identity_keys: set[tuple[str, str, str]] = set()
+
+            for connector in sorted(subcomposition.delegationConnectors, key=_delegation_sort_key):
+                outer_port = outer_ports_by_name.get(connector.outer_port)
+                if outer_port is None:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' delegation connector outer port '{connector.outer_port}' does not exist.",
+                            code="CORE-034-UNKNOWN-OUTER-PORT",
+                        )
+                    )
+                    continue
+
+                component = components_by_name.get(connector.inner_instance)
+                if component is None:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' delegation connector inner instance '{connector.inner_instance}' does not exist.",
+                            code="CORE-034-UNKNOWN-INNER-INSTANCE",
+                        )
+                    )
+                    continue
+
+                inner_swc = ctx.swc_by_name.get(component.typeRef)
+                if inner_swc is None:
+                    continue
+
+                inner_port = ctx.find_swc_port(inner_swc.name, connector.inner_port)
+                if inner_port is None:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' delegation connector inner port '{connector.inner_ref}' does not exist on type '{inner_swc.name}'.",
+                            code="CORE-034-UNKNOWN-INNER-PORT",
+                        )
+                    )
+                    continue
+
+                if connector.identity_key in seen_identity_keys:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' has duplicate delegation connector '{connector.outer_port}' <-> '{connector.inner_ref}'.",
+                            code="CORE-034-DUPLICATE",
+                        )
+                    )
+                else:
+                    seen_identity_keys.add(connector.identity_key)
+
+                if outer_port.direction != inner_port.direction:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' delegation connector '{connector.outer_port}' <-> '{connector.inner_ref}' "
+                            f"has direction mismatch: outer is '{outer_port.direction}' but inner is '{inner_port.direction}'.",
+                            code="CORE-034-DIRECTION-MISMATCH",
+                        )
+                    )
+
+                if outer_port.interfaceRef != inner_port.interfaceRef:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' delegation connector '{connector.outer_port}' <-> '{connector.inner_ref}' "
+                            f"has interface mismatch: outer uses '{outer_port.interfaceRef}' but inner uses '{inner_port.interfaceRef}'.",
+                            code="CORE-034-INTERFACE-MISMATCH",
+                        )
+                    )
+
+                if outer_port.interfaceType != inner_port.interfaceType:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' delegation connector '{connector.outer_port}' <-> '{connector.inner_ref}' "
+                            f"has interface-kind mismatch: outer is '{outer_port.interfaceType}' but inner is '{inner_port.interfaceType}'.",
+                            code="CORE-034-INTERFACE-TYPE-MISMATCH",
                         )
                     )
 

@@ -15,5 +15,5 @@ system:
       - name: "DiagManager_0"
         description: "Standalone top-level atomic SWC instance."
         typeRef: "DiagManager"
-    # No top-level connectors are needed here because the subcomposition has only internal assembly connectors in this first iteration.
+    # No top-level connectors are needed here because the example only demonstrates delegation inside the reusable subcomposition.
     connectors: []

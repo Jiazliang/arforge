@@ -272,6 +272,26 @@ class ComponentPrototype:
 
 
 @dataclass(frozen=True)
+class DelegationConnector:
+    inner_instance: str
+    inner_port: str
+    outer_port: str
+    description: str | None = None
+
+    @property
+    def inner_ref(self) -> str:
+        return f"{self.inner_instance}.{self.inner_port}"
+
+    @property
+    def identity_key(self) -> tuple[str, str, str]:
+        return (
+            self.inner_instance,
+            self.inner_port,
+            self.outer_port,
+        )
+
+
+@dataclass(frozen=True)
 class Composition:
     name: str
     components: List[ComponentPrototype]
@@ -286,6 +306,7 @@ class SubcompositionType:
     connectors: List[Connection]
     description: str | None = None
     ports: List[Port] = field(default_factory=list)
+    delegationConnectors: List[DelegationConnector] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -377,6 +398,21 @@ def _parse_connectors(connectors: List[Dict[str, Any]]) -> List[Connection]:
                 description=connector.get("description"),
                 dataElement=connector.get("dataElement"),
                 operation=connector.get("operation"),
+            )
+        )
+    return parsed
+
+
+def _parse_delegation_connectors(connectors: List[Dict[str, Any]]) -> List[DelegationConnector]:
+    parsed: List[DelegationConnector] = []
+    for connector in connectors:
+        inner_instance, inner_port = _split_endpoint(connector["inner"])
+        parsed.append(
+            DelegationConnector(
+                inner_instance=inner_instance,
+                inner_port=inner_port,
+                outer_port=connector["outer"],
+                description=connector.get("description"),
             )
         )
     return parsed
@@ -573,6 +609,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                 ports=_parse_ports(subcomposition_data.get("ports", []), iface_by_name),
                 components=_parse_components(subcomposition_data.get("components", [])),
                 connectors=_parse_connectors(subcomposition_data.get("connectors", [])),
+                delegationConnectors=_parse_delegation_connectors(subcomposition_data.get("delegationConnectors", [])),
             )
         )
 
