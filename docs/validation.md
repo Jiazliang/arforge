@@ -114,6 +114,14 @@ Checks every connector inside each subcomposition.
 - interface kind must be consistent (SR-to-SR, CS-to-CS, MS-to-MS)
 - duplicate port pairs are rejected
 
+### CORE-033 - SubcompositionPortDefinitions
+Checks subcomposition boundary port definitions.
+
+- composition port names must be unique within the subcomposition
+- `direction` must be `provides` or `requires`
+- `interfaceRef` must resolve to an existing senderReceiver, clientServer, or modeSwitch interface
+- open composition ports are allowed; this rule does not require any delegation mapping yet
+
 ### CORE-040 - ConnectionSemantics
 Checks every connector in the top-level system composition.
 

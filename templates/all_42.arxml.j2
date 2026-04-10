@@ -496,6 +496,35 @@
             {% for subcomposition in subcompositions %}
             <COMPOSITION-SW-COMPONENT-TYPE>
               <SHORT-NAME>{{ subcomposition.name }}</SHORT-NAME>
+              {% if subcomposition.ports %}
+              <PORTS>
+                {% for p in subcomposition.ports %}
+                  {% if p.direction == "provides" %}
+                <P-PORT-PROTOTYPE>
+                  <SHORT-NAME>{{ p.name }}</SHORT-NAME>
+                  {% if p.interfaceType == "senderReceiver" %}
+                  <PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
+                  {% elif p.interfaceType == "clientServer" %}
+                  <PROVIDED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
+                  {% elif p.interfaceType == "modeSwitch" %}
+                  <PROVIDED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
+                  {% endif %}
+                </P-PORT-PROTOTYPE>
+                  {% else %}
+                <R-PORT-PROTOTYPE>
+                  <SHORT-NAME>{{ p.name }}</SHORT-NAME>
+                  {% if p.interfaceType == "senderReceiver" %}
+                  <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
+                  {% elif p.interfaceType == "clientServer" %}
+                  <REQUIRED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
+                  {% elif p.interfaceType == "modeSwitch" %}
+                  <REQUIRED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
+                  {% endif %}
+                </R-PORT-PROTOTYPE>
+                  {% endif %}
+                {% endfor %}
+              </PORTS>
+              {% endif %}
               <COMPONENTS>
                 {% for i in subcomposition.components %}
                 <SW-COMPONENT-PROTOTYPE>

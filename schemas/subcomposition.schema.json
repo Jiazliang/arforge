@@ -37,6 +37,35 @@
       },
       "additionalProperties": false
     },
+    "portPrototype": {
+      "type": "object",
+      "required": [
+        "name",
+        "direction",
+        "interfaceRef"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "description": {
+          "$ref": "#/$defs/descriptionProperty"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "provides",
+            "requires"
+          ],
+          "description": "Port direction from the composition boundary point of view."
+        },
+        "interfaceRef": {
+          "$ref": "#/$defs/name",
+          "description": "Interface exposed on the reusable composition boundary."
+        }
+      },
+      "additionalProperties": false
+    },
     "connector": {
       "type": "object",
       "required": [
@@ -79,6 +108,12 @@
         },
         "description": {
           "$ref": "#/$defs/descriptionProperty"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/portPrototype"
+          }
         },
         "components": {
           "type": "array",

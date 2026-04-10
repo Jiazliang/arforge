@@ -383,11 +383,18 @@ Connector endpoints use `InstanceName.PortName` syntax. Both the instance and th
 
 ### Subcomposition definitions
 
-Subcompositions are defined in dedicated files and currently contain only atomic SWC instances plus their internal assembly connectors.
+Subcompositions are defined in dedicated files and may expose composition boundary ports in addition to their internal atomic SWC instances and assembly connectors.
 
 ```yaml
 subcomposition:
   name: "SubComposition_SpeedCluster"
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+    - name: "Pp_PowerStateOut"
+      direction: "provides"
+      interfaceRef: "If_PowerState"
   components:
     - name: "SpeedSensor_1"
       typeRef: "SpeedSensor"
@@ -402,8 +409,9 @@ In this first iteration:
 
 - top-level `system.yaml` may instantiate atomic SWCs and subcomposition types
 - subcompositions may instantiate atomic SWCs only
+- subcompositions may declare their own external composition ports
 - nested subcompositions are rejected by semantic validation (`CORE-031`)
-- composition ports and delegation connectors are not modeled yet
+- delegation connectors are not modeled yet, so composition ports are not wired to inner SWC ports automatically
 
 ### What connectors do not carry
 

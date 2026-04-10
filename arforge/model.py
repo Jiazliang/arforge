@@ -285,6 +285,7 @@ class SubcompositionType:
     components: List[ComponentPrototype]
     connectors: List[Connection]
     description: str | None = None
+    ports: List[Port] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -379,6 +380,28 @@ def _parse_connectors(connectors: List[Dict[str, Any]]) -> List[Connection]:
             )
         )
     return parsed
+
+
+def _build_port(port_data: Dict[str, Any], iface_by_name: Dict[str, Interface]) -> Port:
+    interface_name = port_data["interfaceRef"]
+    interface = iface_by_name.get(interface_name)
+    # interfaceType is used by templates; unknown handled by validation layer
+    interface_type = interface.type if interface else "senderReceiver"
+    com_spec_data = port_data.get("comSpec")
+    com_spec = ComSpec(**com_spec_data) if com_spec_data is not None else None
+    return Port(
+        name=port_data["name"],
+        direction=port_data["direction"],
+        interfaceRef=interface_name,
+        interfaceType=interface_type,
+        modeGroupRef=interface.modeGroupRef if interface and interface.type == "modeSwitch" else None,
+        description=port_data.get("description"),
+        comSpec=com_spec,
+    )
+
+
+def _parse_ports(ports: List[Dict[str, Any]], iface_by_name: Dict[str, Interface]) -> List[Port]:
+    return [_build_port(port_data, iface_by_name) for port_data in ports]
 
 def from_dict(d: Dict[str, Any]) -> Project:
     autosar = d["autosar"]
@@ -531,30 +554,11 @@ def from_dict(d: Dict[str, Any]) -> Project:
             )
             for r in s.get("runnables", [])
         ]
-        ports: List[Port] = []
-        for p in s.get("ports", []):
-            it_name = p["interfaceRef"]
-            it = iface_by_name.get(it_name)
-            # interfaceType is used by templates; unknown handled by validation layer
-            interfaceType = it.type if it else "senderReceiver"
-            com_spec_data = p.get("comSpec")
-            com_spec = ComSpec(**com_spec_data) if com_spec_data is not None else None
-            ports.append(
-                Port(
-                    name=p["name"],
-                    direction=p["direction"],
-                    interfaceRef=it_name,
-                    interfaceType=interfaceType,
-                    modeGroupRef=it.modeGroupRef if it and it.type == "modeSwitch" else None,
-                    description=p.get("description"),
-                    comSpec=com_spec,
-                )
-            )
         swcs.append(
             Swc(
                 name=s["name"],
                 runnables=runs,
-                ports=ports,
+                ports=_parse_ports(s.get("ports", []), iface_by_name),
                 description=s.get("description"),
                 category=s.get("category", SWC_CATEGORY_APPLICATION),
             )
@@ -566,6 +570,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
             SubcompositionType(
                 name=subcomposition_data["name"],
                 description=subcomposition_data.get("description"),
+                ports=_parse_ports(subcomposition_data.get("ports", []), iface_by_name),
                 components=_parse_components(subcomposition_data.get("components", [])),
                 connectors=_parse_connectors(subcomposition_data.get("connectors", [])),
             )

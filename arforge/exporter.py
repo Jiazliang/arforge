@@ -201,6 +201,7 @@ def _sort_swc(swc: Swc) -> Swc:
 def _sort_subcomposition(subcomposition: SubcompositionType) -> SubcompositionType:
     return replace(
         subcomposition,
+        ports=sorted(subcomposition.ports, key=lambda port: port.name),
         components=sorted(subcomposition.components, key=lambda component: component.name),
         connectors=sorted(subcomposition.connectors, key=_connection_sort_key),
     )
@@ -412,6 +413,7 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
         {
             "name": subcomposition.name,
             "description": subcomposition.description,
+            "ports": subcomposition.ports,
             "components": subcomposition.components,
             "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
         }
@@ -472,6 +474,7 @@ def write_outputs_with_report(
             {
                 "name": subcomposition.name,
                 "description": subcomposition.description,
+                "ports": subcomposition.ports,
                 "components": subcomposition.components,
                 "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
             }

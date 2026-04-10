@@ -36,6 +36,7 @@ SHARED_EXAMPLE_OUTPUT = "DEMO_SharedTypes.arxml"
 SYSTEM_EXAMPLE_OUTPUT = "DemoSystem.arxml"
 PLANTUML_DIAGRAM_OUTPUTS = [
     "composition_DemoSystem.puml",
+    "subcomposition_SubComposition_SpeedCluster.puml",
     "interfaces_wiring.puml",
     "interfaces_contracts.puml",
     "behavior_DiagManager.puml",
@@ -157,6 +158,12 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     assert next(subcomposition for subcomposition in project.subcompositions if subcomposition.name == "SubComposition_SpeedCluster").description == (
         "Reusable subcomposition that contains the speed sensing and display flow."
     )
+    subcomposition = next(
+        subcomposition for subcomposition in project.subcompositions if subcomposition.name == "SubComposition_SpeedCluster"
+    )
+    assert [port.name for port in subcomposition.ports] == ["Rp_VehicleSpeedIn", "Pp_PowerStateOut"]
+    assert next(port for port in subcomposition.ports if port.name == "Rp_VehicleSpeedIn").interfaceType == "senderReceiver"
+    assert next(port for port in subcomposition.ports if port.name == "Pp_PowerStateOut").interfaceType == "modeSwitch"
     assert project.system.description == (
         "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
     )
@@ -280,6 +287,7 @@ def test_generate_diagrams_contain_expected_smoke_fragments(
     extension = ".puml"
 
     composition_text = (out_dir / f"composition_DemoSystem{extension}").read_text(encoding="utf-8")
+    subcomposition_text = (out_dir / f"subcomposition_SubComposition_SpeedCluster{extension}").read_text(encoding="utf-8")
     interfaces_wiring_text = (out_dir / f"interfaces_wiring{extension}").read_text(encoding="utf-8")
     interfaces_contracts_text = (out_dir / f"interfaces_contracts{extension}").read_text(encoding="utf-8")
     behavior_text = (out_dir / f"behavior_SpeedSensor{extension}").read_text(encoding="utf-8")
@@ -288,6 +296,8 @@ def test_generate_diagrams_contain_expected_smoke_fragments(
     assert "DiagManager_0" in composition_text
     assert 'component "SpeedCluster_0"' in composition_text
     assert "Subcomposition" in composition_text
+    assert "Rp_VehicleSpeedIn" in composition_text
+    assert "Pp_PowerStateOut" in composition_text
     assert "Provided S/R" in composition_text
     assert "Subcomposition" in composition_text
     assert "Application SWC" in composition_text
@@ -295,6 +305,15 @@ def test_generate_diagrams_contain_expected_smoke_fragments(
     assert interface_name in interfaces_wiring_text
     assert "SpeedCluster_0" in interfaces_wiring_text
     assert "DiagManager_0" in interfaces_wiring_text
+    assert "Rp_VehicleSpeedIn" in interfaces_wiring_text
+    assert "Pp_PowerStateOut" in interfaces_wiring_text
+    assert 'component "SubComposition_SpeedCluster"' in subcomposition_text
+    assert "SpeedSensor_1" in subcomposition_text
+    assert "SpeedDisplay_1" in subcomposition_text
+    assert "Rp_VehicleSpeedIn" in subcomposition_text
+    assert "Pp_PowerStateOut" in subcomposition_text
+    assert "Pp_VehicleSpeed" in subcomposition_text
+    assert "Rp_VehicleSpeed" in subcomposition_text
     assert interface_name in interfaces_contracts_text
     assert "Mdg_PowerState" in interfaces_contracts_text
     assert "type__App_VehicleSpeed --> type__Impl_VehicleSpeed_U16 : impl" in interfaces_contracts_text
@@ -352,6 +371,18 @@ def test_composition_diagram_uses_multi_column_layout_for_larger_systems() -> No
 
     assert view.grid_columns == 2
     assert [len(row.instances) for row in view.rows] == [2, 2, 1]
+
+
+def test_subcomposition_diagram_view_contains_boundary_and_internal_instances() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+
+    view = build_diagram_views(project).subcompositions[0]
+
+    assert view.system_name == "SubComposition_SpeedCluster"
+    assert view.boundary_name == "SubComposition_SpeedCluster"
+    assert [port.name for port in view.boundary_incoming_ports] == ["Rp_VehicleSpeedIn"]
+    assert [port.name for port in view.boundary_outgoing_ports] == ["Pp_PowerStateOut"]
+    assert [instance.name for instance in view.instances] == ["SpeedDisplay_1", "SpeedSensor_1"]
 
 
 def test_behavior_diagram_places_server_trigger_ports_in_incoming_lane() -> None:
@@ -849,6 +880,11 @@ def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: 
     system_xml = (out_dir / SYSTEM_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
 
     assert "<SHORT-NAME>SubComposition_SpeedCluster</SHORT-NAME>" in system_xml
+    assert "<PORTS>" in system_xml
+    assert "<SHORT-NAME>Rp_VehicleSpeedIn</SHORT-NAME>" in system_xml
+    assert "<SHORT-NAME>Pp_PowerStateOut</SHORT-NAME>" in system_xml
+    assert "<REQUIRED-INTERFACE-TREF DEST=\"SENDER-RECEIVER-INTERFACE\">/DEMO/Interfaces/If_VehicleSpeed</REQUIRED-INTERFACE-TREF>" in system_xml
+    assert "<PROVIDED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</PROVIDED-INTERFACE-TREF>" in system_xml
     assert "<SHORT-NAME>SpeedCluster_0</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>DiagManager_0</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>SpeedSensor_1</SHORT-NAME>" in system_xml
@@ -1045,6 +1081,8 @@ def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
         ("project_subcomposition_unknown_swc_type.yaml", "CORE-031-UNKNOWN-SWC-TYPE"),
         ("project_subcomposition_duplicate_component_names.yaml", "CORE-001-SUBCOMPOSITION-INSTANCE-DUPLICATE"),
         ("project_subcomposition_nested_not_allowed.yaml", "CORE-031-NESTED-SUBCOMPOSITION"),
+        ("project_subcomposition_duplicate_port_names.yaml", "CORE-033-PORT-DUPLICATE"),
+        ("project_subcomposition_unknown_port_interface.yaml", "CORE-033-UNKNOWN-INTERFACE-REF"),
     ],
 )
 def test_data_receive_event_invalid_fixtures_emit_expected_codes(fixture_name: str, expected_code: str) -> None:

@@ -1,0 +1,17 @@
+# ARForge: Invalid subcomposition fixture
+# Tests schema validation failure for an invalid composition boundary port direction.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  description: "Reusable subcomposition with an invalid outer composition port direction."
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "incoming"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "SpeedSensor_1"
+      typeRef: "SpeedSensor"
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  connectors:
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      to: "SpeedDisplay_1.Rp_VehicleSpeed"

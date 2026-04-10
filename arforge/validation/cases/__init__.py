@@ -40,6 +40,7 @@ from .swc import (
 from .system import (
     ConnectionSemanticCase,
     SubcompositionConnectionSemanticCase,
+    SubcompositionPortDefinitionCase,
     SubcompositionTypeCase,
     SystemInstanceTypeCase,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "SwcPortInterfaceCase",
     "SwcStructureCase",
     "SubcompositionConnectionSemanticCase",
+    "SubcompositionPortDefinitionCase",
     "SubcompositionTypeCase",
     "SystemInstanceTypeCase",
     "UnusedModeDeclarationGroupCase",
@@ -101,6 +103,7 @@ def core_validation_cases() -> List[ValidationCase]:
         ModeSwitchEventCase(),
         SystemInstanceTypeCase(),
         SubcompositionTypeCase(),
+        SubcompositionPortDefinitionCase(),
         SubcompositionConnectionSemanticCase(),
         ConnectionSemanticCase(),
         SrPortConnectivityCase(),

@@ -1,0 +1,27 @@
+# ARForge: Invalid example fixture
+# Domain: subcomposition composition ports.
+# Tests validation failure for an unknown interface reference on a composition boundary port.
+autosar:
+  version: "4.2"
+  rootPackage: "DEMO"
+
+inputs:
+  baseTypes: "../types/base_types.yaml"
+  implementationDataTypes: "../types/implementation_types.yaml"
+  applicationDataTypes: "../types/application_types.yaml"
+  units:
+    - "../units/*.yaml"
+  compuMethods:
+    - "../compu_methods/*.yaml"
+  modeDeclarationGroups:
+    - "../modes/*.yaml"
+  interfaces:
+    - "../interfaces/If_VehicleSpeed.yaml"
+    - "../interfaces/If_PowerState.yaml"
+  swcs:
+    - "../swcs/SpeedSensor.yaml"
+    - "../swcs/SpeedDisplay.yaml"
+    - "../swcs/DiagManager.yaml"
+  subcompositions:
+    - "subcompositions/subcomposition_unknown_port_interface.yaml"
+  system: "support/system_with_subcomposition.yaml"

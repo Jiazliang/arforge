@@ -349,3 +349,56 @@ class SubcompositionConnectionSemanticCase(ValidationCase):
             )
             findings.extend(_validate_connectors(ctx, spec, self))
         return findings
+
+
+class SubcompositionPortDefinitionCase(ValidationCase):
+    case_id = "CORE-033"
+    name = "SubcompositionPortDefinitions"
+    description = "Checks subcomposition boundary ports for unique names, valid directions, and resolvable interface references."
+    tags = ("core", "system", "subcomposition", "ports")
+
+    def applicability(self, ctx: ValidationContext) -> tuple[bool, str | None]:
+        if not any(subcomposition.ports for subcomposition in ctx.project.subcompositions):
+            return False, "no subcomposition boundary ports defined"
+        return True, None
+
+    def run(self, ctx: ValidationContext) -> List[Finding]:
+        findings: List[Finding] = []
+        for subcomposition in sorted(ctx.project.subcompositions, key=lambda item: item.name):
+            port_names = [port.name for port in subcomposition.ports]
+            if len(set(port_names)) != len(port_names):
+                findings.append(
+                    self.finding(
+                        f"Subcomposition '{subcomposition.name}' has duplicate composition port names.",
+                        code="CORE-033-PORT-DUPLICATE",
+                    )
+                )
+
+            for port in sorted(subcomposition.ports, key=lambda item: item.name):
+                if port.direction not in {"provides", "requires"}:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' port '{port.name}' has invalid direction '{port.direction}'.",
+                            code="CORE-033-DIRECTION",
+                        )
+                    )
+
+                interface = ctx.iface_by_name.get(port.interfaceRef)
+                if interface is None:
+                    findings.append(
+                        self.finding(
+                            f"Subcomposition '{subcomposition.name}' port '{port.name}' references unknown interface '{port.interfaceRef}'.",
+                            code="CORE-033-UNKNOWN-INTERFACE-REF",
+                        )
+                    )
+                    continue
+
+                if port.interfaceType != interface.type:
+                    findings.append(
+                        self.finding(
+                            f"Internal mismatch: subcomposition port '{subcomposition.name}.{port.name}' interfaceType '{port.interfaceType}' != interface '{interface.type}'.",
+                            code="CORE-033-INTERFACE-TYPE-MISMATCH",
+                        )
+                    )
+
+        return findings

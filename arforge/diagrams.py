@@ -8,7 +8,7 @@ from typing import Dict, Iterable, List, Literal, Sequence
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .exporter import _safe_filename_stem, _sort_project_for_export
-from .model import ApplicationDataType, Connection, Interface, ModeDeclarationGroup, Port, Project, Swc
+from .model import ApplicationDataType, ComponentPrototype, Connection, Interface, ModeDeclarationGroup, Port, Project, SubcompositionType, Swc
 
 
 DiagramFormat = Literal["plantuml"]
@@ -68,7 +68,10 @@ class CompositionConnectorView:
 class CompositionDiagramView:
     system_name: str
     composition_name: str
+    boundary_name: str | None
     boundary_id: str
+    boundary_incoming_ports: List[CompositionPortView]
+    boundary_outgoing_ports: List[CompositionPortView]
     grid_columns: int
     rows: List[CompositionRowView]
     instances: List[CompositionInstanceView]
@@ -157,6 +160,7 @@ class BehaviorDiagramView:
 @dataclass(frozen=True)
 class DiagramBuild:
     composition: CompositionDiagramView
+    subcompositions: List[CompositionDiagramView]
     interfaces_wiring: InterfaceDiagramView
     interfaces_contracts: InterfaceDiagramView
     behaviors: List[BehaviorDiagramView]
@@ -223,9 +227,12 @@ def _port_extra_label(port: Port) -> str | None:
     return None
 
 
-def _connector_port_type(connection: Connection, project: Project) -> Port | None:
-    instance_by_name = {instance.name: instance for instance in project.system.composition.components}
-    swc_by_name = {swc.name: swc for swc in project.swcs}
+def _connector_port_type_for_components(
+    connection: Connection,
+    components: Sequence[ComponentPrototype],
+    swc_by_name: Dict[str, Swc],
+) -> Port | None:
+    instance_by_name = {instance.name: instance for instance in components}
     source_instance = instance_by_name.get(connection.from_instance)
     if source_instance is None:
         return None
@@ -281,14 +288,31 @@ def _build_interface_layers(entities: Iterable[InterfaceEntityView]) -> List[Int
     ]
 
 
-def _build_composition_view(project: Project) -> CompositionDiagramView:
-    swc_by_name = {swc.name: swc for swc in project.swcs}
-    subcomposition_names = {subcomposition.name for subcomposition in project.subcompositions}
+def _build_composition_instance_views(
+    components: Sequence[ComponentPrototype],
+    swc_by_name: Dict[str, Swc],
+    subcomposition_by_name: Dict[str, SubcompositionType],
+) -> List[CompositionInstanceView]:
     instances: List[CompositionInstanceView] = []
-    for instance in project.system.composition.components:
+    for instance in components:
         swc = swc_by_name.get(instance.typeRef)
         if swc is None:
-            if instance.typeRef in subcomposition_names:
+            subcomposition = subcomposition_by_name.get(instance.typeRef)
+            if subcomposition is not None:
+                ports = []
+                for port in subcomposition.ports:
+                    kind_label, style_class, fill_color = _port_style(port)
+                    ports.append(
+                        CompositionPortView(
+                            id=_node_id(instance.name, port.name),
+                            name=port.name,
+                            kind_label=kind_label,
+                            interface_name=port.interfaceRef,
+                            extra_label=_port_extra_label(port),
+                            style_class=style_class,
+                            fill_color=fill_color,
+                        )
+                    )
                 instances.append(
                     CompositionInstanceView(
                         id=_node_id(instance.name),
@@ -296,12 +320,13 @@ def _build_composition_view(project: Project) -> CompositionDiagramView:
                         type_name=instance.typeRef,
                         type_label="(Subcomposition)",
                         fill_color=_subcomposition_fill_color(),
-                        incoming_ports=[],
-                        outgoing_ports=[],
+                        incoming_ports=[port for port in ports if "requires" in port.kind_label],
+                        outgoing_ports=[port for port in ports if "provides" in port.kind_label],
                     )
                 )
                 continue
             continue
+
         ports = []
         for port in swc.ports:
             kind_label, style_class, fill_color = _port_style(port)
@@ -327,16 +352,52 @@ def _build_composition_view(project: Project) -> CompositionDiagramView:
                 outgoing_ports=[port for port in ports if "provides" in port.kind_label],
                 )
             )
+    return instances
 
+
+def _build_boundary_ports(ports: Sequence[Port], boundary_name: str) -> tuple[List[CompositionPortView], List[CompositionPortView]]:
+    incoming_ports: List[CompositionPortView] = []
+    outgoing_ports: List[CompositionPortView] = []
+    for port in ports:
+        kind_label, style_class, fill_color = _port_style(port)
+        port_view = CompositionPortView(
+            id=_node_id(boundary_name, port.name),
+            name=port.name,
+            kind_label=kind_label,
+            interface_name=port.interfaceRef,
+            extra_label=_port_extra_label(port),
+            style_class=style_class,
+            fill_color=fill_color,
+        )
+        if "requires" in kind_label:
+            incoming_ports.append(port_view)
+        else:
+            outgoing_ports.append(port_view)
+    return incoming_ports, outgoing_ports
+
+
+def _build_composition_diagram_view(
+    *,
+    system_name: str,
+    composition_name: str,
+    boundary_name: str | None,
+    boundary_ports: Sequence[Port],
+    components: Sequence[ComponentPrototype],
+    connectors: Sequence[Connection],
+    swc_by_name: Dict[str, Swc],
+    subcomposition_by_name: Dict[str, SubcompositionType],
+) -> CompositionDiagramView:
+    instances = _build_composition_instance_views(components, swc_by_name, subcomposition_by_name)
+    boundary_incoming_ports, boundary_outgoing_ports = _build_boundary_ports(boundary_ports, boundary_name or composition_name)
     grid_columns = _composition_grid_columns(len(instances))
     instance_positions = {
         instance.name: (index // grid_columns, index % grid_columns)
-        for index, instance in enumerate(project.system.composition.components)
+        for index, instance in enumerate(components)
     }
 
     assembly_connectors: List[CompositionConnectorView] = []
-    for connector in project.system.composition.connectors:
-        source_port = _connector_port_type(connector, project)
+    for connector in connectors:
+        source_port = _connector_port_type_for_components(connector, components, swc_by_name)
         line_style = _connector_style(source_port)
         direction_hint = _connector_direction_hint(
             connector.from_instance,
@@ -363,7 +424,7 @@ def _build_composition_view(project: Project) -> CompositionDiagramView:
     )
     rows = [
         CompositionRowView(
-            id=_node_id(project.system.composition.name, "row", str(row_index + 1)),
+            id=_node_id(composition_name, "row", str(row_index + 1)),
             instances=instances[row_index : row_index + grid_columns],
         )
         for row_index in range(0, len(instances), grid_columns)
@@ -389,9 +450,12 @@ def _build_composition_view(project: Project) -> CompositionDiagramView:
             )
 
     return CompositionDiagramView(
-        system_name=project.system.name,
-        composition_name=project.system.composition.name,
-        boundary_id=_node_id(project.system.composition.name),
+        system_name=system_name,
+        composition_name=composition_name,
+        boundary_name=boundary_name,
+        boundary_id=_node_id(composition_name),
+        boundary_incoming_ports=boundary_incoming_ports,
+        boundary_outgoing_ports=boundary_outgoing_ports,
         grid_columns=grid_columns,
         rows=rows,
         instances=instances,
@@ -399,6 +463,39 @@ def _build_composition_view(project: Project) -> CompositionDiagramView:
         assembly_connectors=assembly_connectors,
         delegation_connectors=[],
     )
+
+
+def _build_composition_view(project: Project) -> CompositionDiagramView:
+    swc_by_name = {swc.name: swc for swc in project.swcs}
+    return _build_composition_diagram_view(
+        system_name=project.system.name,
+        composition_name=project.system.composition.name,
+        boundary_name=None,
+        boundary_ports=[],
+        components=project.system.composition.components,
+        connectors=project.system.composition.connectors,
+        swc_by_name=swc_by_name,
+        subcomposition_by_name={subcomposition.name: subcomposition for subcomposition in project.subcompositions},
+    )
+
+
+def _build_subcomposition_views(project: Project) -> List[CompositionDiagramView]:
+    swc_by_name = {swc.name: swc for swc in project.swcs}
+    views: List[CompositionDiagramView] = []
+    for subcomposition in project.subcompositions:
+        views.append(
+            _build_composition_diagram_view(
+                system_name=subcomposition.name,
+                composition_name=subcomposition.name,
+                boundary_name=subcomposition.name,
+                boundary_ports=subcomposition.ports,
+                components=subcomposition.components,
+                connectors=subcomposition.connectors,
+                swc_by_name=swc_by_name,
+                subcomposition_by_name={},
+            )
+        )
+    return views
 
 
 def _composition_grid_columns(instance_count: int) -> int:
@@ -455,6 +552,7 @@ def _build_interface_views(project: Project) -> tuple[InterfaceDiagramView, Inte
     compu_methods = {compu.name: compu for compu in project.compuMethods}
     mode_groups = {group.name: group for group in project.modeDeclarationGroups}
     swc_by_name = {swc.name: swc for swc in project.swcs}
+    subcomposition_by_name = {subcomposition.name: subcomposition for subcomposition in project.subcompositions}
 
     wiring_entities: List[InterfaceEntityView] = []
     wiring_relations: List[InterfaceRelationView] = []
@@ -467,6 +565,7 @@ def _build_interface_views(project: Project) -> tuple[InterfaceDiagramView, Inte
 
     for instance in project.system.composition.components:
         swc = swc_by_name.get(instance.typeRef)
+        subcomposition = subcomposition_by_name.get(instance.typeRef)
         wiring_entities.append(
             InterfaceEntityView(
                 id=_node_id("instance", instance.name),
@@ -479,9 +578,9 @@ def _build_interface_views(project: Project) -> tuple[InterfaceDiagramView, Inte
                 shape="class",
             )
         )
-        if swc is None:
+        if swc is None and subcomposition is None:
             continue
-        for port in swc.ports:
+        for port in (swc.ports if swc is not None else subcomposition.ports):
             kind_label, _, fill_color = _port_style(port)
             port_id = _node_id("port", instance.name, port.name)
             port_lines = [kind_label]
@@ -882,6 +981,7 @@ def build_diagram_views(project: Project) -> DiagramBuild:
     interfaces_wiring, interfaces_contracts = _build_interface_views(project)
     return DiagramBuild(
         composition=_build_composition_view(project),
+        subcompositions=_build_subcomposition_views(project),
         interfaces_wiring=interfaces_wiring,
         interfaces_contracts=interfaces_contracts,
         behaviors=[_build_behavior_view(swc) for swc in project.swcs],
@@ -900,6 +1000,10 @@ def _composition_filename(system_name: str, extension: str) -> str:
     return f"composition_{_safe_filename_stem(system_name, 'system')}{extension}"
 
 
+def _subcomposition_filename(subcomposition_name: str, extension: str) -> str:
+    return f"subcomposition_{_safe_filename_stem(subcomposition_name, 'subcomposition')}{extension}"
+
+
 def write_diagram_outputs(project: Project, template_dir: Path, out: Path, fmt: DiagramFormat) -> List[DiagramOutputArtifact]:
     backend = BACKENDS[fmt]
     env = _env(template_dir)
@@ -914,15 +1018,28 @@ def write_diagram_outputs(project: Project, template_dir: Path, out: Path, fmt: 
             out / _composition_filename(views.composition.system_name, backend.extension),
             _render_template(env, backend.composition_template, view=views.composition),
         ),
-        (
-            out / f"interfaces_wiring{backend.extension}",
-            _render_template(env, backend.interfaces_wiring_template, view=views.interfaces_wiring),
-        ),
-        (
-            out / f"interfaces_contracts{backend.extension}",
-            _render_template(env, backend.interfaces_contracts_template, view=views.interfaces_contracts),
-        ),
     ]
+
+    for subcomposition in views.subcompositions:
+        rendered.append(
+            (
+                out / _subcomposition_filename(subcomposition.system_name, backend.extension),
+                _render_template(env, backend.composition_template, view=subcomposition),
+            )
+        )
+
+    rendered.extend(
+        [
+            (
+                out / f"interfaces_wiring{backend.extension}",
+                _render_template(env, backend.interfaces_wiring_template, view=views.interfaces_wiring),
+            ),
+            (
+                out / f"interfaces_contracts{backend.extension}",
+                _render_template(env, backend.interfaces_contracts_template, view=views.interfaces_contracts),
+            ),
+        ]
+    )
 
     for behavior in views.behaviors:
         rendered.append(

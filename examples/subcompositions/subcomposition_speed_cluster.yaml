@@ -3,6 +3,15 @@
 subcomposition:
   name: "SubComposition_SpeedCluster"
   description: "Reusable subcomposition that contains the speed sensing and display flow."
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      description: "Required outer composition port reserved for future delegation from the system boundary."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+    - name: "Pp_PowerStateOut"
+      description: "Provided outer composition port reserved for future delegation to the system boundary."
+      direction: "provides"
+      interfaceRef: "If_PowerState"
   components:
     - name: "SpeedSensor_1"
       description: "Internal speed publisher instance."

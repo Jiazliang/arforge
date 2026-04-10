@@ -45,7 +45,7 @@ def readme_md(system_name: str, *, no_example: bool = False) -> str:
         "- `modes/power_state.yaml` defines a simple mode declaration group.\n"
         "- `interfaces/If_VehicleSpeed.yaml` and `interfaces/If_PowerState.yaml` define the example interfaces used by ports.\n"
         "- `swcs/` defines atomic SWC types, including a standalone `DiagManager` and the reusable building blocks used inside a subcomposition.\n"
-        "- `subcompositions/subcomposition_speed_cluster.yaml` defines a reusable subcomposition that instantiates atomic SWCs and wires their internal connectors.\n"
+        "- `subcompositions/subcomposition_speed_cluster.yaml` defines a reusable subcomposition that exposes composition boundary ports, instantiates atomic SWCs, and wires its internal connectors.\n"
         "- `system.yaml` instantiates that subcomposition type plus one standalone atomic SWC at the top level.\n"
     )
     if no_example:
@@ -314,6 +314,15 @@ def subcomposition_speed_cluster_yaml() -> str:
 body="""subcomposition:
   name: "SubComposition_SpeedCluster"
   description: "Reusable subcomposition that contains the speed sensing and display flow."
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      description: "Required outer composition port reserved for future delegation from the system boundary."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+    - name: "Pp_PowerStateOut"
+      description: "Provided outer composition port reserved for future delegation to the system boundary."
+      direction: "provides"
+      interfaceRef: "If_PowerState"
   components:
     - name: "SpeedSensor_1"
       description: "Internal speed publisher instance."
@@ -357,7 +366,7 @@ body=f"""system:
       - name: "DiagManager_0"
         description: "Standalone top-level atomic SWC instance."
         typeRef: "DiagManager"
-    # No top-level connectors are needed here because the subcomposition has only internal assembly connectors in this first iteration.
+    # No top-level connectors are needed here because composition boundary ports are declared but not delegated in this iteration.
     connectors: []
 """,
     )
