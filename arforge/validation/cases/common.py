@@ -32,11 +32,21 @@ class DuplicateNameCase(ValidationCase):
             findings.append(self.finding("Duplicate interface names found.", code="CORE-001-INTERFACE-DUPLICATE"))
         if len({s.name for s in project.swcs}) != len(project.swcs):
             findings.append(self.finding("Duplicate SWC names found.", code="CORE-001-SWC-DUPLICATE"))
+        if len({s.name for s in project.subcompositions}) != len(project.subcompositions):
+            findings.append(self.finding("Duplicate subcomposition names found.", code="CORE-001-SUBCOMPOSITION-DUPLICATE"))
         if len({u.name for u in project.units}) != len(project.units):
             findings.append(self.finding("Duplicate unit names found.", code="CORE-001-UNIT-DUPLICATE"))
         if len({c.name for c in project.compuMethods}) != len(project.compuMethods):
             findings.append(self.finding("Duplicate compu method names found.", code="CORE-001-COMPU-METHOD-DUPLICATE"))
         if len({c.name for c in project.system.composition.components}) != len(project.system.composition.components):
             findings.append(self.finding("System composition has duplicate component prototype names.", code="CORE-001-INSTANCE-DUPLICATE"))
+        for subcomposition in sorted(project.subcompositions, key=lambda item: item.name):
+            if len({component.name for component in subcomposition.components}) != len(subcomposition.components):
+                findings.append(
+                    self.finding(
+                        f"Subcomposition '{subcomposition.name}' has duplicate component prototype names.",
+                        code="CORE-001-SUBCOMPOSITION-INSTANCE-DUPLICATE",
+                    )
+                )
 
         return findings

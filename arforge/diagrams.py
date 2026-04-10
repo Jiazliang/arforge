@@ -243,6 +243,10 @@ def _swc_fill_color(category: str) -> str:
     }.get(category, "#f7f7f7")
 
 
+def _subcomposition_fill_color() -> str:
+    return "#f1e3d3"
+
+
 def _connector_style(source_port: Port | None) -> str:
     if source_port is None:
         return "[#666666]"
@@ -279,9 +283,25 @@ def _build_interface_layers(entities: Iterable[InterfaceEntityView]) -> List[Int
 
 def _build_composition_view(project: Project) -> CompositionDiagramView:
     swc_by_name = {swc.name: swc for swc in project.swcs}
+    subcomposition_names = {subcomposition.name for subcomposition in project.subcompositions}
     instances: List[CompositionInstanceView] = []
     for instance in project.system.composition.components:
-        swc = swc_by_name[instance.typeRef]
+        swc = swc_by_name.get(instance.typeRef)
+        if swc is None:
+            if instance.typeRef in subcomposition_names:
+                instances.append(
+                    CompositionInstanceView(
+                        id=_node_id(instance.name),
+                        name=instance.name,
+                        type_name=instance.typeRef,
+                        type_label="(Subcomposition)",
+                        fill_color=_subcomposition_fill_color(),
+                        incoming_ports=[],
+                        outgoing_ports=[],
+                    )
+                )
+                continue
+            continue
         ports = []
         for port in swc.ports:
             kind_label, style_class, fill_color = _port_style(port)
@@ -305,8 +325,8 @@ def _build_composition_view(project: Project) -> CompositionDiagramView:
                 fill_color=_swc_fill_color(swc.category),
                 incoming_ports=[port for port in ports if "requires" in port.kind_label],
                 outgoing_ports=[port for port in ports if "provides" in port.kind_label],
+                )
             )
-        )
 
     grid_columns = _composition_grid_columns(len(instances))
     instance_positions = {

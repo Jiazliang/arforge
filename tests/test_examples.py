@@ -38,6 +38,7 @@ PLANTUML_DIAGRAM_OUTPUTS = [
     "composition_DemoSystem.puml",
     "interfaces_wiring.puml",
     "interfaces_contracts.puml",
+    "behavior_DiagManager.puml",
     "behavior_SpeedDisplay.puml",
     "behavior_SpeedSensor.puml",
 ]
@@ -153,8 +154,11 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     assert next(compu for compu in project.compuMethods if compu.name == "CM_VehicleSpeed_Kph").description == (
         "Identity scaling for the demo vehicle speed value."
     )
+    assert next(subcomposition for subcomposition in project.subcompositions if subcomposition.name == "SubComposition_SpeedCluster").description == (
+        "Reusable subcomposition that contains the speed sensing and display flow."
+    )
     assert project.system.description == (
-        "Demo AUTOSAR system wiring explicit, implicit, and queued speed flows plus one mode-switch flow."
+        "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
     )
 
 
@@ -258,7 +262,7 @@ def test_generate_diagrams_writes_expected_files(tmp_path: Path, diagram_format:
 @pytest.mark.parametrize(
     ("diagram_format", "composition_name", "interface_name", "behavior_name"),
     [
-        ("plantuml", "SpeedSensor_1", "If_VehicleSpeed", "Runnable_PublishVehicleSpeed"),
+        ("plantuml", "SpeedCluster_0", "If_VehicleSpeed", "Runnable_PublishVehicleSpeed"),
     ],
 )
 def test_generate_diagrams_contain_expected_smoke_fragments(
@@ -281,20 +285,16 @@ def test_generate_diagrams_contain_expected_smoke_fragments(
     behavior_text = (out_dir / f"behavior_SpeedSensor{extension}").read_text(encoding="utf-8")
 
     assert composition_name in composition_text
-    assert "Rp_PowerState" in composition_text
-    assert 'component "SpeedSensor_1"' in composition_text
-    assert 'portout "Pp_VehicleSpeed"' in composition_text
-    assert 'portin "Rp_PowerState"' in composition_text
+    assert "DiagManager_0" in composition_text
+    assert 'component "SpeedCluster_0"' in composition_text
+    assert "Subcomposition" in composition_text
     assert "Provided S/R" in composition_text
-    assert "Required ModeSwitch" in composition_text
-    assert "[#2e8b57,bold]" in composition_text
-    assert "[#8e44ad,bold,dashed]" in composition_text
-    assert ": C/S" not in composition_text
+    assert "Subcomposition" in composition_text
     assert "Application SWC" in composition_text
     assert "Client/Server connector" in composition_text
     assert interface_name in interfaces_wiring_text
-    assert "SpeedDisplay_1" in interfaces_wiring_text
-    assert "Rp_VehicleSpeed" in interfaces_wiring_text
+    assert "SpeedCluster_0" in interfaces_wiring_text
+    assert "DiagManager_0" in interfaces_wiring_text
     assert interface_name in interfaces_contracts_text
     assert "Mdg_PowerState" in interfaces_contracts_text
     assert "type__App_VehicleSpeed --> type__Impl_VehicleSpeed_U16 : impl" in interfaces_contracts_text
@@ -401,6 +401,7 @@ def test_behavior_diagram_places_server_trigger_ports_in_incoming_lane() -> None
                 ],
             )
         ],
+        subcompositions=[],
         system=System(
             name="DemoSystem",
             composition=Composition(
@@ -762,6 +763,7 @@ def test_split_export_reports_aligned_example_outputs(tmp_path: Path) -> None:
 
     assert [path.name for path in written] == [
         SHARED_EXAMPLE_OUTPUT,
+        "DiagManager.arxml",
         "SpeedDisplay.arxml",
         "SpeedSensor.arxml",
         SYSTEM_EXAMPLE_OUTPUT,
@@ -776,6 +778,8 @@ def test_generate_code_writes_expected_files_for_example_project(tmp_path: Path)
     written = write_code_outputs(project, template_dir=template_dir, out=out_dir, lang="c")
 
     assert [path.name for path in written] == [
+        "DiagManager.h",
+        "DiagManager.c",
         "SpeedDisplay.h",
         "SpeedDisplay.c",
         "SpeedSensor.h",
@@ -844,18 +848,24 @@ def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: 
 
     system_xml = (out_dir / SYSTEM_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
 
+    assert "<SHORT-NAME>SubComposition_SpeedCluster</SHORT-NAME>" in system_xml
+    assert "<SHORT-NAME>SpeedCluster_0</SHORT-NAME>" in system_xml
+    assert "<SHORT-NAME>DiagManager_0</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>SpeedSensor_1</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>SpeedDisplay_1</SHORT-NAME>" in system_xml
-    assert system_xml.count("<SW-COMPONENT-PROTOTYPE>") == 2
+    assert system_xml.count("<COMPOSITION-SW-COMPONENT-TYPE>") == 2
+    assert system_xml.count("<SW-COMPONENT-PROTOTYPE>") == 4
     assert system_xml.count("<ASSEMBLY-SW-CONNECTOR>") == 4
+    assert "<TYPE-TREF DEST=\"COMPOSITION-SW-COMPONENT-TYPE\">/DEMO/Components/SubComposition_SpeedCluster</TYPE-TREF>" in system_xml
+    assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/DiagManager</TYPE-TREF>" in system_xml
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedSensor</TYPE-TREF>" in system_xml
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedDisplay</TYPE-TREF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedSensor_1/Pp_VehicleSpeed</TARGET-P-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedDisplay_1/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedDisplay_1/Rp_VehicleSpeedImplicit</TARGET-R-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedDisplay_1/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedSensor_1/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedDisplay_1/Rp_PowerState</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_VehicleSpeed</TARGET-P-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedImplicit</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_PowerState</TARGET-R-PORT-REF>" in system_xml
 
 
 def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) -> None:
@@ -1003,7 +1013,7 @@ def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
         for artifact in report.outputs
         if artifact.path.name.endswith(".arxml") and artifact.path.name not in {SHARED_EXAMPLE_OUTPUT, SYSTEM_EXAMPLE_OUTPUT}
     ]
-    assert swc_outputs == ["SpeedDisplay.arxml", "SpeedSensor.arxml"]
+    assert swc_outputs == ["DiagManager.arxml", "SpeedDisplay.arxml", "SpeedSensor.arxml"]
 
 
 @pytest.mark.parametrize(
@@ -1031,6 +1041,10 @@ def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
         ("project_mode_switch_event_on_provides_port.yaml", "CORE-028-MSE-DIRECTION"),
         ("project_mode_switch_event_on_non_mode_switch_port.yaml", "CORE-028-MSE-INTERFACE-TYPE"),
         ("project_mode_switch_event_unknown_mode.yaml", "CORE-028-MSE-UNKNOWN-MODE"),
+        ("project_unknown_subcomposition_type.yaml", "CORE-030-UNKNOWN-COMPONENT-TYPE"),
+        ("project_subcomposition_unknown_swc_type.yaml", "CORE-031-UNKNOWN-SWC-TYPE"),
+        ("project_subcomposition_duplicate_component_names.yaml", "CORE-001-SUBCOMPOSITION-INSTANCE-DUPLICATE"),
+        ("project_subcomposition_nested_not_allowed.yaml", "CORE-031-NESTED-SUBCOMPOSITION"),
     ],
 )
 def test_data_receive_event_invalid_fixtures_emit_expected_codes(fixture_name: str, expected_code: str) -> None:

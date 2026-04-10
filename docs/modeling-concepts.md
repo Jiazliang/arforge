@@ -352,16 +352,17 @@ runnables:
 
 ---
 
-## System composition
+## System composition and subcompositions
 
-The system file defines the composition — which SWC types are instantiated and how their ports are connected.
+The system file defines the top-level composition. Subcomposition files define reusable inner compositions that can be instantiated from the system.
 
 ### The type vs. instance distinction
 
 This distinction is fundamental in AUTOSAR and ARForge models it correctly:
 
 - An SWC type is defined in `swcs/SpeedSensor.yaml`. It is the reusable blueprint.
-- A component prototype is an instance of that type inside the composition.
+- A subcomposition type is defined in `subcompositions/subcomposition_speed_cluster.yaml`. It is a reusable composition made of atomic SWC instances.
+- A component prototype is an instance of either an atomic SWC type or, at the top level, a subcomposition type.
 
 Connectors are wired between instantiated ports, not between SWC type definitions. The same SWC type can be instantiated multiple times.
 
@@ -371,18 +372,38 @@ system:
   composition:
     name: "Composition_DemoSystem"
     components:
-      - name: "SpeedSensor_1"
-        typeRef: "SpeedSensor"
-      - name: "SpeedDisplay_1"
-        typeRef: "SpeedDisplay"
-    connectors:
-      - from: "SpeedSensor_1.Pp_VehicleSpeed"
-        to: "SpeedDisplay_1.Rp_VehicleSpeed"
-      - from: "SpeedSensor_1.Pp_PowerState"
-        to: "SpeedDisplay_1.Rp_PowerState"
+      - name: "SpeedCluster_0"
+        typeRef: "SubComposition_SpeedCluster"
+      - name: "DiagManager_0"
+        typeRef: "DiagManager"
+    connectors: []
 ```
 
 Connector endpoints use `InstanceName.PortName` syntax. Both the instance and the port must exist. Interface compatibility between connected ports is validated by `CORE-040`.
+
+### Subcomposition definitions
+
+Subcompositions are defined in dedicated files and currently contain only atomic SWC instances plus their internal assembly connectors.
+
+```yaml
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  components:
+    - name: "SpeedSensor_1"
+      typeRef: "SpeedSensor"
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  connectors:
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      to: "SpeedDisplay_1.Rp_VehicleSpeed"
+```
+
+In this first iteration:
+
+- top-level `system.yaml` may instantiate atomic SWCs and subcomposition types
+- subcompositions may instantiate atomic SWCs only
+- nested subcompositions are rejected by semantic validation (`CORE-031`)
+- composition ports and delegation connectors are not modeled yet
 
 ### What connectors do not carry
 

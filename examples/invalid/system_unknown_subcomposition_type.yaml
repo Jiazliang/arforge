@@ -1,0 +1,12 @@
+# ARForge: Invalid example fixture
+# Top-level system references an unknown subcomposition type.
+system:
+  name: "DemoSystem"
+  composition:
+    name: "Composition_DemoSystem"
+    components:
+      - name: "SpeedCluster_0"
+        typeRef: "SubComposition_DoesNotExist"
+      - name: "DiagManager_0"
+        typeRef: "DiagManager"
+    connectors: []

@@ -8,7 +8,19 @@ from typing import Dict, List, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .model import CompuMethod, Connection, Interface, ModeDeclarationGroup, Operation, Project, Runnable, Swc
+from .model import (
+    CompuMethod,
+    ComponentPrototype,
+    Composition,
+    Connection,
+    Interface,
+    ModeDeclarationGroup,
+    Operation,
+    Project,
+    Runnable,
+    SubcompositionType,
+    Swc,
+)
 
 SHARED_TEMPLATE = "shared_42.arxml.j2"
 SWC_TEMPLATE = "swc_42.arxml.j2"
@@ -32,6 +44,7 @@ class ExportInputSummary:
     mode_declaration_group_patterns: List[InputPatternExpansion]
     interface_patterns: List[InputPatternExpansion]
     swc_patterns: List[InputPatternExpansion]
+    subcomposition_patterns: List[InputPatternExpansion]
     system_file: Optional[Path]
 
 
@@ -44,6 +57,7 @@ class ExportModelSummary:
     cs_interfaces_count: int
     ms_interfaces_count: int
     swcs_count: int
+    subcompositions_count: int
     instances_count: int
     connectors_count: int
 
@@ -184,8 +198,26 @@ def _sort_swc(swc: Swc) -> Swc:
     )
 
 
-def _swc_type_dests(project: Project) -> Dict[str, str]:
-    return {swc.name: swc.component_type_dest for swc in project.swcs}
+def _sort_subcomposition(subcomposition: SubcompositionType) -> SubcompositionType:
+    return replace(
+        subcomposition,
+        components=sorted(subcomposition.components, key=lambda component: component.name),
+        connectors=sorted(subcomposition.connectors, key=_connection_sort_key),
+    )
+
+
+def _component_type_dests(project: Project) -> Dict[str, str]:
+    dests = {swc.name: swc.component_type_dest for swc in project.swcs}
+    dests.update({subcomposition.name: "COMPOSITION-SW-COMPONENT-TYPE" for subcomposition in project.subcompositions})
+    return dests
+
+
+def _component_type_refs(project: Project) -> Dict[str, str]:
+    refs = {swc.name: f"/{project.rootPackage}/Components/{swc.name}" for swc in project.swcs}
+    refs.update(
+        {subcomposition.name: f"/{project.rootPackage}/Components/{subcomposition.name}" for subcomposition in project.subcompositions}
+    )
+    return refs
 
 
 def _safe_filename_stem(value: Optional[str], fallback: str) -> str:
@@ -233,6 +265,10 @@ def _sort_project_for_export(project: Project) -> Project:
         ),
         interfaces=sorted((_sort_interface(interface) for interface in project.interfaces), key=lambda interface: interface.name),
         swcs=sorted((_sort_swc(swc) for swc in project.swcs), key=lambda swc: swc.name),
+        subcompositions=sorted(
+            (_sort_subcomposition(subcomposition) for subcomposition in project.subcompositions),
+            key=lambda subcomposition: subcomposition.name,
+        ),
         system=replace(
             project.system,
             composition=replace(
@@ -260,14 +296,19 @@ def _model_summary(project: Project) -> ExportModelSummary:
         cs_interfaces_count=len(cs),
         ms_interfaces_count=len(ms),
         swcs_count=len(project.swcs),
+        subcompositions_count=len(project.subcompositions),
         instances_count=len(project.system.composition.components),
         connectors_count=len(project.system.composition.connectors),
     )
 
 
-def _build_connections(project: Project) -> List[Dict[str, object]]:
+def _build_connections_for_composition(
+    project: Project,
+    components: List[ComponentPrototype],
+    connectors: List[Connection],
+) -> List[Dict[str, object]]:
     swc_by_name = {swc.name: swc for swc in project.swcs}
-    instance_by_name = {instance.name: instance for instance in project.system.composition.components}
+    instance_by_name = {instance.name: instance for instance in components}
 
     def _is_sender_receiver(conn) -> bool:
         from_instance = instance_by_name.get(conn.from_instance)
@@ -283,7 +324,7 @@ def _build_connections(project: Project) -> List[Dict[str, object]]:
 
     unique_connectors = []
     seen_port_pairs: set[tuple[str, str, str, str]] = set()
-    for connector in project.system.composition.connectors:
+    for connector in connectors:
         if _is_sender_receiver(connector):
             if connector.port_pair_key in seen_port_pairs:
                 continue
@@ -306,6 +347,14 @@ def _build_connections(project: Project) -> List[Dict[str, object]]:
         }
         for idx, c in enumerate(unique_connectors, start=1)
     ]
+
+
+def _build_connections(project: Project) -> List[Dict[str, object]]:
+    return _build_connections_for_composition(
+        project,
+        project.system.composition.components,
+        project.system.composition.connectors,
+    )
 
 
 def render_shared(project: Project, template_dir: Path, template_name: str = SHARED_TEMPLATE) -> str:
@@ -357,13 +406,26 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
     connections = _build_connections(project)
+    component_type_dests = _component_type_dests(project)
+    component_type_refs = _component_type_refs(project)
+    subcompositions = [
+        {
+            "name": subcomposition.name,
+            "description": subcomposition.description,
+            "components": subcomposition.components,
+            "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
+        }
+        for subcomposition in project.subcompositions
+    ]
     return tpl.render(
         root_pkg=project.rootPackage,
         system_name=project.system.name,
         composition_name=project.system.composition.name,
         components=project.system.composition.components,
         connections=connections,
-        swc_type_dests=_swc_type_dests(project),
+        component_type_dests=component_type_dests,
+        component_type_refs=component_type_refs,
+        subcompositions=subcompositions,
     )
 
 
@@ -404,7 +466,17 @@ def write_outputs_with_report(
         swcs = project.swcs
         sr, cs, ms = _split_interfaces(project)
         connections = _build_connections(project)
-        swc_type_dests = _swc_type_dests(project)
+        component_type_dests = _component_type_dests(project)
+        component_type_refs = _component_type_refs(project)
+        subcompositions = [
+            {
+                "name": subcomposition.name,
+                "description": subcomposition.description,
+                "components": subcomposition.components,
+                "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
+            }
+            for subcomposition in project.subcompositions
+        ]
         rendered = {
             out: tpl.render(
                 root_pkg=project.rootPackage,
@@ -420,11 +492,13 @@ def write_outputs_with_report(
                 ms_interfaces=ms,
                 cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
                 swcs=swcs,
+                subcompositions=subcompositions,
                 system_name=project.system.name,
                 composition_name=project.system.composition.name,
                 instances=project.system.composition.components,
                 connections=connections,
-                swc_type_dests=swc_type_dests,
+                component_type_dests=component_type_dests,
+                component_type_refs=component_type_refs,
             )
         }
         layout = "monolithic"

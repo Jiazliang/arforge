@@ -2,30 +2,18 @@
 # Defines component prototypes (instances) and connectors between their ports.
 system:
   name: "DemoSystem"
-  description: "Demo AUTOSAR system wiring explicit, implicit, and queued speed flows plus one mode-switch flow."
+  description: "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
   composition:
     name: "Composition_DemoSystem"
-    description: "Top-level composition for the scaffolded sender-receiver and mode-switch example."
+    description: "Top-level composition for the scaffolded hierarchical example."
     # These are component prototypes (instances in the system).
-    # typeRef points to the SWC type defined in swcs/*.yaml.
+    # typeRef may point to either an atomic SWC type or a reusable subcomposition type.
     components:
-      - name: "SpeedSensor_1"
-        description: "Instance of the SpeedSensor SWC type."
-        typeRef: "SpeedSensor"
-      - name: "SpeedDisplay_1"
-        description: "Instance of the SpeedDisplay SWC type."
-        typeRef: "SpeedDisplay"
-    # Connect the provider ports on the producer instance to the receiver ports on the consumer instance.
-    connectors:
-      - from: "SpeedSensor_1.Pp_VehicleSpeed"
-        description: "Connects the published speed sample to the explicit receiver port."
-        to: "SpeedDisplay_1.Rp_VehicleSpeed"
-      - from: "SpeedSensor_1.Pp_VehicleSpeed"
-        description: "Connects the published speed sample to the implicit receiver port."
-        to: "SpeedDisplay_1.Rp_VehicleSpeedImplicit"
-      - from: "SpeedSensor_1.Pp_VehicleSpeed"
-        description: "Connects the published speed sample to the queued receiver port."
-        to: "SpeedDisplay_1.Rp_VehicleSpeedQueued"
-      - from: "SpeedSensor_1.Pp_PowerState"
-        description: "Connects the ECU power-state mode to the display instance."
-        to: "SpeedDisplay_1.Rp_PowerState"
+      - name: "SpeedCluster_0"
+        description: "Instance of the reusable speed-cluster subcomposition."
+        typeRef: "SubComposition_SpeedCluster"
+      - name: "DiagManager_0"
+        description: "Standalone top-level atomic SWC instance."
+        typeRef: "DiagManager"
+    # No top-level connectors are needed here because the subcomposition has only internal assembly connectors in this first iteration.
+    connectors: []

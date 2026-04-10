@@ -6,7 +6,7 @@ ARForge validates every project in two stages before allowing export. Both stage
 
 Schema validation checks the structure of each YAML file against a JSON Schema. It catches missing required fields, wrong value types, and unsupported keys. Schema errors are reported immediately during loading, before semantic validation runs.
 
-Schemas exist for every input category: aggregator manifests, base types, implementation types, application types, units, compu methods, mode declaration groups, interfaces, SWCs, and system files.
+Schemas exist for every input category: aggregator manifests, base types, implementation types, application types, units, compu methods, mode declaration groups, interfaces, SWCs, subcompositions, and system files.
 
 ## Stage 2 - Semantic validation
 
@@ -37,7 +37,7 @@ arforge validate project.yaml -vv    # adds case descriptions and full detail
 ## Validation rules
 
 ### CORE-001 - GlobalUniqueness
-Checks that all globally named elements are unique across the project. Covers data type names, interface names, SWC names, unit names, compu method names, and system composition instance names.
+Checks that all globally named elements are unique across the project. Covers data type names, interface names, SWC names, subcomposition names, unit names, compu method names, system composition instance names, and duplicate component prototype names inside a subcomposition.
 
 ### CORE-002 - BaseTypeMetadata
 Checks that base type definitions are internally consistent: no duplicate names, required fields present, valid bit length and signedness values.
@@ -99,10 +99,23 @@ Checks `dataReceiveEvents` bindings: port must exist, must be a `requires` SR po
 Checks `modeSwitchEvents` bindings: port must exist, must be a `requires` mode-switch port, the referenced mode must be declared in the resolved `ModeDeclarationGroup`.
 
 ### CORE-030 - SystemInstanceTypes
-Checks that every component prototype in the system composition references a known SWC type by name.
+Checks that every component prototype in the top-level system composition references a known atomic SWC type or subcomposition type by name.
+
+### CORE-031 - SubcompositionInstanceTypes
+Checks that every component prototype inside a subcomposition resolves to a known atomic SWC type. Nested subcomposition instantiation is intentionally rejected in this first iteration.
+
+### CORE-032 - SubcompositionConnectionSemantics
+Checks every connector inside each subcomposition.
+
+- both endpoint instances must exist within the subcomposition
+- both endpoint ports must exist on the resolved atomic SWC types
+- `from` port must be a `provides` port; `to` port must be a `requires` port
+- both ports must reference the same interface
+- interface kind must be consistent (SR-to-SR, CS-to-CS, MS-to-MS)
+- duplicate port pairs are rejected
 
 ### CORE-040 - ConnectionSemantics
-Checks every connector in the system composition.
+Checks every connector in the top-level system composition.
 
 - both endpoint instances must exist
 - both endpoint ports must exist on those instances

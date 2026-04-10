@@ -1,0 +1,10 @@
+# ARForge: Software Component Type
+# Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.
+swc:
+  name: "DiagManager"
+  description: "Standalone atomic SWC type used to show that top-level systems may mix atomic instances and subcompositions."
+  runnables:
+    - name: "Runnable_InitDiagManager"
+      description: "Initializes the diagnostic manager placeholder."
+      initEvent: true
+  ports: []

@@ -280,6 +280,14 @@ class Composition:
 
 
 @dataclass(frozen=True)
+class SubcompositionType:
+    name: str
+    components: List[ComponentPrototype]
+    connectors: List[Connection]
+    description: str | None = None
+
+
+@dataclass(frozen=True)
 class System:
     name: str
     composition: Composition
@@ -305,6 +313,7 @@ class Project:
     modeDeclarationGroups: List[ModeDeclarationGroup]
     interfaces: List[Interface]
     swcs: List[Swc]
+    subcompositions: List[SubcompositionType]
     system: System
 
     @property
@@ -340,6 +349,36 @@ def _parse_application_errors(errors: List[Any]) -> List[ApplicationError]:
             -1 if e.code is None else e.code,
         ),
     )
+
+
+def _parse_components(components: List[Dict[str, Any]]) -> List[ComponentPrototype]:
+    return [
+        ComponentPrototype(
+            name=component["name"],
+            typeRef=component["typeRef"],
+            description=component.get("description"),
+        )
+        for component in components
+    ]
+
+
+def _parse_connectors(connectors: List[Dict[str, Any]]) -> List[Connection]:
+    parsed: List[Connection] = []
+    for connector in connectors:
+        from_instance, from_port = _split_endpoint(connector["from"])
+        to_instance, to_port = _split_endpoint(connector["to"])
+        parsed.append(
+            Connection(
+                from_instance=from_instance,
+                from_port=from_port,
+                to_instance=to_instance,
+                to_port=to_port,
+                description=connector.get("description"),
+                dataElement=connector.get("dataElement"),
+                operation=connector.get("operation"),
+            )
+        )
+    return parsed
 
 def from_dict(d: Dict[str, Any]) -> Project:
     autosar = d["autosar"]
@@ -521,36 +560,24 @@ def from_dict(d: Dict[str, Any]) -> Project:
             )
         )
 
+    subcompositions: List[SubcompositionType] = []
+    for subcomposition_data in d.get("subcompositions", []):
+        subcompositions.append(
+            SubcompositionType(
+                name=subcomposition_data["name"],
+                description=subcomposition_data.get("description"),
+                components=_parse_components(subcomposition_data.get("components", [])),
+                connectors=_parse_connectors(subcomposition_data.get("connectors", [])),
+            )
+        )
+
     system_data = d.get("system")
     if system_data:
         composition_data = system_data["composition"]
-        instances = [
-            ComponentPrototype(
-                name=i["name"],
-                typeRef=i["typeRef"],
-                description=i.get("description"),
-            )
-            for i in composition_data.get("components", [])
-        ]
-        conns: List[Connection] = []
-        for c in composition_data.get("connectors", []):
-            fs, fp = _split_endpoint(c["from"])
-            ts, tp = _split_endpoint(c["to"])
-            conns.append(
-                Connection(
-                    from_instance=fs,
-                    from_port=fp,
-                    to_instance=ts,
-                    to_port=tp,
-                    description=c.get("description"),
-                    dataElement=c.get("dataElement"),
-                    operation=c.get("operation"),
-                )
-            )
         composition = Composition(
             name=composition_data["name"],
-            components=instances,
-            connectors=conns,
+            components=_parse_components(composition_data.get("components", [])),
+            connectors=_parse_connectors(composition_data.get("connectors", [])),
             description=composition_data.get("description"),
         )
         system = System(
@@ -572,5 +599,6 @@ def from_dict(d: Dict[str, Any]) -> Project:
         modeDeclarationGroups=mode_declaration_groups,
         interfaces=ifaces,
         swcs=swcs,
+        subcompositions=subcompositions,
         system=system,
     )

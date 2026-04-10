@@ -8,6 +8,40 @@
       <AR-PACKAGES>
 
         <AR-PACKAGE>
+          <SHORT-NAME>Components</SHORT-NAME>
+          <ELEMENTS>
+            {% for subcomposition in subcompositions %}
+            <COMPOSITION-SW-COMPONENT-TYPE>
+              <SHORT-NAME>{{ subcomposition.name }}</SHORT-NAME>
+              <COMPONENTS>
+                {% for c in subcomposition.components %}
+                <SW-COMPONENT-PROTOTYPE>
+                  <SHORT-NAME>{{ c.name }}</SHORT-NAME>
+                  <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
+                </SW-COMPONENT-PROTOTYPE>
+                {% endfor %}
+              </COMPONENTS>
+              <CONNECTORS>
+                {% for c in subcomposition.connections %}
+                <ASSEMBLY-SW-CONNECTOR>
+                  <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
+                  <PROVIDER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.from_instance }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.from_instance }}/{{ c.from_port }}</TARGET-P-PORT-REF>
+                  </PROVIDER-IREF>
+                  <REQUESTER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.to_instance }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.to_instance }}/{{ c.to_port }}</TARGET-R-PORT-REF>
+                  </REQUESTER-IREF>
+                </ASSEMBLY-SW-CONNECTOR>
+                {% endfor %}
+              </CONNECTORS>
+            </COMPOSITION-SW-COMPONENT-TYPE>
+            {% endfor %}
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+        <AR-PACKAGE>
           <SHORT-NAME>System</SHORT-NAME>
           <ELEMENTS>
             <COMPOSITION-SW-COMPONENT-TYPE>
@@ -16,7 +50,7 @@
                 {% for c in components %}
                 <SW-COMPONENT-PROTOTYPE>
                   <SHORT-NAME>{{ c.name }}</SHORT-NAME>
-                  <TYPE-TREF DEST="{{ swc_type_dests[c.typeRef] }}">/{{ root_pkg }}/Components/{{ c.typeRef }}</TYPE-TREF>
+                  <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
                 </SW-COMPONENT-PROTOTYPE>
                 {% endfor %}
               </COMPONENTS>

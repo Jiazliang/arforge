@@ -493,6 +493,34 @@
               </INTERNAL-BEHAVIORS>
             </{{ swc.component_type_tag }}>
             {% endfor %}
+            {% for subcomposition in subcompositions %}
+            <COMPOSITION-SW-COMPONENT-TYPE>
+              <SHORT-NAME>{{ subcomposition.name }}</SHORT-NAME>
+              <COMPONENTS>
+                {% for i in subcomposition.components %}
+                <SW-COMPONENT-PROTOTYPE>
+                  <SHORT-NAME>{{ i.name }}</SHORT-NAME>
+                  <TYPE-TREF DEST="{{ component_type_dests[i.typeRef] }}">{{ component_type_refs[i.typeRef] }}</TYPE-TREF>
+                </SW-COMPONENT-PROTOTYPE>
+                {% endfor %}
+              </COMPONENTS>
+              <CONNECTORS>
+                {% for c in subcomposition.connections %}
+                <ASSEMBLY-SW-CONNECTOR>
+                  <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
+                  <PROVIDER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.from_instance }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.from_instance }}/{{ c.from_port }}</TARGET-P-PORT-REF>
+                  </PROVIDER-IREF>
+                  <REQUESTER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.to_instance }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ subcomposition.name }}/{{ c.to_instance }}/{{ c.to_port }}</TARGET-R-PORT-REF>
+                  </REQUESTER-IREF>
+                </ASSEMBLY-SW-CONNECTOR>
+                {% endfor %}
+              </CONNECTORS>
+            </COMPOSITION-SW-COMPONENT-TYPE>
+            {% endfor %}
           </ELEMENTS>
         </AR-PACKAGE>
 
@@ -505,7 +533,7 @@
                 {% for i in instances %}
                 <SW-COMPONENT-PROTOTYPE>
                   <SHORT-NAME>{{ i.name }}</SHORT-NAME>
-                  <TYPE-TREF DEST="{{ swc_type_dests[i.typeRef] }}">/{{ root_pkg }}/Components/{{ i.typeRef }}</TYPE-TREF>
+                  <TYPE-TREF DEST="{{ component_type_dests[i.typeRef] }}">{{ component_type_refs[i.typeRef] }}</TYPE-TREF>
                 </SW-COMPONENT-PROTOTYPE>
                 {% endfor %}
               </COMPONENTS>

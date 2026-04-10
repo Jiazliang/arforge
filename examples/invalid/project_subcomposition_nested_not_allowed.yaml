@@ -1,6 +1,6 @@
 # ARForge: Invalid example fixture
-# Domain: project-level validation.
-# Tests warning for connected mode-switch requires port with no runnable modeSwitchEvents.
+# Domain: subcomposition support.
+# Tests validation failure for nested subcomposition instantiation.
 autosar:
   version: "4.2"
   rootPackage: "DEMO"
@@ -20,5 +20,9 @@ inputs:
     - "../interfaces/If_PowerState.yaml"
   swcs:
     - "../swcs/SpeedSensor.yaml"
-    - "swcs/SpeedDisplay_NoModeUsage.yaml"
-  system: "support/system_mode_switch_connected.yaml"
+    - "../swcs/SpeedDisplay.yaml"
+    - "../swcs/DiagManager.yaml"
+  subcompositions:
+    - "subcompositions/subcomposition_nested_base.yaml"
+    - "subcompositions/subcomposition_nested_not_allowed.yaml"
+  system: "support/system_with_subcomposition.yaml"

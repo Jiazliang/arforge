@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ARForge Subcomposition",
+  "description": "Schema for reusable subcomposition types that instantiate atomic SWCs and wire internal assembly connectors.",
+  "type": "object",
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "descriptionProperty": {
+      "type": "string",
+      "description": "Optional human-readable documentation for this modeled object."
+    },
+    "endpoint": {
+      "type": "string",
+      "description": "Component instance and port reference in the form InstanceName.PortName.",
+      "pattern": "^[A-Za-z0-9_]+\\.[A-Za-z0-9_]+$"
+    },
+    "componentPrototype": {
+      "type": "object",
+      "required": [
+        "name",
+        "typeRef"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "description": {
+          "$ref": "#/$defs/descriptionProperty"
+        },
+        "typeRef": {
+          "$ref": "#/$defs/name",
+          "description": "Atomic SWC type instantiated inside this subcomposition."
+        }
+      },
+      "additionalProperties": false
+    },
+    "connector": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "description": {
+          "$ref": "#/$defs/descriptionProperty"
+        },
+        "to": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "dataElement": {
+          "$ref": "#/$defs/name"
+        },
+        "operation": {
+          "$ref": "#/$defs/name"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "subcomposition"
+  ],
+  "properties": {
+    "subcomposition": {
+      "type": "object",
+      "required": [
+        "name",
+        "components"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "description": {
+          "$ref": "#/$defs/descriptionProperty"
+        },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/componentPrototype"
+          }
+        },
+        "connectors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/connector"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

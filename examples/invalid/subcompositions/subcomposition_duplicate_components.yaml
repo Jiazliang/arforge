@@ -1,0 +1,10 @@
+# ARForge: Invalid example fixture
+# Subcomposition uses duplicate internal component prototype names.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  components:
+    - name: "SpeedNode_1"
+      typeRef: "SpeedSensor"
+    - name: "SpeedNode_1"
+      typeRef: "SpeedDisplay"
+  connectors: []

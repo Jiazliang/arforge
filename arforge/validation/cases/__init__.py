@@ -37,7 +37,12 @@ from .swc import (
     SwcPortInterfaceCase,
     SwcStructureCase,
 )
-from .system import ConnectionSemanticCase, SystemInstanceTypeCase
+from .system import (
+    ConnectionSemanticCase,
+    SubcompositionConnectionSemanticCase,
+    SubcompositionTypeCase,
+    SystemInstanceTypeCase,
+)
 from .timing import SrConsumerFasterThanProducerCase, SrProducerFasterThanConsumerCase
 from .types import ApplicationConstraintCase, BaseTypeMetadataCase
 
@@ -68,6 +73,8 @@ __all__ = [
     "SrProducerFasterThanConsumerCase",
     "SwcPortInterfaceCase",
     "SwcStructureCase",
+    "SubcompositionConnectionSemanticCase",
+    "SubcompositionTypeCase",
     "SystemInstanceTypeCase",
     "UnusedModeDeclarationGroupCase",
     "core_validation_cases",
@@ -93,6 +100,8 @@ def core_validation_cases() -> List[ValidationCase]:
         DataReceiveEventCase(),
         ModeSwitchEventCase(),
         SystemInstanceTypeCase(),
+        SubcompositionTypeCase(),
+        SubcompositionConnectionSemanticCase(),
         ConnectionSemanticCase(),
         SrPortConnectivityCase(),
         SrPortUsageCase(),

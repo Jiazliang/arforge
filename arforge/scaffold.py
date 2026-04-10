@@ -31,6 +31,8 @@ inputs:
     - "interfaces/*.yaml"
   swcs:
     - "swcs/*.yaml"
+  subcompositions:
+    - "subcompositions/*.yaml"
   system: "system.yaml"
 """,
     )
@@ -42,8 +44,9 @@ def readme_md(system_name: str, *, no_example: bool = False) -> str:
         "- `types/` defines reusable data types.\n"
         "- `modes/power_state.yaml` defines a simple mode declaration group.\n"
         "- `interfaces/If_VehicleSpeed.yaml` and `interfaces/If_PowerState.yaml` define the example interfaces used by ports.\n"
-        "- `swcs/SpeedSensor.yaml` and `swcs/SpeedDisplay.yaml` define SWC types with both data and mode ports, including a runnable mode-switch trigger.\n"
-        "- `system.yaml` instantiates those SWC types as component prototypes and connects both flows.\n"
+        "- `swcs/` defines atomic SWC types, including a standalone `DiagManager` and the reusable building blocks used inside a subcomposition.\n"
+        "- `subcompositions/subcomposition_speed_cluster.yaml` defines a reusable subcomposition that instantiates atomic SWCs and wires their internal connectors.\n"
+        "- `system.yaml` instantiates that subcomposition type plus one standalone atomic SWC at the top level.\n"
     )
     if no_example:
         example_note = (
@@ -52,7 +55,8 @@ def readme_md(system_name: str, *, no_example: bool = False) -> str:
             "- Update the mode declaration groups under `modes/`.\n"
             "- Add interface definitions under `interfaces/`.\n"
             "- Add SWC type definitions under `swcs/`.\n"
-            "- Define component instances and connectors in `system.yaml`.\n"
+            "- Add reusable subcomposition types under `subcompositions/` when needed.\n"
+            "- Define top-level component instances and connectors in `system.yaml`.\n"
         )
     return f"""# {system_name}
 
@@ -234,13 +238,25 @@ def swc_speed_display_yaml() -> str:
         "Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.",
 body="""swc:
   name: "SpeedDisplay"
-  description: "SWC type that reads vehicle speed and could display it to a user."
+  description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."
   runnables:
     - name: "Runnable_ReadVehicleSpeed"
-      description: "Reads the latest vehicle speed sample from the required port."
+      description: "Reads the latest vehicle speed sample from the explicit required port."
       timingEventMs: 10
       reads:
         - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+    - name: "Runnable_ReadVehicleSpeedImplicit"
+      description: "Reads the latest vehicle speed sample from the implicit required port."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeedImplicit"
+          dataElement: "VehicleSpeed"
+    - name: "Runnable_ReadVehicleSpeedQueued"
+      description: "Reads the latest vehicle speed sample from the queued required port."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeedQueued"
           dataElement: "VehicleSpeed"
     - name: "Runnable_OnPowerOn"
       description: "React to the ECU entering the ON power mode."
@@ -252,10 +268,72 @@ body="""swc:
       description: "Required sender-receiver port for receiving speed."
       direction: "requires"
       interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "explicit"
+    - name: "Rp_VehicleSpeedImplicit"
+      description: "Required sender-receiver port for receiving speed with implicit semantics."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "implicit"
+    - name: "Rp_VehicleSpeedQueued"
+      description: "Required sender-receiver port for receiving speed with queued semantics."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "queued"
+        queueLength: 4
     - name: "Rp_PowerState"
       description: "Required mode switch port for ECU power state."
       direction: "requires"
       interfaceRef: "If_PowerState"
+""",
+    )
+
+
+def swc_diag_manager_yaml() -> str:
+    return _with_header(
+        "ARForge: Software Component Type",
+        "Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.",
+body="""swc:
+  name: "DiagManager"
+  description: "Standalone atomic SWC type used to show that top-level systems may mix atomic instances and subcompositions."
+  runnables:
+    - name: "Runnable_InitDiagManager"
+      description: "Initializes the diagnostic manager placeholder."
+      initEvent: true
+  ports: []
+""",
+    )
+
+
+def subcomposition_speed_cluster_yaml() -> str:
+    return _with_header(
+        "ARForge: Subcomposition type",
+        "Defines reusable inner component prototypes and their internal assembly connectors.",
+body="""subcomposition:
+  name: "SubComposition_SpeedCluster"
+  description: "Reusable subcomposition that contains the speed sensing and display flow."
+  components:
+    - name: "SpeedSensor_1"
+      description: "Internal speed publisher instance."
+      typeRef: "SpeedSensor"
+    - name: "SpeedDisplay_1"
+      description: "Internal speed consumer instance."
+      typeRef: "SpeedDisplay"
+  connectors:
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      description: "Connects the published speed sample to the explicit receiver port."
+      to: "SpeedDisplay_1.Rp_VehicleSpeed"
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      description: "Connects the published speed sample to the implicit receiver port."
+      to: "SpeedDisplay_1.Rp_VehicleSpeedImplicit"
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      description: "Connects the published speed sample to the queued receiver port."
+      to: "SpeedDisplay_1.Rp_VehicleSpeedQueued"
+    - from: "SpeedSensor_1.Pp_PowerState"
+      description: "Connects the ECU power-state mode to the display instance."
+      to: "SpeedDisplay_1.Rp_PowerState"
 """,
     )
 
@@ -266,27 +344,21 @@ def system_yaml(system_name: str) -> str:
         "Defines component prototypes (instances) and connectors between their ports.",
 body=f"""system:
   name: "{system_name}"
-  description: "Demo AUTOSAR system wiring one speed flow and one mode-switch flow."
+  description: "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
   composition:
     name: "Composition_{system_name}"
-    description: "Top-level composition for the scaffolded sender-receiver and mode-switch example."
+    description: "Top-level composition for the scaffolded hierarchical example."
     # These are component prototypes (instances in the system).
-    # typeRef points to the SWC type defined in swcs/*.yaml.
+    # typeRef may point to either an atomic SWC type or a reusable subcomposition type.
     components:
-      - name: "SpeedSensor_1"
-        description: "Instance of the SpeedSensor SWC type."
-        typeRef: "SpeedSensor"
-      - name: "SpeedDisplay_1"
-        description: "Instance of the SpeedDisplay SWC type."
-        typeRef: "SpeedDisplay"
-    # Connect the provider ports on the producer instance to the receiver ports on the consumer instance.
-    connectors:
-      - from: "SpeedSensor_1.Pp_VehicleSpeed"
-        description: "Connects the published speed sample to the display instance."
-        to: "SpeedDisplay_1.Rp_VehicleSpeed"
-      - from: "SpeedSensor_1.Pp_PowerState"
-        description: "Connects the ECU power-state mode to the display instance."
-        to: "SpeedDisplay_1.Rp_PowerState"
+      - name: "SpeedCluster_0"
+        description: "Instance of the reusable speed-cluster subcomposition."
+        typeRef: "SubComposition_SpeedCluster"
+      - name: "DiagManager_0"
+        description: "Standalone top-level atomic SWC instance."
+        typeRef: "DiagManager"
+    # No top-level connectors are needed here because the subcomposition has only internal assembly connectors in this first iteration.
+    connectors: []
 """,
     )
 
@@ -303,6 +375,8 @@ def structure_only_system_yaml(system_name: str) -> str:
 #     components:
 #       - name: "MyComponent_1"
 #         typeRef: "MyComponent"
+#       - name: "MySubcomposition_1"
+#         typeRef: "MySubcomposition"
 #     connectors:
 #       - from: "MyProvider_1.Pp_Port"
 #         to: "MyConsumer_1.Rp_Port"
@@ -330,6 +404,8 @@ def scaffold_files(system_name: str, *, no_example: bool = False) -> Dict[Path, 
     files[Path("interfaces/If_PowerState.yaml")] = interface_power_state_yaml()
     files[Path("swcs/SpeedSensor.yaml")] = swc_speed_sensor_yaml()
     files[Path("swcs/SpeedDisplay.yaml")] = swc_speed_display_yaml()
+    files[Path("swcs/DiagManager.yaml")] = swc_diag_manager_yaml()
+    files[Path("subcompositions/subcomposition_speed_cluster.yaml")] = subcomposition_speed_cluster_yaml()
     files[Path("system.yaml")] = system_yaml(system_name)
     return files
 
@@ -348,6 +424,7 @@ def scaffold_project(path: Path, *, name: str = "DemoSystem", force: bool = Fals
         Path("units"),
         Path("compu_methods"),
         Path("modes"),
+        Path("subcompositions"),
     ]:
         (target / rel_dir).mkdir(parents=True, exist_ok=True)
     written: list[Path] = []

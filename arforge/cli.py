@@ -227,6 +227,10 @@ def export(
                 InputPatternExpansion(pattern=p.pattern, matched_files=p.matched_files)
                 for p in load_report.swc_patterns
             ],
+            subcomposition_patterns=[
+                InputPatternExpansion(pattern=p.pattern, matched_files=p.matched_files)
+                for p in load_report.subcomposition_patterns
+            ],
             system_file=load_report.system_file,
         )
         export_report = write_outputs_with_report(
@@ -260,6 +264,8 @@ def export(
                 _print_pattern_summary("modeDeclarationGroups", export_report.input_summary.mode_declaration_group_patterns)
             _print_pattern_summary("interfaces", export_report.input_summary.interface_patterns)
             _print_pattern_summary("swcs", export_report.input_summary.swc_patterns)
+            if export_report.input_summary.subcomposition_patterns:
+                _print_pattern_summary("subcompositions", export_report.input_summary.subcomposition_patterns)
             if export_report.input_summary.system_file:
                 console.print(f"system: {export_report.input_summary.system_file}")
 
@@ -287,6 +293,7 @@ def export(
                 f"modeDeclarationGroups={ms.mode_declaration_groups_count} "
                 f"interfaces={ms.interfaces_count} (SR={ms.sr_interfaces_count}, CS={ms.cs_interfaces_count}, MS={ms.ms_interfaces_count}) "
                 f"swcs={ms.swcs_count} "
+                f"subcompositions={ms.subcompositions_count} "
                 f"instances={ms.instances_count} connectors={ms.connectors_count}"
             )
             console.print("timings (ms):")

@@ -6,7 +6,7 @@ from enum import StrEnum
 from time import perf_counter
 from typing import Dict, List, Literal, Optional, Sequence, Tuple
 
-from .model import ComponentPrototype, Connection, Port, Project, Swc
+from .model import ComponentPrototype, Connection, Port, Project, SubcompositionType, Swc
 
 class FindingSeverity(StrEnum):
     ERROR = "error"
@@ -175,7 +175,14 @@ class ValidationContext:
         self.datatype_by_name = {**self.base_type_by_name, **self.implementation_type_by_name, **self.application_type_by_name}
         self.iface_by_name = {i.name: i for i in project.interfaces}
         self.swc_by_name = {s.name: s for s in project.swcs}
+        self.subcomposition_by_name = {s.name: s for s in project.subcompositions}
         self.instance_by_name = {i.name: i for i in project.system.composition.components}
+        self.top_level_component_type_kind_by_name = {
+            swc.name: "swc" for swc in project.swcs
+        }
+        self.top_level_component_type_kind_by_name.update(
+            {subcomposition.name: "subcomposition" for subcomposition in project.subcompositions}
+        )
         self.instances_by_swc_name: Dict[str, List[ComponentPrototype]] = {}
         for instance in sorted(project.system.composition.components, key=lambda c: (c.typeRef, c.name)):
             self.instances_by_swc_name.setdefault(instance.typeRef, []).append(instance)
@@ -329,6 +336,12 @@ class ValidationContext:
         if instance is None:
             return None
         return self.swc_by_name.get(instance.typeRef)
+
+    def find_top_level_component_type_kind(self, type_name: str) -> Optional[str]:
+        return self.top_level_component_type_kind_by_name.get(type_name)
+
+    def find_subcomposition(self, name: str) -> Optional[SubcompositionType]:
+        return self.subcomposition_by_name.get(name)
 
     def find_instance_port_connectivity(self, instance_name: str, port_name: str) -> Optional[InstancePortConnectivity]:
         return self.instantiated_port_connections.get((instance_name, port_name))

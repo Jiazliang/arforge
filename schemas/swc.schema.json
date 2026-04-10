@@ -539,7 +539,6 @@
         "ports": {
           "type": "array",
           "description": "Ports exposed by the software component.",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/port"
           }
