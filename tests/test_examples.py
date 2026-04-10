@@ -33,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 VALID_PROJECT = REPO_ROOT / "examples" / "autosar.project.yaml"
 INVALID_DIR = REPO_ROOT / "examples" / "invalid"
 SHARED_EXAMPLE_OUTPUT = "DEMO_SharedTypes.arxml"
+SUBCOMPOSITION_EXAMPLE_OUTPUT = "SubComposition_SpeedCluster.arxml"
 SYSTEM_EXAMPLE_OUTPUT = "DemoSystem.arxml"
 PLANTUML_DIAGRAM_OUTPUTS = [
     "composition_DemoSystem.puml",
@@ -824,6 +825,36 @@ def test_split_export_reports_aligned_example_outputs(tmp_path: Path) -> None:
         "DiagManager.arxml",
         "SpeedDisplay.arxml",
         "SpeedSensor.arxml",
+        SUBCOMPOSITION_EXAMPLE_OUTPUT,
+        SYSTEM_EXAMPLE_OUTPUT,
+    ]
+
+
+def test_split_export_flat_project_regression_keeps_legacy_artifact_set(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out_dir = tmp_path / "out"
+    flat_project = replace(
+        project,
+        subcompositions=[],
+        system=replace(
+            project.system,
+            composition=Composition(
+                name=project.system.composition.name,
+                description=project.system.composition.description,
+                components=[component for component in project.system.composition.components if component.typeRef != "SubComposition_SpeedCluster"],
+                connectors=[],
+            ),
+        ),
+    )
+
+    written = write_outputs(flat_project, template_dir=template_dir, out=out_dir, split_by_swc=True)
+
+    assert [path.name for path in written] == [
+        SHARED_EXAMPLE_OUTPUT,
+        "DiagManager.arxml",
+        "SpeedDisplay.arxml",
+        "SpeedSensor.arxml",
         SYSTEM_EXAMPLE_OUTPUT,
     ]
 
@@ -900,7 +931,41 @@ def test_generate_code_is_deterministic(tmp_path: Path) -> None:
         assert hashlib.sha256(data1).hexdigest() == hashlib.sha256(data2).hexdigest()
 
 
-def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: Path) -> None:
+def test_split_export_subcomposition_file_contains_reusable_composition_type(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out_dir = tmp_path / "out"
+    _ = write_outputs(project, template_dir=template_dir, out=out_dir, split_by_swc=True)
+
+    composition_xml = (out_dir / SUBCOMPOSITION_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
+
+    assert "<SHORT-NAME>SubComposition_SpeedCluster</SHORT-NAME>" in composition_xml
+    assert "<PORTS>" in composition_xml
+    assert "<SHORT-NAME>Rp_PowerStateIn</SHORT-NAME>" in composition_xml
+    assert "<SHORT-NAME>Pp_VehicleSpeedOut</SHORT-NAME>" in composition_xml
+    assert "<REQUIRED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</REQUIRED-INTERFACE-TREF>" in composition_xml
+    assert "<PROVIDED-INTERFACE-TREF DEST=\"SENDER-RECEIVER-INTERFACE\">/DEMO/Interfaces/If_VehicleSpeed</PROVIDED-INTERFACE-TREF>" in composition_xml
+    assert "<SHORT-NAME>SpeedSensor_1</SHORT-NAME>" in composition_xml
+    assert "<SHORT-NAME>SpeedDisplay_1</SHORT-NAME>" in composition_xml
+    assert composition_xml.count("<COMPOSITION-SW-COMPONENT-TYPE>") == 1
+    assert composition_xml.count("<SW-COMPONENT-PROTOTYPE>") == 2
+    assert composition_xml.count("<ASSEMBLY-SW-CONNECTOR>") == 4
+    assert composition_xml.count("<DELEGATION-SW-CONNECTOR>") == 2
+    assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedSensor</TYPE-TREF>" in composition_xml
+    assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedDisplay</TYPE-TREF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_VehicleSpeed</TARGET-P-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedImplicit</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_PowerState</TARGET-P-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_PowerState</TARGET-R-PORT-REF>" in composition_xml
+    assert "<SHORT-NAME>DelegationConn_1</SHORT-NAME>" in composition_xml
+    assert "<SHORT-NAME>DelegationConn_2</SHORT-NAME>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Rp_PowerStateIn</OUTER-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Pp_VehicleSpeedOut</OUTER-PORT-REF>" in composition_xml
+
+
+def test_split_export_system_contains_root_composition_without_inlining_subcomposition_type(tmp_path: Path) -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
     template_dir = REPO_ROOT / "templates"
     out_dir = tmp_path / "out"
@@ -908,38 +973,20 @@ def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: 
 
     system_xml = (out_dir / SYSTEM_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
 
-    assert "<SHORT-NAME>SubComposition_SpeedCluster</SHORT-NAME>" in system_xml
-    assert "<PORTS>" in system_xml
-    assert "<SHORT-NAME>Rp_PowerStateIn</SHORT-NAME>" in system_xml
-    assert "<SHORT-NAME>Pp_VehicleSpeedOut</SHORT-NAME>" in system_xml
-    assert "<REQUIRED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</REQUIRED-INTERFACE-TREF>" in system_xml
-    assert "<PROVIDED-INTERFACE-TREF DEST=\"SENDER-RECEIVER-INTERFACE\">/DEMO/Interfaces/If_VehicleSpeed</PROVIDED-INTERFACE-TREF>" in system_xml
-    assert "<SHORT-NAME>SpeedCluster_0</SHORT-NAME>" in system_xml
-    assert "<SHORT-NAME>DiagManager_0</SHORT-NAME>" in system_xml
-    assert "<SHORT-NAME>SpeedSensor_1</SHORT-NAME>" in system_xml
-    assert "<SHORT-NAME>SpeedDisplay_1</SHORT-NAME>" in system_xml
-    assert system_xml.count("<COMPOSITION-SW-COMPONENT-TYPE>") == 2
-    assert system_xml.count("<SW-COMPONENT-PROTOTYPE>") == 4
-    assert system_xml.count("<ASSEMBLY-SW-CONNECTOR>") == 6
-    assert system_xml.count("<DELEGATION-SW-CONNECTOR>") == 2
-    assert "<TYPE-TREF DEST=\"COMPOSITION-SW-COMPONENT-TYPE\">/DEMO/Components/SubComposition_SpeedCluster</TYPE-TREF>" in system_xml
-    assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/DiagManager</TYPE-TREF>" in system_xml
-    assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedSensor</TYPE-TREF>" in system_xml
-    assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedDisplay</TYPE-TREF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_VehicleSpeed</TARGET-P-PORT-REF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedImplicit</TARGET-R-PORT-REF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_PowerState</TARGET-R-PORT-REF>" in system_xml
+    assert "<SHORT-NAME>Composition_DemoSystem</SHORT-NAME>" in system_xml
     assert "/DEMO/System/Composition_DemoSystem/DiagManager_0/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
     assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Rp_PowerStateIn</TARGET-R-PORT-REF>" in system_xml
     assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Pp_VehicleSpeedOut</TARGET-P-PORT-REF>" in system_xml
     assert "/DEMO/System/Composition_DemoSystem/DiagManager_0/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in system_xml
-    assert "<SHORT-NAME>DelegationConn_1</SHORT-NAME>" in system_xml
-    assert "<SHORT-NAME>DelegationConn_2</SHORT-NAME>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/Rp_PowerStateIn</OUTER-PORT-REF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/Pp_VehicleSpeedOut</OUTER-PORT-REF>" in system_xml
+    assert "<SHORT-NAME>SpeedCluster_0</SHORT-NAME>" in system_xml
+    assert "<SHORT-NAME>DiagManager_0</SHORT-NAME>" in system_xml
+    assert system_xml.count("<COMPOSITION-SW-COMPONENT-TYPE>") == 1
+    assert system_xml.count("<SW-COMPONENT-PROTOTYPE>") == 2
+    assert system_xml.count("<ASSEMBLY-SW-CONNECTOR>") == 2
+    assert "<TYPE-TREF DEST=\"COMPOSITION-SW-COMPONENT-TYPE\">/DEMO/Components/SubComposition_SpeedCluster</TYPE-TREF>" in system_xml
+    assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/DiagManager</TYPE-TREF>" in system_xml
+    assert "<SHORT-NAME>SubComposition_SpeedCluster</SHORT-NAME>" not in system_xml
+    assert "<DELEGATION-SW-CONNECTOR>" not in system_xml
 
 
 def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) -> None:
@@ -1070,13 +1117,15 @@ def test_split_export_uses_swc_category_for_component_types_and_prototype_dests(
 
     speed_sensor_xml = (out_dir / "SpeedSensor.arxml").read_text(encoding="utf-8")
     speed_display_xml = (out_dir / "SpeedDisplay.arxml").read_text(encoding="utf-8")
+    subcomposition_xml = (out_dir / SUBCOMPOSITION_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
     system_xml = (out_dir / SYSTEM_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
 
     assert "<SERVICE-SW-COMPONENT-TYPE>" in speed_sensor_xml
     assert "<APPLICATION-SW-COMPONENT-TYPE>" not in speed_sensor_xml
     assert "<COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE>" in speed_display_xml
-    assert "<TYPE-TREF DEST=\"SERVICE-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedSensor</TYPE-TREF>" in system_xml
-    assert "<TYPE-TREF DEST=\"COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedDisplay</TYPE-TREF>" in system_xml
+    assert "<TYPE-TREF DEST=\"SERVICE-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedSensor</TYPE-TREF>" in subcomposition_xml
+    assert "<TYPE-TREF DEST=\"COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedDisplay</TYPE-TREF>" in subcomposition_xml
+    assert "<TYPE-TREF DEST=\"COMPOSITION-SW-COMPONENT-TYPE\">/DEMO/Components/SubComposition_SpeedCluster</TYPE-TREF>" in system_xml
 
 
 def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
@@ -1085,12 +1134,17 @@ def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
     out_dir = tmp_path / "out"
     report = write_outputs_with_report(project, template_dir=template_dir, out=out_dir, split_by_swc=True)
 
-    swc_outputs = [
+    component_type_outputs = [
         artifact.path.name
         for artifact in report.outputs
         if artifact.path.name.endswith(".arxml") and artifact.path.name not in {SHARED_EXAMPLE_OUTPUT, SYSTEM_EXAMPLE_OUTPUT}
     ]
-    assert swc_outputs == ["DiagManager.arxml", "SpeedDisplay.arxml", "SpeedSensor.arxml"]
+    assert component_type_outputs == [
+        "DiagManager.arxml",
+        "SpeedDisplay.arxml",
+        "SpeedSensor.arxml",
+        SUBCOMPOSITION_EXAMPLE_OUTPUT,
+    ]
 
 
 @pytest.mark.parametrize(

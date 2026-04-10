@@ -101,7 +101,7 @@ python -m arforge.cli init my-project
 # Validate — stable finding codes on any semantic issue
 python -m arforge.cli validate examples/autosar.project.yaml
 
-# Export — monolithic or split by SWC
+# Export - monolithic or split by component type
 python -m arforge.cli export examples/autosar.project.yaml --out build/out --split-by-swc
 
 # Generate starter C skeletons for SWCs
@@ -144,7 +144,7 @@ Once installed, open the repository root in VS Code. Schema-backed autocompletio
 | Task | Description |
 |---|---|
 | `arforge: validate project` | Validate the configured project manifest |
-| `arforge: export project (split by swc)` | Export ARXML, one file per SWC |
+| `arforge: export project (split by swc)` | Export ARXML as shared types + one file per component type + one root system file |
 | `arforge: export project (monolithic)` | Export ARXML as a single file |
 | `arforge: generate Plantuml` | Generate the PlantUML diagram set |
 | `arforge: generate C-code` | Generate C SWC starter skeletons |

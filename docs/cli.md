@@ -98,7 +98,7 @@ python -m arforge.cli export <project.yaml> --out <path> [options]
 | Option | Description |
 |---|---|
 | `--out PATH` | Output path. Required. For split export, a directory path. For monolithic export, a file path ending in `.arxml`. |
-| `--split-by-swc` | Split output into shared types, one file per SWC, and a system file. |
+| `--split-by-swc` | Split output into shared types, one file per component type, and one root system composition file. |
 | `--templates DIR` | Use an alternate Jinja2 template directory instead of the built-in templates. |
 | `-v` | Verbose output. |
 | `-vv` | Very verbose output. |
@@ -113,12 +113,14 @@ python -m arforge.cli export examples/autosar.project.yaml --out build/out --spl
 
 Produces:
 
-```
+```text
 build/out/
-├── DEMO_SharedTypes.arxml
-├── SpeedSensor.arxml
-├── SpeedDisplay.arxml
-└── DemoSystem.arxml
+|- DEMO_SharedTypes.arxml
+|- DiagManager.arxml
+|- SpeedSensor.arxml
+|- SpeedDisplay.arxml
+|- SubComposition_SpeedCluster.arxml
+`- DemoSystem.arxml
 ```
 
 **Monolithic export:**

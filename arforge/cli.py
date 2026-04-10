@@ -155,7 +155,7 @@ def export(
     split_by_swc: bool = typer.Option(
         False,
         "--split-by-swc",
-        help="Write <Project>_SharedTypes.arxml + one <SWC>.arxml per component + <System>.arxml",
+        help="Write shared types + one ARXML per component type + one root system ARXML",
     ),
     templates: Path = typer.Option(None, help="Template directory"),
     verbose: int = typer.Option(
@@ -270,7 +270,7 @@ def export(
                 console.print(f"system: {export_report.input_summary.system_file}")
 
         if export_report.layout == "split-by-swc":
-            console.print("layout=split-by-swc (shared types + per-SWC + system)")
+            console.print("layout=split-by-swc (shared types + atomic/component-type ARXMLs + root system)")
         else:
             console.print("layout=monolithic")
 
@@ -280,6 +280,7 @@ def export(
                 "templates: "
                 f"shared={export_report.templates['shared']} "
                 f"swc={export_report.templates['swc']} "
+                f"composition={export_report.templates['composition']} "
                 f"system={export_report.templates['system']}"
             )
         else:

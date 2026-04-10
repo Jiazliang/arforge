@@ -25,6 +25,7 @@ from .model import (
 
 SHARED_TEMPLATE = "shared_42.arxml.j2"
 SWC_TEMPLATE = "swc_42.arxml.j2"
+COMPOSITION_TEMPLATE = "composition_42.arxml.j2"
 SYSTEM_TEMPLATE = "system_42.arxml.j2"
 MONOLITHIC_TEMPLATE = "all_42.arxml.j2"
 
@@ -426,6 +427,34 @@ def render_swc(project: Project, swc: Swc, template_dir: Path, template_name: st
     return tpl.render(root_pkg=project.rootPackage, swc=swc)
 
 
+def render_composition_type(
+    project: Project,
+    subcomposition: SubcompositionType,
+    template_dir: Path,
+    template_name: str = COMPOSITION_TEMPLATE,
+) -> str:
+    env = _env(template_dir)
+    tpl = env.get_template(template_name)
+    project = _sort_project_for_export(project)
+    subcomposition = next(candidate for candidate in project.subcompositions if candidate.name == subcomposition.name)
+    component_type_dests = _component_type_dests(project)
+    component_type_refs = _component_type_refs(project)
+    composition_model = {
+        "name": subcomposition.name,
+        "description": subcomposition.description,
+        "ports": subcomposition.ports,
+        "components": subcomposition.components,
+        "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
+        "delegation_connectors": _build_delegation_connectors(subcomposition),
+    }
+    return tpl.render(
+        root_pkg=project.rootPackage,
+        composition=composition_model,
+        component_type_dests=component_type_dests,
+        component_type_refs=component_type_refs,
+    )
+
+
 def render_system(project: Project, template_dir: Path, template_name: str = SYSTEM_TEMPLATE) -> str:
     env = _env(template_dir)
     tpl = env.get_template(template_name)
@@ -433,17 +462,6 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
     connections = _build_connections(project)
     component_type_dests = _component_type_dests(project)
     component_type_refs = _component_type_refs(project)
-    subcompositions = [
-        {
-            "name": subcomposition.name,
-            "description": subcomposition.description,
-            "ports": subcomposition.ports,
-            "components": subcomposition.components,
-            "connections": _build_connections_for_composition(project, subcomposition.components, subcomposition.connectors),
-            "delegation_connectors": _build_delegation_connectors(subcomposition),
-        }
-        for subcomposition in project.subcompositions
-    ]
     return tpl.render(
         root_pkg=project.rootPackage,
         system_name=project.system.name,
@@ -452,7 +470,6 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
         connections=connections,
         component_type_dests=component_type_dests,
         component_type_refs=component_type_refs,
-        subcompositions=subcompositions,
     )
 
 
@@ -538,11 +555,19 @@ def write_outputs_with_report(
         rendered[target_dir / _shared_output_name(project)] = render_shared(project, template_dir, template_name=SHARED_TEMPLATE)
         for swc in project.swcs:
             rendered[target_dir / f"{swc.name}.arxml"] = render_swc(project, swc=swc, template_dir=template_dir, template_name=SWC_TEMPLATE)
+        for subcomposition in project.subcompositions:
+            rendered[target_dir / f"{subcomposition.name}.arxml"] = render_composition_type(
+                project,
+                subcomposition=subcomposition,
+                template_dir=template_dir,
+                template_name=COMPOSITION_TEMPLATE,
+            )
         rendered[target_dir / _system_output_name(project)] = render_system(project, template_dir, template_name=SYSTEM_TEMPLATE)
         layout = "split-by-swc"
         templates = {
             "shared": SHARED_TEMPLATE,
             "swc": SWC_TEMPLATE,
+            "composition": COMPOSITION_TEMPLATE,
             "system": SYSTEM_TEMPLATE,
         }
     timings_ms["rendering"] = (perf_counter() - render_started) * 1000.0

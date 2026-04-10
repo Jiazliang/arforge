@@ -105,7 +105,7 @@ subcomposition:
 
 Export output is written to the path passed to `arforge export`. By convention this lives under `build/` and should not be committed to source control if it is generated in CI.
 
-Split export (`--split-by-swc`) produces one file per atomic SWC plus shared types and the system composition:
+Split export (`--split-by-swc`) produces shared/common ARXML, one file per component type, and a distinct root system composition ARXML:
 
 ```text
 build/
@@ -113,6 +113,7 @@ build/
 |-- DiagManager.arxml
 |-- SpeedSensor.arxml
 |-- SpeedDisplay.arxml
+|-- SubComposition_SpeedCluster.arxml
 `-- DemoSystem.arxml
 ```
 

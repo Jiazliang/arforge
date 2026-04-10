@@ -137,6 +137,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
         "DiagManager.arxml",
         "SpeedDisplay.arxml",
         "SpeedSensor.arxml",
+        "SubComposition_SpeedCluster.arxml",
         "DemoSystem.arxml",
     ]
     speed_display_xml = (out_dir / "SpeedDisplay.arxml").read_text(encoding="utf-8")
