@@ -2,16 +2,16 @@
 # Defines reusable inner component prototypes and their internal assembly connectors.
 subcomposition:
   name: "SubComposition_SpeedCluster"
-  description: "Reusable subcomposition that contains the speed sensing and display flow."
+  description: "Reusable subcomposition that accepts a boundary power-state input, keeps the sensor-to-display wiring internal, and exposes a boundary speed output."
   ports:
-    - name: "Rp_VehicleSpeedIn"
-      description: "Required outer composition port delegated to the internal display receiver."
+    - name: "Rp_PowerStateIn"
+      description: "Required outer composition port delegated to the internal sensor power-state input."
       direction: "requires"
-      interfaceRef: "If_VehicleSpeed"
-    - name: "Pp_PowerStateOut"
-      description: "Provided outer composition port delegated from the internal sensor mode output."
-      direction: "provides"
       interfaceRef: "If_PowerState"
+    - name: "Pp_VehicleSpeedOut"
+      description: "Provided outer composition port delegated from the internal display speed output."
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"
   components:
     - name: "SpeedSensor_1"
       description: "Internal speed publisher instance."
@@ -33,7 +33,7 @@ subcomposition:
       description: "Connects the ECU power-state mode to the display instance."
       to: "SpeedDisplay_1.Rp_PowerState"
   delegationConnectors:
-    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
-      outer: "Rp_VehicleSpeedIn"
-    - inner: "SpeedSensor_1.Pp_PowerState"
-      outer: "Pp_PowerStateOut"
+    - inner: "SpeedSensor_1.Rp_PowerStateIn"
+      outer: "Rp_PowerStateIn"
+    - inner: "SpeedDisplay_1.Pp_VehicleSpeedOut"
+      outer: "Pp_VehicleSpeedOut"

@@ -5,10 +5,13 @@ swc:
   description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."
   runnables:
     - name: "Runnable_ReadVehicleSpeed"
-      description: "Reads the latest vehicle speed sample from the explicit required port."
+      description: "Reads the latest vehicle speed sample from the explicit required port and forwards it outside the subcomposition."
       timingEventMs: 10
       reads:
         - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+      writes:
+        - port: "Pp_VehicleSpeedOut"
           dataElement: "VehicleSpeed"
     - name: "Runnable_ReadVehicleSpeedImplicit"
       description: "Reads the latest vehicle speed sample from the implicit required port."
@@ -51,3 +54,7 @@ swc:
       description: "Required mode switch port for ECU power state."
       direction: "requires"
       interfaceRef: "If_PowerState"
+    - name: "Pp_VehicleSpeedOut"
+      description: "Provided sender-receiver port delegated to the subcomposition boundary."
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"

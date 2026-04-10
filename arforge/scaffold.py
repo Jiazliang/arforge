@@ -211,7 +211,7 @@ def swc_speed_sensor_yaml() -> str:
         "Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.",
 body="""swc:
   name: "SpeedSensor"
-  description: "SWC type that publishes the current vehicle speed."
+  description: "SWC type that reacts to the external power-state input and publishes the current vehicle speed."
   runnables:
     - name: "Runnable_PublishVehicleSpeed"
       description: "Writes the latest vehicle speed sample to the provided port."
@@ -219,13 +219,22 @@ body="""swc:
       writes:
         - port: "Pp_VehicleSpeed"
           dataElement: "VehicleSpeed"
+    - name: "Runnable_OnPowerOn"
+      description: "React to the delegated ECU power mode entering ON."
+      modeSwitchEvents:
+        - port: "Rp_PowerStateIn"
+          mode: "ON"
   ports:
     - name: "Pp_VehicleSpeed"
       description: "Provided sender-receiver port for publishing speed."
       direction: "provides"
       interfaceRef: "If_VehicleSpeed"
+    - name: "Rp_PowerStateIn"
+      description: "Required mode switch port delegated from the subcomposition boundary."
+      direction: "requires"
+      interfaceRef: "If_PowerState"
     - name: "Pp_PowerState"
-      description: "Provided mode switch port for ECU power state."
+      description: "Provided mode switch port forwarded to the internal display."
       direction: "provides"
       interfaceRef: "If_PowerState"
 """,
@@ -241,10 +250,13 @@ body="""swc:
   description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."
   runnables:
     - name: "Runnable_ReadVehicleSpeed"
-      description: "Reads the latest vehicle speed sample from the explicit required port."
+      description: "Reads the latest vehicle speed sample from the explicit required port and forwards it outside the subcomposition."
       timingEventMs: 10
       reads:
         - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+      writes:
+        - port: "Pp_VehicleSpeedOut"
           dataElement: "VehicleSpeed"
     - name: "Runnable_ReadVehicleSpeedImplicit"
       description: "Reads the latest vehicle speed sample from the implicit required port."
@@ -287,6 +299,10 @@ body="""swc:
       description: "Required mode switch port for ECU power state."
       direction: "requires"
       interfaceRef: "If_PowerState"
+    - name: "Pp_VehicleSpeedOut"
+      description: "Provided sender-receiver port delegated to the subcomposition boundary."
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"
 """,
     )
 
@@ -297,12 +313,28 @@ def swc_diag_manager_yaml() -> str:
         "Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.",
 body="""swc:
   name: "DiagManager"
-  description: "Standalone atomic SWC type used to show that top-level systems may mix atomic instances and subcompositions."
+  description: "Standalone atomic SWC type used to show that one top-level SWC can connect to a reusable subcomposition through boundary ports."
   runnables:
-    - name: "Runnable_InitDiagManager"
-      description: "Initializes the diagnostic manager placeholder."
+    - name: "Runnable_PublishPowerState"
+      description: "Acts as the top-level power-state source for the reusable subcomposition."
       initEvent: true
-  ports: []
+    - name: "Runnable_ReadClusterSpeed"
+      description: "Reads the speed value exposed by the reusable subcomposition."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Pp_PowerState"
+      description: "Provided mode switch port connected to the subcomposition input boundary."
+      direction: "provides"
+      interfaceRef: "If_PowerState"
+    - name: "Rp_VehicleSpeed"
+      description: "Required sender-receiver port connected to the subcomposition output boundary."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "explicit"
 """,
     )
 
@@ -313,16 +345,16 @@ def subcomposition_speed_cluster_yaml() -> str:
         "Defines reusable inner component prototypes and their internal assembly connectors.",
 body="""subcomposition:
   name: "SubComposition_SpeedCluster"
-  description: "Reusable subcomposition that contains the speed sensing and display flow."
+  description: "Reusable subcomposition that accepts a boundary power-state input, keeps the sensor-to-display wiring internal, and exposes a boundary speed output."
   ports:
-    - name: "Rp_VehicleSpeedIn"
-      description: "Required outer composition port delegated to the internal display receiver."
+    - name: "Rp_PowerStateIn"
+      description: "Required outer composition port delegated to the internal sensor power-state input."
       direction: "requires"
-      interfaceRef: "If_VehicleSpeed"
-    - name: "Pp_PowerStateOut"
-      description: "Provided outer composition port delegated from the internal sensor mode output."
-      direction: "provides"
       interfaceRef: "If_PowerState"
+    - name: "Pp_VehicleSpeedOut"
+      description: "Provided outer composition port delegated from the internal display speed output."
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"
   components:
     - name: "SpeedSensor_1"
       description: "Internal speed publisher instance."
@@ -344,10 +376,10 @@ body="""subcomposition:
       description: "Connects the ECU power-state mode to the display instance."
       to: "SpeedDisplay_1.Rp_PowerState"
   delegationConnectors:
-    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
-      outer: "Rp_VehicleSpeedIn"
-    - inner: "SpeedSensor_1.Pp_PowerState"
-      outer: "Pp_PowerStateOut"
+    - inner: "SpeedSensor_1.Rp_PowerStateIn"
+      outer: "Rp_PowerStateIn"
+    - inner: "SpeedDisplay_1.Pp_VehicleSpeedOut"
+      outer: "Pp_VehicleSpeedOut"
 """,
     )
 
@@ -358,7 +390,7 @@ def system_yaml(system_name: str) -> str:
         "Defines component prototypes (instances) and connectors between their ports.",
 body=f"""system:
   name: "{system_name}"
-  description: "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
+  description: "Demo AUTOSAR system showing one standalone atomic SWC connected to one reusable subcomposition through composition boundary ports."
   composition:
     name: "Composition_{system_name}"
     description: "Top-level composition for the scaffolded hierarchical example."
@@ -369,10 +401,15 @@ body=f"""system:
         description: "Instance of the reusable speed-cluster subcomposition."
         typeRef: "SubComposition_SpeedCluster"
       - name: "DiagManager_0"
-        description: "Standalone top-level atomic SWC instance."
+        description: "Standalone top-level atomic SWC instance connected to the reusable speed-cluster subcomposition."
         typeRef: "DiagManager"
-    # No top-level connectors are needed here because the scaffold only demonstrates delegation inside the reusable subcomposition.
-    connectors: []
+    connectors:
+      - from: "DiagManager_0.Pp_PowerState"
+        description: "Feeds the top-level power-state output into the subcomposition boundary."
+        to: "SpeedCluster_0.Rp_PowerStateIn"
+      - from: "SpeedCluster_0.Pp_VehicleSpeedOut"
+        description: "Returns the speed value exposed by the subcomposition back to the standalone SWC."
+        to: "DiagManager_0.Rp_VehicleSpeed"
 """,
     )
 

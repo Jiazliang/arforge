@@ -94,21 +94,24 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert 'name: "SpeedCluster_0"' in system_yaml
     assert 'typeRef: "SubComposition_SpeedCluster"' in system_yaml
     assert 'name: "DiagManager_0"' in system_yaml
-    assert 'connectors: []' in system_yaml
+    assert 'from: "DiagManager_0.Pp_PowerState"' in system_yaml
+    assert 'to: "SpeedCluster_0.Rp_PowerStateIn"' in system_yaml
+    assert 'from: "SpeedCluster_0.Pp_VehicleSpeedOut"' in system_yaml
+    assert 'to: "DiagManager_0.Rp_VehicleSpeed"' in system_yaml
     assert 'description: "Sender-receiver interface for the current vehicle speed."' in interface_yaml
     assert 'description: "Mode switch interface for ECU power state."' in mode_interface_yaml
     assert 'modeGroupRef: "Mdg_PowerState"' in mode_interface_yaml
-    assert 'description: "SWC type that publishes the current vehicle speed."' in producer_yaml
-    assert 'description: "Provided mode switch port for ECU power state."' in producer_yaml
+    assert 'description: "SWC type that reacts to the external power-state input and publishes the current vehicle speed."' in producer_yaml
+    assert 'description: "Required mode switch port delegated from the subcomposition boundary."' in producer_yaml
     assert 'description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."' in consumer_yaml
     assert 'description: "Required mode switch port for ECU power state."' in consumer_yaml
-    assert 'description: "Standalone atomic SWC type used to show that top-level systems may mix atomic instances and subcompositions."' in diag_manager_yaml
+    assert 'description: "Standalone atomic SWC type used to show that one top-level SWC can connect to a reusable subcomposition through boundary ports."' in diag_manager_yaml
     assert 'name: "SubComposition_SpeedCluster"' in subcomposition_yaml
-    assert 'name: "Rp_VehicleSpeedIn"' in subcomposition_yaml
-    assert 'name: "Pp_PowerStateOut"' in subcomposition_yaml
+    assert 'name: "Rp_PowerStateIn"' in subcomposition_yaml
+    assert 'name: "Pp_VehicleSpeedOut"' in subcomposition_yaml
     assert 'typeRef: "SpeedSensor"' in subcomposition_yaml
     assert 'typeRef: "SpeedDisplay"' in subcomposition_yaml
-    assert "delegation inside the reusable subcomposition" in system_yaml
+    assert 'name: "Runnable_ReadClusterSpeed"' in diag_manager_yaml
     assert 'delegationConnectors:' in subcomposition_yaml
     assert 'modeSwitchEvents:' in consumer_yaml
     assert 'mode: "ON"' in consumer_yaml

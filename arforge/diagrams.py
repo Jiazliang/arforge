@@ -413,10 +413,16 @@ def _build_composition_diagram_view(
             connector.to_instance,
             instance_positions,
         )
+        source_id = _node_id(connector.from_instance, connector.from_port)
+        target_id = _node_id(connector.to_instance, connector.to_port)
+        # In subcomposition views, mode-switch wiring reads more naturally from
+        # the mode user back to the mode provider at the composition level.
+        if boundary_name is not None and source_port is not None and source_port.interfaceType == "modeSwitch":
+            source_id, target_id = target_id, source_id
         assembly_connectors.append(
             CompositionConnectorView(
-                source_id=_node_id(connector.from_instance, connector.from_port),
-                target_id=_node_id(connector.to_instance, connector.to_port),
+                source_id=source_id,
+                target_id=target_id,
                 label="",
                 line_style=line_style,
                 direction_hint=direction_hint,
@@ -435,7 +441,14 @@ def _build_composition_diagram_view(
     if boundary_name is not None:
         boundary_port_map = {port.name: port for port in boundary_ports}
         component_map = {component.name: component for component in components}
-        for connector in sorted(delegation_connectors, key=_delegation_connector_sort_key):
+        sorted_delegation_connectors = sorted(
+            delegation_connectors,
+            key=lambda connector: (
+                0 if boundary_port_map.get(connector.outer_port) and boundary_port_map[connector.outer_port].direction == "requires" else 1,
+                *_delegation_connector_sort_key(connector),
+            ),
+        )
+        for connector in sorted_delegation_connectors:
             boundary_port = boundary_port_map.get(connector.outer_port)
             component = component_map.get(connector.inner_instance)
             inner_port = None
@@ -446,7 +459,7 @@ def _build_composition_diagram_view(
 
             reference_port = inner_port or boundary_port
             line_style = _connector_style(reference_port)
-            if boundary_port is not None and boundary_port.direction == "provides":
+            if boundary_port is not None and boundary_port.direction == "requires":
                 source_id = _node_id(boundary_name, connector.outer_port)
                 target_id = _node_id(connector.inner_instance, connector.inner_port)
             else:
@@ -462,10 +475,6 @@ def _build_composition_diagram_view(
                     direction_hint="down",
                 )
             )
-    delegation_connector_views = sorted(
-        delegation_connector_views,
-        key=lambda connector: (connector.source_id, connector.target_id, connector.label),
-    )
     rows = [
         CompositionRowView(
             id=_node_id(composition_name, "row", str(row_index + 1)),

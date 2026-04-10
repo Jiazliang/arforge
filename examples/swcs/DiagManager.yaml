@@ -2,9 +2,25 @@
 # Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.
 swc:
   name: "DiagManager"
-  description: "Standalone atomic SWC type used to show that top-level systems may mix atomic instances and subcompositions."
+  description: "Standalone atomic SWC type used to show that one top-level SWC can connect to a reusable subcomposition through boundary ports."
   runnables:
-    - name: "Runnable_InitDiagManager"
-      description: "Initializes the diagnostic manager placeholder."
+    - name: "Runnable_PublishPowerState"
+      description: "Acts as the top-level power-state source for the reusable subcomposition."
       initEvent: true
-  ports: []
+    - name: "Runnable_ReadClusterSpeed"
+      description: "Reads the speed value exposed by the reusable subcomposition."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Pp_PowerState"
+      description: "Provided mode switch port connected to the subcomposition input boundary."
+      direction: "provides"
+      interfaceRef: "If_PowerState"
+    - name: "Rp_VehicleSpeed"
+      description: "Required sender-receiver port connected to the subcomposition output boundary."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "explicit"

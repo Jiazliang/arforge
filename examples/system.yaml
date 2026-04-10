@@ -2,7 +2,7 @@
 # Defines component prototypes (instances) and connectors between their ports.
 system:
   name: "DemoSystem"
-  description: "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
+  description: "Demo AUTOSAR system showing one standalone atomic SWC connected to one reusable subcomposition through composition boundary ports."
   composition:
     name: "Composition_DemoSystem"
     description: "Top-level composition for the scaffolded hierarchical example."
@@ -13,7 +13,12 @@ system:
         description: "Instance of the reusable speed-cluster subcomposition."
         typeRef: "SubComposition_SpeedCluster"
       - name: "DiagManager_0"
-        description: "Standalone top-level atomic SWC instance."
+        description: "Standalone top-level atomic SWC instance connected to the reusable speed-cluster subcomposition."
         typeRef: "DiagManager"
-    # No top-level connectors are needed here because the example only demonstrates delegation inside the reusable subcomposition.
-    connectors: []
+    connectors:
+      - from: "DiagManager_0.Pp_PowerState"
+        description: "Feeds the top-level power-state output into the subcomposition boundary."
+        to: "SpeedCluster_0.Rp_PowerStateIn"
+      - from: "SpeedCluster_0.Pp_VehicleSpeedOut"
+        description: "Returns the speed value exposed by the subcomposition back to the standalone SWC."
+        to: "DiagManager_0.Rp_VehicleSpeed"

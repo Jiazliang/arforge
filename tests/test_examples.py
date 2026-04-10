@@ -106,7 +106,7 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     assert power_state_interface.description == "Mode switch interface for ECU power state."
     assert power_state_interface.modeGroupRef == "Mdg_PowerState"
     assert next(swc for swc in project.swcs if swc.name == "SpeedSensor").description == (
-        "SWC type that publishes the current vehicle speed."
+        "SWC type that reacts to the external power-state input and publishes the current vehicle speed."
     )
     assert next(swc for swc in project.swcs if swc.name == "SpeedDisplay").description == (
         "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."
@@ -118,8 +118,16 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
         for port in swc.ports
         if port.name == "Pp_PowerState"
     )
-    assert provided_mode_port.description == "Provided mode switch port for ECU power state."
+    assert provided_mode_port.description == "Provided mode switch port forwarded to the internal display."
     assert provided_mode_port.interfaceType == "modeSwitch"
+    power_state_input = next(
+        port
+        for swc in project.swcs
+        if swc.name == "SpeedSensor"
+        for port in swc.ports
+        if port.name == "Rp_PowerStateIn"
+    )
+    assert power_state_input.description == "Required mode switch port delegated from the subcomposition boundary."
     speed_port = next(
         port
         for swc in project.swcs
@@ -138,6 +146,14 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     assert power_state_port.description == "Required mode switch port for ECU power state."
     assert power_state_port.interfaceType == "modeSwitch"
     assert power_state_port.modeGroupRef == "Mdg_PowerState"
+    forwarded_speed_port = next(
+        port
+        for swc in project.swcs
+        if swc.name == "SpeedDisplay"
+        for port in swc.ports
+        if port.name == "Pp_VehicleSpeedOut"
+    )
+    assert forwarded_speed_port.description == "Provided sender-receiver port delegated to the subcomposition boundary."
     on_power_on = next(
         runnable
         for swc in project.swcs
@@ -156,20 +172,20 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
         "Identity scaling for the demo vehicle speed value."
     )
     assert next(subcomposition for subcomposition in project.subcompositions if subcomposition.name == "SubComposition_SpeedCluster").description == (
-        "Reusable subcomposition that contains the speed sensing and display flow."
+        "Reusable subcomposition that accepts a boundary power-state input, keeps the sensor-to-display wiring internal, and exposes a boundary speed output."
     )
     subcomposition = next(
         subcomposition for subcomposition in project.subcompositions if subcomposition.name == "SubComposition_SpeedCluster"
     )
-    assert [port.name for port in subcomposition.ports] == ["Rp_VehicleSpeedIn", "Pp_PowerStateOut"]
-    assert next(port for port in subcomposition.ports if port.name == "Rp_VehicleSpeedIn").interfaceType == "senderReceiver"
-    assert next(port for port in subcomposition.ports if port.name == "Pp_PowerStateOut").interfaceType == "modeSwitch"
+    assert [port.name for port in subcomposition.ports] == ["Rp_PowerStateIn", "Pp_VehicleSpeedOut"]
+    assert next(port for port in subcomposition.ports if port.name == "Rp_PowerStateIn").interfaceType == "modeSwitch"
+    assert next(port for port in subcomposition.ports if port.name == "Pp_VehicleSpeedOut").interfaceType == "senderReceiver"
     assert [(connector.outer_port, connector.inner_ref) for connector in subcomposition.delegationConnectors] == [
-        ("Rp_VehicleSpeedIn", "SpeedDisplay_1.Rp_VehicleSpeed"),
-        ("Pp_PowerStateOut", "SpeedSensor_1.Pp_PowerState"),
+        ("Rp_PowerStateIn", "SpeedSensor_1.Rp_PowerStateIn"),
+        ("Pp_VehicleSpeedOut", "SpeedDisplay_1.Pp_VehicleSpeedOut"),
     ]
     assert project.system.description == (
-        "Demo AUTOSAR system instantiating one reusable subcomposition plus one standalone atomic SWC."
+        "Demo AUTOSAR system showing one standalone atomic SWC connected to one reusable subcomposition through composition boundary ports."
     )
 
 
@@ -300,24 +316,25 @@ def test_generate_diagrams_contain_expected_smoke_fragments(
     assert "DiagManager_0" in composition_text
     assert 'component "SpeedCluster_0"' in composition_text
     assert "Subcomposition" in composition_text
-    assert "Rp_VehicleSpeedIn" in composition_text
-    assert "Pp_PowerStateOut" in composition_text
+    assert "Rp_PowerStateIn" in composition_text
+    assert "Pp_VehicleSpeedOut" in composition_text
     assert "Provided S/R" in composition_text
     assert "Subcomposition" in composition_text
     assert "Application SWC" in composition_text
+    assert "DiagManager_0.Pp_PowerState" not in composition_text
     assert "Client/Server connector" in composition_text
     assert interface_name in interfaces_wiring_text
     assert "SpeedCluster_0" in interfaces_wiring_text
     assert "DiagManager_0" in interfaces_wiring_text
-    assert "Rp_VehicleSpeedIn" in interfaces_wiring_text
-    assert "Pp_PowerStateOut" in interfaces_wiring_text
+    assert "Rp_PowerStateIn" in interfaces_wiring_text
+    assert "Pp_VehicleSpeedOut" in interfaces_wiring_text
     assert 'component "SubComposition_SpeedCluster"' in subcomposition_text
     assert "SpeedSensor_1" in subcomposition_text
     assert "SpeedDisplay_1" in subcomposition_text
-    assert "Rp_VehicleSpeedIn" in subcomposition_text
-    assert "Pp_PowerStateOut" in subcomposition_text
+    assert "Rp_PowerStateIn" in subcomposition_text
+    assert "Pp_VehicleSpeedOut" in subcomposition_text
     assert "Pp_VehicleSpeed" in subcomposition_text
-    assert "Rp_VehicleSpeed" in subcomposition_text
+    assert "Rp_PowerStateIn" in subcomposition_text
     assert "..[#2e8b57,bold].>" in subcomposition_text
     assert "..[#8e44ad,bold,dashed].>" in subcomposition_text
     assert interface_name in interfaces_contracts_text
@@ -386,12 +403,12 @@ def test_subcomposition_diagram_view_contains_boundary_and_internal_instances() 
 
     assert view.system_name == "SubComposition_SpeedCluster"
     assert view.boundary_name == "SubComposition_SpeedCluster"
-    assert [port.name for port in view.boundary_incoming_ports] == ["Rp_VehicleSpeedIn"]
-    assert [port.name for port in view.boundary_outgoing_ports] == ["Pp_PowerStateOut"]
+    assert [port.name for port in view.boundary_incoming_ports] == ["Rp_PowerStateIn"]
+    assert [port.name for port in view.boundary_outgoing_ports] == ["Pp_VehicleSpeedOut"]
     assert [instance.name for instance in view.instances] == ["SpeedDisplay_1", "SpeedSensor_1"]
     assert [(connector.source_id, connector.target_id) for connector in view.delegation_connectors] == [
-        ("SpeedDisplay_1__Rp_VehicleSpeed", "SubComposition_SpeedCluster__Rp_VehicleSpeedIn"),
-        ("SubComposition_SpeedCluster__Pp_PowerStateOut", "SpeedSensor_1__Pp_PowerState"),
+        ("SubComposition_SpeedCluster__Rp_PowerStateIn", "SpeedSensor_1__Rp_PowerStateIn"),
+        ("SpeedDisplay_1__Pp_VehicleSpeedOut", "SubComposition_SpeedCluster__Pp_VehicleSpeedOut"),
     ]
 
 
@@ -850,6 +867,7 @@ def test_generate_code_contains_expected_runnable_names_and_rte_placeholders(tmp
     assert "Rte_Read_Rp_VehicleSpeed_VehicleSpeed" in speed_display_source
     assert "Rte_Read_Rp_VehicleSpeedImplicit_VehicleSpeed" in speed_display_source
     assert "Rte_Read_Rp_VehicleSpeedQueued_VehicleSpeed" in speed_display_source
+    assert "Rte_Write_Pp_VehicleSpeedOut_VehicleSpeed" in speed_display_source
     assert "uint16 rp_vehicle_speed_vehicle_speed = 0;" in speed_display_source
     assert "uint16 rp_vehicle_speed_implicit_vehicle_speed = 0;" in speed_display_source
     assert "uint16 rp_vehicle_speed_queued_vehicle_speed = 0;" in speed_display_source
@@ -858,6 +876,7 @@ def test_generate_code_contains_expected_runnable_names_and_rte_placeholders(tmp
     assert "React to the ECU entering the ON power mode." in speed_display_source
 
     assert "Rte_Write_Pp_VehicleSpeed_VehicleSpeed" in speed_sensor_source
+    assert "Trigger: ModeSwitchEvent(Rp_PowerStateIn -> ON)" in speed_sensor_source
     assert "Trigger: TimingEvent(10 ms)" in speed_sensor_source
 
 
@@ -891,17 +910,17 @@ def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: 
 
     assert "<SHORT-NAME>SubComposition_SpeedCluster</SHORT-NAME>" in system_xml
     assert "<PORTS>" in system_xml
-    assert "<SHORT-NAME>Rp_VehicleSpeedIn</SHORT-NAME>" in system_xml
-    assert "<SHORT-NAME>Pp_PowerStateOut</SHORT-NAME>" in system_xml
-    assert "<REQUIRED-INTERFACE-TREF DEST=\"SENDER-RECEIVER-INTERFACE\">/DEMO/Interfaces/If_VehicleSpeed</REQUIRED-INTERFACE-TREF>" in system_xml
-    assert "<PROVIDED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</PROVIDED-INTERFACE-TREF>" in system_xml
+    assert "<SHORT-NAME>Rp_PowerStateIn</SHORT-NAME>" in system_xml
+    assert "<SHORT-NAME>Pp_VehicleSpeedOut</SHORT-NAME>" in system_xml
+    assert "<REQUIRED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</REQUIRED-INTERFACE-TREF>" in system_xml
+    assert "<PROVIDED-INTERFACE-TREF DEST=\"SENDER-RECEIVER-INTERFACE\">/DEMO/Interfaces/If_VehicleSpeed</PROVIDED-INTERFACE-TREF>" in system_xml
     assert "<SHORT-NAME>SpeedCluster_0</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>DiagManager_0</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>SpeedSensor_1</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>SpeedDisplay_1</SHORT-NAME>" in system_xml
     assert system_xml.count("<COMPOSITION-SW-COMPONENT-TYPE>") == 2
     assert system_xml.count("<SW-COMPONENT-PROTOTYPE>") == 4
-    assert system_xml.count("<ASSEMBLY-SW-CONNECTOR>") == 4
+    assert system_xml.count("<ASSEMBLY-SW-CONNECTOR>") == 6
     assert system_xml.count("<DELEGATION-SW-CONNECTOR>") == 2
     assert "<TYPE-TREF DEST=\"COMPOSITION-SW-COMPONENT-TYPE\">/DEMO/Components/SubComposition_SpeedCluster</TYPE-TREF>" in system_xml
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/DiagManager</TYPE-TREF>" in system_xml
@@ -913,10 +932,14 @@ def test_split_export_system_contains_one_clear_end_to_end_connection(tmp_path: 
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in system_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_PowerState</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/DiagManager_0/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Rp_PowerStateIn</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Pp_VehicleSpeedOut</TARGET-P-PORT-REF>" in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/DiagManager_0/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in system_xml
     assert "<SHORT-NAME>DelegationConn_1</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>DelegationConn_2</SHORT-NAME>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/Rp_VehicleSpeedIn</OUTER-PORT-REF>" in system_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/Pp_PowerStateOut</OUTER-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Rp_PowerStateIn</OUTER-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Pp_VehicleSpeedOut</OUTER-PORT-REF>" in system_xml
 
 
 def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) -> None:
@@ -952,7 +975,9 @@ def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Pa
     speed_display_xml = (out_dir / "SpeedDisplay.arxml").read_text(encoding="utf-8")
 
     assert "<SHORT-NAME>Runnable_PublishVehicleSpeed</SHORT-NAME>" in speed_sensor_xml
+    assert "<SHORT-NAME>Runnable_OnPowerOn</SHORT-NAME>" in speed_sensor_xml
     assert "<SHORT-NAME>Pp_VehicleSpeed</SHORT-NAME>" in speed_sensor_xml
+    assert "<SHORT-NAME>Rp_PowerStateIn</SHORT-NAME>" in speed_sensor_xml
     assert "<SHORT-NAME>Pp_PowerState</SHORT-NAME>" in speed_sensor_xml
     assert "<PROVIDED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</PROVIDED-INTERFACE-TREF>" in speed_sensor_xml
     assert "<SHORT-NAME>Runnable_ReadVehicleSpeed</SHORT-NAME>" in speed_display_xml
@@ -963,6 +988,7 @@ def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Pa
     assert "<SHORT-NAME>Rp_VehicleSpeedImplicit</SHORT-NAME>" in speed_display_xml
     assert "<SHORT-NAME>Rp_VehicleSpeedQueued</SHORT-NAME>" in speed_display_xml
     assert "<SHORT-NAME>Rp_PowerState</SHORT-NAME>" in speed_display_xml
+    assert "<SHORT-NAME>Pp_VehicleSpeedOut</SHORT-NAME>" in speed_display_xml
     assert "<REQUIRED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</REQUIRED-INTERFACE-TREF>" in speed_display_xml
     assert "<MODE-SWITCH-EVENT>" in speed_display_xml
     assert "<SHORT-NAME>MSE_Runnable_OnPowerOn_Rp_PowerState_ON</SHORT-NAME>" in speed_display_xml
