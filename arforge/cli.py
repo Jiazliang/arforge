@@ -88,6 +88,28 @@ def _print_validation_summary(report) -> None:
     console.print(f" - infos: {counts['info']}")
 
 
+def _case_status_label(case) -> tuple[str, str]:
+    if case.status == "skip":
+        return "SKIP", "dim"
+    if any(finding.severity == "error" for finding in case.findings):
+        return "ERROR", "red"
+    if any(finding.severity == "warning" for finding in case.findings):
+        return "WARNING", "yellow"
+    return "RUN OK", "green"
+
+
+def _print_case_status(prefix: str, case, reason: str | None = None) -> None:
+    label, style = _case_status_label(case)
+    suffix = f" ({reason})" if reason else ""
+    console.print(f"{prefix}[{style}]{label}[/{style}]{suffix} {_format_case_metrics(case)}")
+
+
+def _print_case_line(prefix: str, case, reason: str | None = None) -> None:
+    label, style = _case_status_label(case)
+    suffix = f" ({reason})" if reason else ""
+    console.print(f"{prefix}{case.case_id} {case.name} [{style}]{label}[/{style}]{suffix} {_format_case_metrics(case)}")
+
+
 @app.command()
 def validate(
     project: Path,
@@ -98,7 +120,7 @@ def validate(
         count=True,
         help=(
             "Validation verbosity:\n"
-            "-v  show which validation cases ran (OK/SKIP/FAIL)\n"
+            "-v  show which validation cases ran (RUN OK/WARNING/ERROR/SKIP)\n"
             "-vv also show per-case timing and finding counts"
         ),
     ),
@@ -117,19 +139,19 @@ def validate(
                     if verbose >= 2:
                         console.print(f" - {case.case_id} {case.name}")
                         console.print(f"   {case.description}")
-                        console.print(f"   SKIP ({case.reason}) {_format_case_metrics(case)}")
+                        _print_case_status("   ", case, reason=case.reason)
                     else:
-                        console.print(f" - {case.case_id} {case.name} SKIP ({case.reason}) {_format_case_metrics(case)}")
+                        _print_case_line(" - ", case, reason=case.reason)
                     continue
 
                 if verbose >= 2:
                     console.print(f" - {case.case_id} {case.name}")
                     console.print(f"   {case.description}")
-                    console.print(f"   RUN {case.outcome.upper()} {_format_case_metrics(case)}")
+                    _print_case_status("   ", case)
                     for finding in case.findings:
                         _print_colored_finding("   ", finding)
                 else:
-                    console.print(f" - {case.case_id} {case.name} RUN {case.outcome.upper()} {_format_case_metrics(case)}")
+                    _print_case_line(" - ", case)
         elif report.findings:
             for finding in report.findings:
                 _print_colored_finding("", finding)

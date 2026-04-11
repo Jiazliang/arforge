@@ -669,7 +669,7 @@ def test_cli_validate_sr_n_to_1_verbose_includes_case_and_finding_count() -> Non
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "CORE-045 SenderReceiverMultiplicity RUN OK" in result.stdout
+    assert "CORE-045 SenderReceiverMultiplicity WARNING" in result.stdout
     assert "findings=1" in result.stdout
 
 
@@ -706,6 +706,18 @@ def test_cli_validate_error_project_shows_error_and_fails() -> None:
     )
     assert result.returncode == 2, result.stdout + result.stderr
     assert "ERROR" in result.stdout
+
+
+def test_cli_validate_error_project_verbose_marks_failing_case_as_error() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "arforge.cli", "validate", str(ERROR_PROJECT), "-v"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "CORE-022 RunnableAccessSemantics ERROR" in result.stdout
     assert "errors: " in result.stdout
 
 
