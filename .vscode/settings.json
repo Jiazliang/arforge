@@ -23,8 +23,12 @@
       "**/system.yaml"
     ],
 
-    "./schemas/connections.schema.json": [
-      "**/connections.yaml"
+    "./schemas/mode_declaration_groups.schema.json": [
+      "**/modes/*.yaml"
+    ],
+
+    "./schemas/subcomposition.schema.json": [
+      "**/subcompositions/*.yaml"
     ],
 
     "./schemas/base_types.schema.json": [

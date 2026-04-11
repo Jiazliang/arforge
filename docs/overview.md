@@ -7,7 +7,7 @@ ARForge takes a set of YAML files describing an AUTOSAR Classic project - data t
 The full pipeline in one line:
 
 ```
-YAML inputs -> schema validation -> semantic validation -> internal model -> rendered outputs
+YAML inputs -> schema validation -> internal model -> semantic validation -> rendered outputs
 ```
 
 Everything that can be checked before generation is checked before generation. The ARXML and generated artifacts you get out have already passed semantic validation.
@@ -58,7 +58,7 @@ ARForge targets a practical AUTOSAR Classic 4.2 subset:
 - SWC types with provides/requires ports, runnables, and all standard AUTOSAR event kinds
 - runnable access definitions - reads, writes, calls, raised errors - validated against port and interface semantics
 - system compositions with component prototypes and port-level assembly connectors for SR, CS, and mode-switch flows
-- semantic validation with 192 stable finding codes across three severity levels
+- semantic validation with stable finding codes across three severity levels
 - Jinja2-based ARXML export, monolithic or split by SWC, with deterministic ordering
 - template-driven C code skeleton generation for SWC runnables
 - PlantUML diagram generation for architecture and behavior views

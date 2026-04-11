@@ -19,7 +19,7 @@ AUTOSAR SWC design in GUI-based tools is expensive, opaque, and hostile to versi
 | | |
 |---|---|
 | **Text-first design** | SWCs, compositions, interfaces, modes, and types — all in human-readable YAML |
-| **Semantic validation** | 192 stable finding codes across all supported constructs. Catches design problems before export |
+| **Semantic validation** | Stable finding codes across supported constructs. Catches design problems before export |
 | **Clean ARXML export** | Deterministic, ordered output — git diffs on generated files are actually readable |
 | **CI-ready CLI** | Validate and export in a pipeline with no GUI dependency or license server |
 | **VS Code integration** | YAML schema autocomplete, inline diagnostics, and task runner built in |
@@ -45,7 +45,7 @@ Current implementation targets a practical AUTOSAR Classic 4.2 subset:
 | **SWC types** | Provides/requires ports, runnables, `TimingEvent`, `InitEvent`, `OperationInvokedEvent`, `DataReceiveEvent`, `ModeSwitchEvent` |
 | **Runnable access** | `reads`, `writes`, `calls`, `raisesErrors` — all validated against port direction and interface kind |
 | **System composition** | Component prototypes, SWC type references, port-level assembly connectors for SR, CS, and mode-switch |
-| **Validation** | 192 stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
+| **Validation** | Stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
 | **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering |
 | **Code skeletons** | Template-driven C `.h` / `.c` starter files generated from validated SWC models |
 | **Diagrams** | Unified `generate diagram` command for PlantUML architecture views |
@@ -115,6 +115,7 @@ python -m arforge.cli generate diagram examples/autosar.project.yaml --out build
 
 The diagram generator writes:
 - `composition_<System>.puml`
+- `subcomposition_<Subcomposition>.puml`
 - `interfaces_wiring.puml`
 - `interfaces_contracts.puml`
 - `behavior_<SWC>.puml`
@@ -137,7 +138,7 @@ ARForge includes a `.vscode/` configuration that enables YAML schema validation,
 - [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
 - [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) (Red Hat)
 
-Once installed, open the repository root in VS Code. Schema-backed autocompletion and inline diagnostics activate automatically for all ARForge YAML files.
+Once installed, open the repository root in VS Code. Schema-backed autocompletion and inline diagnostics activate automatically for the standard ARForge YAML file layout.
 
 **Built-in tasks** (accessible via `Terminal → Run Task`):
 
@@ -157,7 +158,7 @@ Once installed, open the repository root in VS Code. Schema-backed autocompletio
 "arforge.projectFile": "examples/autosar.project.yaml"
 ```
 
-All tasks resolve this path at runtime, so switching between projects requires changing only this one setting.
+The validate, export, and generate tasks resolve this path at runtime, so switching between projects requires changing only this one setting.
 
 ---
 

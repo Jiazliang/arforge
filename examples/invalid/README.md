@@ -10,7 +10,7 @@ Each fixture represents a specific failure scenario for schema or, more commonly
 
 Fixtures in this directory are exercised in two main ways:
 
-- `pytest` loads them from [`tests/test_examples.py`](/d:/VMs/git/arforge/tests/test_examples.py) to check expected findings and stable finding codes.
+- `pytest` loads them from [tests/test_examples.py](../../tests/test_examples.py) to check expected findings and stable finding codes.
 - `arforge validate` can be run directly against a fixture to inspect the same validation behavior from the CLI.
 
 Each fixture is expected to trigger a known validation outcome. That keeps validation rules honest as the codebase evolves and helps ensure:
@@ -84,7 +84,7 @@ operations:
 
 ## Relationship To `examples/`
 
-The top-level [`examples/`](/d:/VMs/git/arforge/examples) directory contains valid modeling examples intended to validate and export successfully.
+The top-level [examples/](../) directory contains valid modeling examples intended to validate and export successfully.
 
 This `examples/invalid/` directory is different: it is the validation test corpus for scenarios that should fail or warn in well-defined ways.
 

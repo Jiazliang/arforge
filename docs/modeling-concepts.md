@@ -345,8 +345,7 @@ runnables:
       - port: "Pp_Diag"
         operation: "ReadDTC"
     raisesErrors:
-      - port: "Pp_Diag"
-        operation: "ReadDTC"
+      - operation: "ReadDTC"
         error: "DTC_NOT_FOUND"
 ```
 

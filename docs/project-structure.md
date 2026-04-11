@@ -144,7 +144,7 @@ ARForge ships with a `.vscode/` directory that configures the editor automatical
 - [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
 - [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) (Red Hat)
 
-Once both extensions are installed, YAML schema autocomplete and inline validation diagnostics activate for all ARForge YAML files without any manual configuration.
+Once both extensions are installed, YAML schema autocomplete and inline validation diagnostics activate for the standard ARForge YAML file layout without any manual configuration.
 
 **Configuring the active project file:**
 
@@ -154,18 +154,18 @@ The VS Code tasks resolve the project manifest from a single setting in `.vscode
 "arforge.projectFile": "examples/autosar.project.yaml"
 ```
 
-Change this path to point to your own project manifest. All tasks - validate, export, generate, init, and pytest - pick it up automatically.
+Change this path to point to your own project manifest. The validate, export, and generate tasks pick it up automatically.
 
 **Available tasks** (`Terminal -> Run Task`):
 
 | Task | What it runs |
 |---|---|
-| `arforge: validate project` | `arforge validate <projectFile> -vv` |
-| `arforge: export project (split by swc)` | `arforge export <projectFile> --out build --split-by-swc -vv` |
-| `arforge: export project (monolithic)` | `arforge export <projectFile> --out build/DemoProject.arxml -vv` |
-| `arforge: generate Plantuml` | `arforge generate diagram <projectFile> --out build/diagrams_plantuml` |
-| `arforge: generate C-code` | `arforge generate code <projectFile> --lang c --out build/code` |
-| `arforge: init project` | `arforge init demo-project` |
+| `arforge: validate project` | `python -m arforge.cli validate <projectFile> -vv` |
+| `arforge: export project (split by swc)` | `python -m arforge.cli export <projectFile> --out build/arxml --split-by-swc -vv` |
+| `arforge: export project (monolithic)` | `python -m arforge.cli export <projectFile> --out build/arxml/DemoProject.arxml -vv` |
+| `arforge: generate Plantuml` | `python -m arforge.cli generate diagram <projectFile> --out build/diagrams_plantuml` |
+| `arforge: generate C-code` | `python -m arforge.cli generate code <projectFile> --lang c --out build/code` |
+| `arforge: init project` | `python -m arforge.cli init demo-project` |
 | `arforge: pytest` | `pytest -q` |
 
 Tasks resolve the correct Python executable for both Linux and Windows using VS Code's `${workspaceFolder}` variable, so no manual path editing is needed on either platform.

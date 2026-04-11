@@ -51,7 +51,7 @@ ARForge currently provides a complete SWC design and generation pipeline for AUT
 ### Validation
 
 - two-stage validation: JSON Schema + semantic
-- 192 stable `CORE-*` finding codes organized in domain modules
+- stable `CORE-*` finding codes organized in domain modules
 - three severity levels: `error`, `warning`, `info`
 - connectivity validation for SR, CS, and mode-switch ports
 - port usage analysis - warnings for connected but unused ports

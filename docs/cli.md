@@ -158,6 +158,7 @@ python -m arforge.cli generate diagram <project.yaml> --out <dir>
 | File pattern | Purpose |
 |---|---|
 | `composition_<System>.<ext>` | Composition / topology view with instances, ports, and connectors |
+| `subcomposition_<Subcomposition>.<ext>` | Reusable subcomposition view with boundary ports, inner instances, assembly connectors, and delegation connectors |
 | `interfaces_wiring.<ext>` | Interface wiring view with component instances, instantiated ports, and referenced interfaces |
 | `interfaces_contracts.<ext>` | Interface contract view with interfaces, referenced types, compu methods, and mode groups |
 | `behavior_<SWC>.<ext>` | Behavior view per SWC type with ports, runnables, and behavior relations |
