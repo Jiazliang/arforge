@@ -1,0 +1,10 @@
+# ARForge: Invalid system fixture
+# Minimal system for validating unsupported initValue usage.
+system:
+  name: "DemoSystem"
+  composition:
+    name: "Composition_DemoSystem"
+    components:
+      - name: "SrProvider_0"
+        typeRef: "SrProviderInitValueInvalid"
+    connectors: []

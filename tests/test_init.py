@@ -109,6 +109,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert 'name: "SubComposition_SpeedCluster"' in subcomposition_yaml
     assert 'name: "Rp_PowerStateIn"' in subcomposition_yaml
     assert 'name: "Pp_VehicleSpeedOut"' in subcomposition_yaml
+    assert 'category: "fixedLength"' in base_types_yaml
     assert 'typeRef: "SpeedSensor"' in subcomposition_yaml
     assert 'typeRef: "SpeedDisplay"' in subcomposition_yaml
     assert 'name: "Runnable_ReadClusterSpeed"' in diag_manager_yaml
@@ -141,7 +142,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
         "DemoSystem.arxml",
     ]
     speed_display_xml = (out_dir / "SpeedDisplay.arxml").read_text(encoding="utf-8")
-    assert "<MODE-SWITCH-EVENT>" in speed_display_xml
+    assert "<SWC-MODE-SWITCH-EVENT>" in speed_display_xml
     assert "<SHORT-NAME>MSE_Runnable_OnPowerOn_Rp_PowerState_ON</SHORT-NAME>" in speed_display_xml
 
 

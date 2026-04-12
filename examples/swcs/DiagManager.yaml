@@ -24,3 +24,4 @@ swc:
       interfaceRef: "If_VehicleSpeed"
       comSpec:
         mode: "explicit"
+        initValue: 0

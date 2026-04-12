@@ -329,6 +329,17 @@
           "examples": [
             8
           ]
+        },
+        "initValue": {
+          "description": "Optional initial value for nonqueued receiver ports.",
+          "type": [
+            "number",
+            "string",
+            "boolean"
+          ],
+          "examples": [
+            0
+          ]
         }
       },
       "additionalProperties": false,

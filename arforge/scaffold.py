@@ -93,11 +93,13 @@ body="""baseTypes:
     bitLength: 8
     signedness: "unsigned"
     nativeDeclaration: "uint8"
+    category: "fixedLength"
   - name: "uint16"
     description: "Unsigned 16-bit platform integer."
     bitLength: 16
     signedness: "unsigned"
     nativeDeclaration: "uint16"
+    category: "fixedLength"
 """,
     )
 
@@ -282,12 +284,14 @@ body="""swc:
       interfaceRef: "If_VehicleSpeed"
       comSpec:
         mode: "explicit"
+        initValue: 0
     - name: "Rp_VehicleSpeedImplicit"
       description: "Required sender-receiver port for receiving speed with implicit semantics."
       direction: "requires"
       interfaceRef: "If_VehicleSpeed"
       comSpec:
         mode: "implicit"
+        initValue: 0
     - name: "Rp_VehicleSpeedQueued"
       description: "Required sender-receiver port for receiving speed with queued semantics."
       direction: "requires"
@@ -335,6 +339,7 @@ body="""swc:
       interfaceRef: "If_VehicleSpeed"
       comSpec:
         mode: "explicit"
+        initValue: 0
 """,
     )
 

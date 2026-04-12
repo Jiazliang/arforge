@@ -14,6 +14,7 @@
             {% for dt in base_types %}
             <SW-BASE-TYPE>
               <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
+              <CATEGORY>{{ dt.category }}</CATEGORY>
               {% if dt.bitLength is not none %}
               <BASE-TYPE-SIZE>{{ dt.bitLength }}</BASE-TYPE-SIZE>
               {% endif %}

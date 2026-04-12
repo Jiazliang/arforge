@@ -7,6 +7,12 @@ from typing import Any, Dict, List, Tuple
 SWC_CATEGORY_APPLICATION = "application"
 SWC_CATEGORY_SERVICE = "service"
 SWC_CATEGORY_COMPLEX_DEVICE_DRIVER = "complexDeviceDriver"
+BASE_TYPE_CATEGORY_FIXED_LENGTH = "FIXED_LENGTH"
+BASE_TYPE_CATEGORY_ALIASES = {
+    "fixedLength": BASE_TYPE_CATEGORY_FIXED_LENGTH,
+    "fixed_length": BASE_TYPE_CATEGORY_FIXED_LENGTH,
+    BASE_TYPE_CATEGORY_FIXED_LENGTH: BASE_TYPE_CATEGORY_FIXED_LENGTH,
+}
 
 SWC_CATEGORY_TO_COMPONENT_TYPE = {
     SWC_CATEGORY_APPLICATION: "APPLICATION-SW-COMPONENT-TYPE",
@@ -21,6 +27,7 @@ class BaseType:
     bitLength: int | None = None
     signedness: str | None = None
     nativeDeclaration: str | None = None
+    category: str = BASE_TYPE_CATEGORY_FIXED_LENGTH
 
 
 @dataclass(frozen=True)
@@ -207,6 +214,7 @@ class ComSpec:
     queueLength: int | None = None
     callMode: str | None = None
     timeoutMs: int | None = None
+    initValue: int | float | str | bool | None = None
 
 @dataclass(frozen=True)
 class Port:
@@ -439,9 +447,21 @@ def _build_port(port_data: Dict[str, Any], iface_by_name: Dict[str, Interface]) 
 def _parse_ports(ports: List[Dict[str, Any]], iface_by_name: Dict[str, Interface]) -> List[Port]:
     return [_build_port(port_data, iface_by_name) for port_data in ports]
 
+
+def _normalize_base_type_category(category: str | None) -> str:
+    return BASE_TYPE_CATEGORY_ALIASES.get(category or "fixedLength", BASE_TYPE_CATEGORY_FIXED_LENGTH)
+
 def from_dict(d: Dict[str, Any]) -> Project:
     autosar = d["autosar"]
-    base_types = [BaseType(**bt) for bt in d.get("baseTypes", [])]
+    base_types = [
+        BaseType(
+            **{
+                **bt,
+                "category": _normalize_base_type_category(bt.get("category")),
+            }
+        )
+        for bt in d.get("baseTypes", [])
+    ]
     impl_types = []
     for idt in d.get("implementationDataTypes", []):
         impl_types.append(

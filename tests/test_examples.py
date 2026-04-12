@@ -147,6 +147,7 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     assert power_state_port.description == "Required mode switch port for ECU power state."
     assert power_state_port.interfaceType == "modeSwitch"
     assert power_state_port.modeGroupRef == "Mdg_PowerState"
+    assert power_state_port.comSpec is None
     forwarded_speed_port = next(
         port
         for swc in project.swcs
@@ -155,6 +156,24 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
         if port.name == "Pp_VehicleSpeedOut"
     )
     assert forwarded_speed_port.description == "Provided sender-receiver port delegated to the subcomposition boundary."
+    explicit_receiver = next(
+        port
+        for swc in project.swcs
+        if swc.name == "SpeedDisplay"
+        for port in swc.ports
+        if port.name == "Rp_VehicleSpeed"
+    )
+    assert explicit_receiver.comSpec is not None
+    assert explicit_receiver.comSpec.initValue == 0
+    diag_receiver = next(
+        port
+        for swc in project.swcs
+        if swc.name == "DiagManager"
+        for port in swc.ports
+        if port.name == "Rp_VehicleSpeed"
+    )
+    assert diag_receiver.comSpec is not None
+    assert diag_receiver.comSpec.initValue == 0
     on_power_on = next(
         runnable
         for swc in project.swcs
@@ -188,6 +207,7 @@ def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     assert project.system.description == (
         "Demo AUTOSAR system showing one standalone atomic SWC connected to one reusable subcomposition through composition boundary ports."
     )
+    assert next(base_type for base_type in project.baseTypes if base_type.name == "uint8").category == "FIXED_LENGTH"
 
 
 def test_main_example_mode_declaration_group_is_loaded_into_model_ir() -> None:
@@ -1055,6 +1075,7 @@ def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) ->
     assert "<SHORT-NAME>Impl_VehicleSpeed_U16</SHORT-NAME>" in shared_xml
     assert "<SHORT-NAME>CM_VehicleSpeed_Kph</SHORT-NAME>" in shared_xml
     assert "<SHORT-NAME>km_per_h</SHORT-NAME>" in shared_xml
+    assert "<CATEGORY>FIXED_LENGTH</CATEGORY>" in shared_xml
     assert "<SHORT-NAME>Mdg_PowerState</SHORT-NAME>" in shared_xml
     assert "<INITIAL-MODE-REF DEST=\"MODE-DECLARATION\">/DEMO/Modes/Mdg_PowerState/OFF</INITIAL-MODE-REF>" in shared_xml
     assert "<SHORT-NAME>SLEEP</SHORT-NAME>" in shared_xml
@@ -1064,6 +1085,8 @@ def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) ->
     assert "<SW-DATA-DEF-PROPS>" in shared_xml
     assert "<COMPU-INTERNAL-TO-PHYS>" in shared_xml
     assert "<FACTOR>" not in shared_xml
+    assert "<CATEGORY>VALUE</CATEGORY>" in shared_xml
+    assert "<COMPU-METHOD-REF DEST=\"COMPU-METHOD\">/DEMO/CompuMethods/CM_VehicleSpeed_Kph</COMPU-METHOD-REF>" in shared_xml
 
 
 def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Path) -> None:
@@ -1091,9 +1114,11 @@ def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Pa
     assert "<SHORT-NAME>Rp_PowerState</SHORT-NAME>" in speed_display_xml
     assert "<SHORT-NAME>Pp_VehicleSpeedOut</SHORT-NAME>" in speed_display_xml
     assert "<REQUIRED-INTERFACE-TREF DEST=\"MODE-SWITCH-INTERFACE\">/DEMO/Interfaces/If_PowerState</REQUIRED-INTERFACE-TREF>" in speed_display_xml
-    assert "<MODE-SWITCH-EVENT>" in speed_display_xml
+    assert "<SWC-MODE-SWITCH-EVENT>" in speed_display_xml
     assert "<SHORT-NAME>MSE_Runnable_OnPowerOn_Rp_PowerState_ON</SHORT-NAME>" in speed_display_xml
     assert "<TARGET-MODE-DECLARATION-REF DEST=\"MODE-DECLARATION\">/DEMO/Modes/Mdg_PowerState/ON</TARGET-MODE-DECLARATION-REF>" in speed_display_xml
+    assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in speed_display_xml
+    assert "<INIT-VALUE>" in speed_display_xml
 
 
 def test_split_export_preserves_explicit_sr_receiver_semantics(tmp_path: Path) -> None:
@@ -1107,6 +1132,9 @@ def test_split_export_preserves_explicit_sr_receiver_semantics(tmp_path: Path) -
 
     assert "<NONQUEUED-RECEIVER-COM-SPEC>" in explicit_fragment
     assert "<ENABLE-UPDATE>true</ENABLE-UPDATE>" in explicit_fragment
+    assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in explicit_fragment
+    assert "<INIT-VALUE>" in explicit_fragment
+    assert "<V>0</V>" in explicit_fragment
 
 
 def test_split_export_preserves_implicit_sr_receiver_semantics(tmp_path: Path) -> None:
@@ -1120,6 +1148,8 @@ def test_split_export_preserves_implicit_sr_receiver_semantics(tmp_path: Path) -
 
     assert "<NONQUEUED-RECEIVER-COM-SPEC>" in implicit_fragment
     assert "<ENABLE-UPDATE>false</ENABLE-UPDATE>" in implicit_fragment
+    assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in implicit_fragment
+    assert "<INIT-VALUE>" in implicit_fragment
 
 
 def test_split_export_preserves_queued_sr_receiver_semantics(tmp_path: Path) -> None:
@@ -1133,6 +1163,8 @@ def test_split_export_preserves_queued_sr_receiver_semantics(tmp_path: Path) -> 
 
     assert "<QUEUED-RECEIVER-COM-SPEC>" in queued_fragment
     assert "<QUEUE-LENGTH>4</QUEUE-LENGTH>" in queued_fragment
+    assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in queued_fragment
+    assert "<INIT-VALUE>" not in queued_fragment
 
 
 def test_split_export_explicit_and_implicit_receiver_fragments_differ(tmp_path: Path) -> None:
@@ -1217,6 +1249,10 @@ def test_monolithic_and_split_shared_type_fragments_are_equivalent(tmp_path: Pat
     split_app_type = _extract_element_fragment(shared_xml, "APPLICATION-PRIMITIVE-DATA-TYPE", "App_VehicleSpeed")
     assert "<SW-DATA-DEF-PROPS>" in mono_app_type
     assert "<SW-DATA-DEF-PROPS>" in split_app_type
+    assert "<CATEGORY>VALUE</CATEGORY>" in mono_app_type
+    assert "<CATEGORY>VALUE</CATEGORY>" in split_app_type
+    assert "<COMPU-METHOD-REF DEST=\"COMPU-METHOD\">/DEMO/CompuMethods/CM_VehicleSpeed_Kph</COMPU-METHOD-REF>" in mono_app_type
+    assert "<COMPU-METHOD-REF DEST=\"COMPU-METHOD\">/DEMO/CompuMethods/CM_VehicleSpeed_Kph</COMPU-METHOD-REF>" in split_app_type
     assert "<DATA-CONSTR-REF DEST=\"DATA-CONSTR\">/DEMO/DataConstrs/DC_App_VehicleSpeed</DATA-CONSTR-REF>" in mono_app_type
     assert "<DATA-CONSTR-REF DEST=\"DATA-CONSTR\">/DEMO/DataConstrs/DC_App_VehicleSpeed</DATA-CONSTR-REF>" in split_app_type
     assert _normalize_xml_fragment(mono_app_type) == _normalize_xml_fragment(split_app_type)
@@ -1246,6 +1282,10 @@ def test_monolithic_and_split_swc_fragments_are_equivalent(tmp_path: Path) -> No
     split_behavior = _extract_internal_behavior_fragment(split_xml, "SpeedDisplay")
     assert mono_behavior.index("<EVENTS>") < mono_behavior.index("<RUNNABLES>")
     assert split_behavior.index("<EVENTS>") < split_behavior.index("<RUNNABLES>")
+    assert "<SWC-MODE-SWITCH-EVENT>" in mono_behavior
+    assert "<SWC-MODE-SWITCH-EVENT>" in split_behavior
+    assert "<MODE-SWITCH-EVENT>" not in mono_behavior
+    assert "<MODE-SWITCH-EVENT>" not in split_behavior
     assert _normalize_xml_fragment(mono_behavior) == _normalize_xml_fragment(split_behavior)
 
     mono_component = _extract_element_fragment(
@@ -1262,7 +1302,17 @@ def test_monolithic_and_split_swc_fragments_are_equivalent(tmp_path: Path) -> No
     split_r_port = _extract_r_port_fragment(split_component, "Rp_VehicleSpeed")
     assert mono_r_port.index("<REQUIRED-COM-SPECS>") < mono_r_port.index("<REQUIRED-INTERFACE-TREF")
     assert split_r_port.index("<REQUIRED-COM-SPECS>") < split_r_port.index("<REQUIRED-INTERFACE-TREF")
+    assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in mono_r_port
+    assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in split_r_port
+    assert "<INIT-VALUE>" in mono_r_port
+    assert "<INIT-VALUE>" in split_r_port
     assert _normalize_xml_fragment(mono_r_port) == _normalize_xml_fragment(split_r_port)
+
+    mono_base_type = _extract_element_fragment(monolithic_xml, "SW-BASE-TYPE", "uint16")
+    split_base_type = _extract_element_fragment((split_out / SHARED_EXAMPLE_OUTPUT).read_text(encoding="utf-8"), "SW-BASE-TYPE", "uint16")
+    assert "<CATEGORY>FIXED_LENGTH</CATEGORY>" in mono_base_type
+    assert "<CATEGORY>FIXED_LENGTH</CATEGORY>" in split_base_type
+    assert _normalize_xml_fragment(mono_base_type) == _normalize_xml_fragment(split_base_type)
 
 
 def test_monolithic_and_split_subcomposition_fragments_are_equivalent(tmp_path: Path) -> None:
@@ -1325,6 +1375,7 @@ def test_monolithic_and_split_subcomposition_fragments_are_equivalent(tmp_path: 
         ("project_subcomposition_delegation_direction_mismatch.yaml", "CORE-034-DIRECTION-MISMATCH"),
         ("project_subcomposition_delegation_interface_mismatch.yaml", "CORE-034-INTERFACE-MISMATCH"),
         ("project_subcomposition_delegation_duplicate.yaml", "CORE-034-DUPLICATE"),
+        ("project_comspec_init_value_unsupported.yaml", "CORE-025-SR-COMSPEC-INITVALUE-DIRECTION"),
     ],
 )
 def test_data_receive_event_invalid_fixtures_emit_expected_codes(fixture_name: str, expected_code: str) -> None:

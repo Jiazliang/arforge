@@ -1,0 +1,18 @@
+# ARForge: Invalid SWC fixture
+# Tests validation failure for initValue on a provided sender-receiver port.
+swc:
+  name: "SrProviderInitValueInvalid"
+  category: "application"
+  runnables:
+    - name: "Runnable_PublishVehicleSpeed"
+      timingEventMs: 10
+      writes:
+        - port: "Pp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Pp_VehicleSpeed"
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "explicit"
+        initValue: 0

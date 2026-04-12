@@ -14,6 +14,7 @@
             {% for dt in base_types %}
             <SW-BASE-TYPE>
               <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
+              <CATEGORY>{{ dt.category }}</CATEGORY>
               {% if dt.bitLength is not none %}
               <BASE-TYPE-SIZE>{{ dt.bitLength }}</BASE-TYPE-SIZE>
               {% endif %}
@@ -167,7 +168,7 @@
           <SHORT-NAME>Components</SHORT-NAME>
           <ELEMENTS>
             {% for swc in swcs %}
-            {{ arxml.render_swc_component(swc, root_pkg) }}
+            {{ arxml.render_swc_component(swc, root_pkg, swc_sr_port_metadata[swc.name]) }}
             {% endfor %}
             {% for subcomposition in subcompositions %}
             <COMPOSITION-SW-COMPONENT-TYPE>
@@ -175,7 +176,7 @@
               {% if subcomposition.ports %}
               <PORTS>
                 {% for p in subcomposition.ports %}
-                {{ arxml.render_port(p, root_pkg) }}
+                {{ arxml.render_port(p, root_pkg, {}) }}
                 {% endfor %}
               </PORTS>
               {% endif %}

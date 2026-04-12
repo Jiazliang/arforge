@@ -109,6 +109,13 @@ class ArxmlDelegationConnector:
     outer: ArxmlPortRef
 
 
+@dataclass(frozen=True)
+class SrPortComSpecMetadata:
+    data_element_name: str
+    data_element_ref: str
+    unit_ref: str | None = None
+
+
 CompositionOwnerKind = Literal["component_type", "root_system"]
 
 
@@ -276,6 +283,26 @@ def _component_type_refs(project: Project) -> Dict[str, str]:
         {subcomposition.name: f"/{project.rootPackage}/Components/{subcomposition.name}" for subcomposition in project.subcompositions}
     )
     return refs
+
+
+def _build_sr_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, SrPortComSpecMetadata]:
+    interfaces_by_name = {interface.name: interface for interface in project.interfaces}
+    application_types_by_name = {data_type.name: data_type for data_type in project.applicationDataTypes}
+    metadata: dict[str, SrPortComSpecMetadata] = {}
+    for port in swc.ports:
+        if port.interfaceType != "senderReceiver" or port.comSpec is None:
+            continue
+        interface = interfaces_by_name.get(port.interfaceRef)
+        if interface is None or not interface.dataElements:
+            continue
+        data_element = interface.dataElements[0]
+        application_type = application_types_by_name.get(data_element.typeRef)
+        metadata[port.name] = SrPortComSpecMetadata(
+            data_element_name=data_element.name,
+            data_element_ref=f"/{project.rootPackage}/Interfaces/{interface.name}/{data_element.name}",
+            unit_ref=application_type.unitRef if application_type is not None else None,
+        )
+    return metadata
 
 
 def _component_type_path(root_package: str, component_type_name: str) -> str:
@@ -575,7 +602,11 @@ def render_swc(project: Project, swc: Swc, template_dir: Path, template_name: st
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
     swc = next(candidate for candidate in project.swcs if candidate.name == swc.name)
-    return tpl.render(root_pkg=project.rootPackage, swc=swc)
+    return tpl.render(
+        root_pkg=project.rootPackage,
+        swc=swc,
+        sr_port_metadata=_build_sr_port_comspec_metadata(project, swc),
+    )
 
 
 def render_composition_type(
@@ -707,6 +738,7 @@ def write_outputs_with_report(
                 ms_interfaces=ms,
                 cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
                 swcs=swcs,
+                swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc) for swc in swcs},
                 subcompositions=subcompositions,
                 system_name=project.system.name,
                 composition_name=project.system.composition.name,

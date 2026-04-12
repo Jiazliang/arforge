@@ -21,24 +21,40 @@
 {% macro render_application_primitive_data_type(dt, root_pkg) -%}
 <APPLICATION-PRIMITIVE-DATA-TYPE>
   <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
+  <CATEGORY>VALUE</CATEGORY>
   {% if dt.constraint or dt.unitRef or dt.compuMethodRef %}
   <SW-DATA-DEF-PROPS>
     <SW-DATA-DEF-PROPS-VARIANTS>
       <SW-DATA-DEF-PROPS-CONDITIONAL>
+        {% if dt.compuMethodRef %}
+        <COMPU-METHOD-REF DEST="COMPU-METHOD">/{{ root_pkg }}/CompuMethods/{{ dt.compuMethodRef }}</COMPU-METHOD-REF>
+        {% endif %}
         {% if dt.constraint %}
         <DATA-CONSTR-REF DEST="DATA-CONSTR">/{{ root_pkg }}/DataConstrs/DC_{{ dt.name }}</DATA-CONSTR-REF>
         {% endif %}
         {% if dt.unitRef %}
         <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ dt.unitRef }}</UNIT-REF>
         {% endif %}
-        {% if dt.compuMethodRef %}
-        <COMPU-METHOD-REF DEST="COMPU-METHOD">/{{ root_pkg }}/CompuMethods/{{ dt.compuMethodRef }}</COMPU-METHOD-REF>
-        {% endif %}
       </SW-DATA-DEF-PROPS-CONDITIONAL>
     </SW-DATA-DEF-PROPS-VARIANTS>
   </SW-DATA-DEF-PROPS>
   {% endif %}
 </APPLICATION-PRIMITIVE-DATA-TYPE>
+{%- endmacro %}
+
+{% macro render_init_value(init_value, unit_ref, root_pkg) -%}
+<INIT-VALUE>
+  <APPLICATION-VALUE-SPECIFICATION>
+    <SW-VALUE-CONT>
+      {% if unit_ref %}
+      <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ unit_ref }}</UNIT-REF>
+      {% endif %}
+      <SW-VALUES-PHYS>
+        <V>{% if init_value is boolean %}{{ init_value | string | lower }}{% else %}{{ init_value }}{% endif %}</V>
+      </SW-VALUES-PHYS>
+    </SW-VALUE-CONT>
+  </APPLICATION-VALUE-SPECIFICATION>
+</INIT-VALUE>
 {%- endmacro %}
 
 {% macro render_compu_method(compu, root_pkg) -%}
@@ -168,7 +184,7 @@
 </MODE-SWITCH-INTERFACE>
 {%- endmacro %}
 
-{% macro render_port(port, root_pkg) -%}
+{% macro render_port(port, root_pkg, sr_port_metadata) -%}
 {% if port.direction == "provides" %}
 <P-PORT-PROTOTYPE>
   <SHORT-NAME>{{ port.name }}</SHORT-NAME>
@@ -206,18 +222,28 @@
 <R-PORT-PROTOTYPE>
   <SHORT-NAME>{{ port.name }}</SHORT-NAME>
   {% if port.interfaceType == "senderReceiver" %}
+  {% set metadata = sr_port_metadata.get(port.name) %}
   {% if port.comSpec %}
   <REQUIRED-COM-SPECS>
     {% if port.comSpec.mode == "queued" %}
     <QUEUED-RECEIVER-COM-SPEC>
+      {% if metadata %}
+      <DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">{{ metadata.data_element_ref }}</DATA-ELEMENT-REF>
+      {% endif %}
       <QUEUE-LENGTH>{{ port.comSpec.queueLength }}</QUEUE-LENGTH>
     </QUEUED-RECEIVER-COM-SPEC>
     {% else %}
     <NONQUEUED-RECEIVER-COM-SPEC>
+      {% if metadata %}
+      <DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">{{ metadata.data_element_ref }}</DATA-ELEMENT-REF>
+      {% endif %}
       {% if port.comSpec.mode == "explicit" %}
       <ENABLE-UPDATE>true</ENABLE-UPDATE>
       {% elif port.comSpec.mode == "implicit" %}
       <ENABLE-UPDATE>false</ENABLE-UPDATE>
+      {% endif %}
+      {% if port.comSpec.initValue is not none %}
+      {{ render_init_value(port.comSpec.initValue, metadata.unit_ref if metadata else none, root_pkg) }}
       {% endif %}
     </NONQUEUED-RECEIVER-COM-SPEC>
     {% endif %}
@@ -283,7 +309,7 @@
   {% endfor %}
   {% for mse in r.modeSwitchEvents %}
   {% set mse_port = (swc.ports | selectattr("name", "equalto", mse.port) | list | first) %}
-  <MODE-SWITCH-EVENT>
+  <SWC-MODE-SWITCH-EVENT>
     <SHORT-NAME>MSE_{{ r.name }}_{{ mse.port }}_{{ mse.mode }}</SHORT-NAME>
     <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
     <MODE-IREFS>
@@ -293,7 +319,7 @@
         <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ mse_port.modeGroupRef if mse_port else '' }}/{{ mse.mode }}</TARGET-MODE-DECLARATION-REF>
       </MODE-IREF>
     </MODE-IREFS>
-  </MODE-SWITCH-EVENT>
+  </SWC-MODE-SWITCH-EVENT>
   {% endfor %}
   {% endfor %}
 </EVENTS>
@@ -382,12 +408,12 @@
 </RUNNABLES>
 {%- endmacro %}
 
-{% macro render_swc_component(swc, root_pkg) -%}
+{% macro render_swc_component(swc, root_pkg, sr_port_metadata) -%}
 <{{ swc.component_type_tag }}>
   <SHORT-NAME>{{ swc.name }}</SHORT-NAME>
   <PORTS>
     {% for port in swc.ports %}
-    {{ render_port(port, root_pkg) }}
+    {{ render_port(port, root_pkg, sr_port_metadata) }}
     {% endfor %}
   </PORTS>
   <INTERNAL-BEHAVIORS>

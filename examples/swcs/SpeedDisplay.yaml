@@ -37,12 +37,14 @@ swc:
       interfaceRef: "If_VehicleSpeed"
       comSpec:
         mode: "explicit"
+        initValue: 0
     - name: "Rp_VehicleSpeedImplicit"
       description: "Required sender-receiver port for receiving speed with implicit semantics."
       direction: "requires"
       interfaceRef: "If_VehicleSpeed"
       comSpec:
         mode: "implicit"
+        initValue: 0
     - name: "Rp_VehicleSpeedQueued"
       description: "Required sender-receiver port for receiving speed with queued semantics."
       direction: "requires"
