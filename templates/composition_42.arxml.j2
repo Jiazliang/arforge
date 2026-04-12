@@ -54,30 +54,30 @@
                 <ASSEMBLY-SW-CONNECTOR>
                   <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
                   <PROVIDER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.from_instance }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.from_instance }}/{{ c.from_port }}</TARGET-P-PORT-REF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.provider.context_component_ref }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-P-PORT-REF DEST="{{ c.provider.port.dest }}">{{ c.provider.port.ref }}</TARGET-P-PORT-REF>
                   </PROVIDER-IREF>
                   <REQUESTER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.to_instance }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.to_instance }}/{{ c.to_port }}</TARGET-R-PORT-REF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.requester.context_component_ref }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-R-PORT-REF DEST="{{ c.requester.port.dest }}">{{ c.requester.port.ref }}</TARGET-R-PORT-REF>
                   </REQUESTER-IREF>
                 </ASSEMBLY-SW-CONNECTOR>
                 {% endfor %}
                 {% for c in composition.delegation_connectors %}
                 <DELEGATION-SW-CONNECTOR>
                   <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
-                  {% if c.outer_direction == "provides" %}
+                  {% if c.outer.dest == "P-PORT-PROTOTYPE" %}
                   <INNER-PORT-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.inner_instance }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.inner_instance }}/{{ c.inner_port }}</TARGET-P-PORT-REF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.inner.context_component_ref }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-P-PORT-REF DEST="{{ c.inner.port.dest }}">{{ c.inner.port.ref }}</TARGET-P-PORT-REF>
                   </INNER-PORT-IREF>
-                  <OUTER-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.outer_port }}</OUTER-PORT-REF>
+                  <OUTER-PORT-REF DEST="{{ c.outer.dest }}">{{ c.outer.ref }}</OUTER-PORT-REF>
                   {% else %}
                   <INNER-PORT-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.inner_instance }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.inner_instance }}/{{ c.inner_port }}</TARGET-R-PORT-REF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.inner.context_component_ref }}</CONTEXT-COMPONENT-REF>
+                    <TARGET-R-PORT-REF DEST="{{ c.inner.port.dest }}">{{ c.inner.port.ref }}</TARGET-R-PORT-REF>
                   </INNER-PORT-IREF>
-                  <OUTER-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ composition.name }}/{{ c.outer_port }}</OUTER-PORT-REF>
+                  <OUTER-PORT-REF DEST="{{ c.outer.dest }}">{{ c.outer.ref }}</OUTER-PORT-REF>
                   {% endif %}
                 </DELEGATION-SW-CONNECTOR>
                 {% endfor %}

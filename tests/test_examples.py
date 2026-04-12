@@ -965,16 +965,22 @@ def test_split_export_subcomposition_file_contains_reusable_composition_type(tmp
     assert composition_xml.count("<DELEGATION-SW-CONNECTOR>") == 2
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedSensor</TYPE-TREF>" in composition_xml
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedDisplay</TYPE-TREF>" in composition_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_VehicleSpeed</TARGET-P-PORT-REF>" in composition_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in composition_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedImplicit</TARGET-R-PORT-REF>" in composition_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in composition_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_PowerState</TARGET-P-PORT-REF>" in composition_xml
-    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_PowerState</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1</CONTEXT-COMPONENT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1</CONTEXT-COMPONENT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedSensor/Pp_VehicleSpeed</TARGET-P-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedDisplay/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedDisplay/Rp_VehicleSpeedImplicit</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedDisplay/Rp_VehicleSpeedQueued</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedSensor/Pp_PowerState</TARGET-P-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedDisplay/Rp_PowerState</TARGET-R-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1/Pp_VehicleSpeed</TARGET-P-PORT-REF>" not in composition_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1/Rp_VehicleSpeed</TARGET-R-PORT-REF>" not in composition_xml
     assert "<SHORT-NAME>DelegationConn_1</SHORT-NAME>" in composition_xml
     assert "<SHORT-NAME>DelegationConn_2</SHORT-NAME>" in composition_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/Rp_PowerStateIn</OUTER-PORT-REF>" in composition_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/Pp_VehicleSpeedOut</OUTER-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedDisplay/Pp_VehicleSpeedOut</TARGET-P-PORT-REF>" in composition_xml
+    assert "/DEMO/Components/SpeedSensor/Rp_PowerStateIn</TARGET-R-PORT-REF>" in composition_xml
 
 
 def test_split_export_system_contains_root_composition_without_inlining_subcomposition_type(tmp_path: Path) -> None:
@@ -986,10 +992,16 @@ def test_split_export_system_contains_root_composition_without_inlining_subcompo
     system_xml = (out_dir / SYSTEM_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
 
     assert "<SHORT-NAME>Composition_DemoSystem</SHORT-NAME>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/DiagManager_0/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Rp_PowerStateIn</TARGET-R-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Pp_VehicleSpeedOut</TARGET-P-PORT-REF>" in system_xml
-    assert "/DEMO/System/Composition_DemoSystem/DiagManager_0/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/DiagManager_0</CONTEXT-COMPONENT-REF>" in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0</CONTEXT-COMPONENT-REF>" in system_xml
+    assert "/DEMO/Components/DiagManager/Pp_PowerState</TARGET-P-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Rp_PowerStateIn</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/Components/SubComposition_SpeedCluster/Pp_VehicleSpeedOut</TARGET-P-PORT-REF>" in system_xml
+    assert "/DEMO/Components/DiagManager/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Rp_PowerStateIn</TARGET-R-PORT-REF>" not in system_xml
+    assert "/DEMO/System/Composition_DemoSystem/SpeedCluster_0/Pp_VehicleSpeedOut</TARGET-P-PORT-REF>" not in system_xml
+    assert "/DEMO/Components/SpeedSensor/Pp_VehicleSpeed</TARGET-P-PORT-REF>" not in system_xml
+    assert "/DEMO/Components/SpeedDisplay/Pp_VehicleSpeedOut</TARGET-P-PORT-REF>" not in system_xml
     assert "<SHORT-NAME>SpeedCluster_0</SHORT-NAME>" in system_xml
     assert "<SHORT-NAME>DiagManager_0</SHORT-NAME>" in system_xml
     assert system_xml.count("<COMPOSITION-SW-COMPONENT-TYPE>") == 1

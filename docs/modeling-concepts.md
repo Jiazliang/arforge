@@ -416,6 +416,7 @@ Composition ports and delegation connectors play different roles:
 - `outer` references a declared subcomposition port
 - `inner` references an internal component instance port using `InstanceName.PortName`
 - outer and inner ports must match on direction, interface reference, and interface kind
+- in exported ARXML, composition ports are referenced on the composition type, while inner ports are referenced on the owning inner component type together with the inner component prototype context
 
 In the current iteration:
 
@@ -426,6 +427,7 @@ In the current iteration:
 - nested subcompositions are rejected by semantic validation (`CORE-031`)
 - delegation connectors are the only supported way to expose inner functionality through the subcomposition boundary
 - direct top-level access to undeclared inner subcomposition ports is not supported
+- top-level connectors to a subcomposition instance therefore go through the subcomposition's exposed composition ports, never directly to nested inner component ports
 
 ### What connectors do not carry
 
