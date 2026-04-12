@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+{% import "_autosar_macros.j2" as arxml %}
 <AUTOSAR xmlns="http://autosar.org/schema/r4.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-2-2.xsd">
@@ -75,18 +76,7 @@
           <SHORT-NAME>ApplicationDataTypes</SHORT-NAME>
           <ELEMENTS>
             {% for dt in application_types %}
-            <APPLICATION-PRIMITIVE-DATA-TYPE>
-              <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
-              {% if dt.constraint %}
-              <DATA-CONSTR-REF DEST="DATA-CONSTR">/{{ root_pkg }}/DataConstrs/DC_{{ dt.name }}</DATA-CONSTR-REF>
-              {% endif %}
-              {% if dt.unitRef %}
-              <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ dt.unitRef }}</UNIT-REF>
-              {% endif %}
-              {% if dt.compuMethodRef %}
-              <COMPU-METHOD-REF DEST="COMPU-METHOD">/{{ root_pkg }}/CompuMethods/{{ dt.compuMethodRef }}</COMPU-METHOD-REF>
-              {% endif %}
-            </APPLICATION-PRIMITIVE-DATA-TYPE>
+            {{ arxml.render_application_primitive_data_type(dt, root_pkg) }}
             {% endfor %}
           </ELEMENTS>
         </AR-PACKAGE>
@@ -128,35 +118,7 @@
           <SHORT-NAME>CompuMethods</SHORT-NAME>
           <ELEMENTS>
             {% for c in compu_methods %}
-            <COMPU-METHOD>
-              <SHORT-NAME>{{ c.name }}</SHORT-NAME>
-              <CATEGORY>{{ c.category }}</CATEGORY>
-              {% if c.category == "linear" %}
-              <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ c.unitRef }}</UNIT-REF>
-              <FACTOR>{{ c.factor }}</FACTOR>
-              <OFFSET>{{ c.offset }}</OFFSET>
-              {% if c.physMin is not none %}
-              <PHYS-MIN>{{ c.physMin }}</PHYS-MIN>
-              {% endif %}
-              {% if c.physMax is not none %}
-              <PHYS-MAX>{{ c.physMax }}</PHYS-MAX>
-              {% endif %}
-              {% elif c.category == "textTable" %}
-              <COMPU-INTERNAL-TO-PHYS>
-                <COMPU-SCALES>
-                  {% for entry in c.entries %}
-                  <COMPU-SCALE>
-                    <LOWER-LIMIT>{{ entry.value }}</LOWER-LIMIT>
-                    <UPPER-LIMIT>{{ entry.value }}</UPPER-LIMIT>
-                    <COMPU-CONST>
-                      <VT>{{ entry.label }}</VT>
-                    </COMPU-CONST>
-                  </COMPU-SCALE>
-                  {% endfor %}
-                </COMPU-SCALES>
-              </COMPU-INTERNAL-TO-PHYS>
-              {% endif %}
-            </COMPU-METHOD>
+            {{ arxml.render_compu_method(c, root_pkg) }}
             {% endfor %}
           </ELEMENTS>
         </AR-PACKAGE>
@@ -187,80 +149,15 @@
           <ELEMENTS>
 
             {% for itf in sr_interfaces %}
-            <SENDER-RECEIVER-INTERFACE>
-              <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
-              <DATA-ELEMENTS>
-                {% for de in itf.dataElements %}
-                <VARIABLE-DATA-PROTOTYPE>
-                  <SHORT-NAME>{{ de.name }}</SHORT-NAME>
-                  {% set tref = type_trefs.get(de.typeRef) %}
-                  <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ tref.package if tref else 'ImplementationDataTypes' }}/{{ de.typeRef }}</TYPE-TREF>
-                </VARIABLE-DATA-PROTOTYPE>
-                {% endfor %}
-              </DATA-ELEMENTS>
-            </SENDER-RECEIVER-INTERFACE>
+            {{ arxml.render_sr_interface(itf, root_pkg, type_trefs) }}
             {% endfor %}
 
             {% for itf in cs_interfaces %}
-            <CLIENT-SERVER-INTERFACE>
-              <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
-              {% if cs_interface_errors[itf.name] %}
-              <POSSIBLE-ERRORS>
-                {% for possible_error in cs_interface_errors[itf.name] %}
-                <APPLICATION-ERROR>
-                  <SHORT-NAME>{{ possible_error.name }}</SHORT-NAME>
-                  {% if possible_error.code is not none %}
-                  <ERROR-CODE>{{ possible_error.code }}</ERROR-CODE>
-                  {% endif %}
-                </APPLICATION-ERROR>
-                {% endfor %}
-              </POSSIBLE-ERRORS>
-              {% endif %}
-              <OPERATIONS>
-                {% for op in itf.operations %}
-                <CLIENT-SERVER-OPERATION>
-                  <SHORT-NAME>{{ op.name }}</SHORT-NAME>
-                  {% if op.arguments or op.returnType != "void" %}
-                  <ARGUMENTS>
-                    {% for arg in op.arguments %}
-                    {% set tref = type_trefs.get(arg.typeRef) %}
-                    <ARGUMENT-DATA-PROTOTYPE>
-                      <SHORT-NAME>{{ arg.name }}</SHORT-NAME>
-                      <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ tref.package if tref else 'ImplementationDataTypes' }}/{{ arg.typeRef }}</TYPE-TREF>
-                      <DIRECTION>{{ arg.direction | upper }}</DIRECTION>
-                    </ARGUMENT-DATA-PROTOTYPE>
-                    {% endfor %}
-                    {% if op.returnType != "void" %}
-                    {% set return_tref = type_trefs.get(op.returnType) %}
-                    <ARGUMENT-DATA-PROTOTYPE>
-                      <SHORT-NAME>ReturnValue</SHORT-NAME>
-                      <TYPE-TREF DEST="{{ return_tref.dest if return_tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ return_tref.package if return_tref else 'ImplementationDataTypes' }}/{{ op.returnType }}</TYPE-TREF>
-                      <DIRECTION>OUT</DIRECTION>
-                    </ARGUMENT-DATA-PROTOTYPE>
-                    {% endif %}
-                  </ARGUMENTS>
-                  {% endif %}
-                  {% if op.possibleErrors %}
-                  <POSSIBLE-ERROR-REFS>
-                    {% for possible_error in op.possibleErrors %}
-                    <POSSIBLE-ERROR-REF DEST="APPLICATION-ERROR">/{{ root_pkg }}/Interfaces/{{ itf.name }}/{{ possible_error.name }}</POSSIBLE-ERROR-REF>
-                    {% endfor %}
-                  </POSSIBLE-ERROR-REFS>
-                  {% endif %}
-                </CLIENT-SERVER-OPERATION>
-                {% endfor %}
-              </OPERATIONS>
-            </CLIENT-SERVER-INTERFACE>
+            {{ arxml.render_cs_interface(itf, root_pkg, type_trefs, cs_interface_errors) }}
             {% endfor %}
 
             {% for itf in ms_interfaces %}
-            <MODE-SWITCH-INTERFACE>
-              <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
-              <MODE-GROUP>
-                <SHORT-NAME>{{ itf.name }}_ModeGroup</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/{{ root_pkg }}/Modes/{{ itf.modeGroupRef }}</TYPE-TREF>
-              </MODE-GROUP>
-            </MODE-SWITCH-INTERFACE>
+            {{ arxml.render_ms_interface(itf, root_pkg) }}
             {% endfor %}
 
           </ELEMENTS>
@@ -270,228 +167,7 @@
           <SHORT-NAME>Components</SHORT-NAME>
           <ELEMENTS>
             {% for swc in swcs %}
-            <{{ swc.component_type_tag }}>
-              <SHORT-NAME>{{ swc.name }}</SHORT-NAME>
-
-              <PORTS>
-                {% for p in swc.ports %}
-                  {% if p.direction == "provides" %}
-                <P-PORT-PROTOTYPE>
-                  <SHORT-NAME>{{ p.name }}</SHORT-NAME>
-                  {% if p.interfaceType == "senderReceiver" %}
-                  <PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
-                  {% if p.comSpec %}
-                  <PROVIDED-COM-SPECS>
-                    {% if p.comSpec.mode == "queued" %}
-                    <QUEUED-SENDER-COM-SPEC>
-                      <QUEUE-LENGTH>{{ p.comSpec.queueLength }}</QUEUE-LENGTH>
-                    </QUEUED-SENDER-COM-SPEC>
-                    {% else %}
-                    <NONQUEUED-SENDER-COM-SPEC>
-                    </NONQUEUED-SENDER-COM-SPEC>
-                    {% endif %}
-                  </PROVIDED-COM-SPECS>
-                  {% endif %}
-                  {% elif p.interfaceType == "clientServer" %}
-                  <PROVIDED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
-                  {% if p.comSpec and p.comSpec.callMode %}
-                  <PROVIDED-COM-SPECS>
-                    <SERVER-COM-SPEC>
-                      <CALL-MODE>{{ p.comSpec.callMode }}</CALL-MODE>
-                      {% if p.comSpec.callMode == "synchronous" and p.comSpec.timeoutMs is not none %}
-                      <TIMEOUT-MS>{{ p.comSpec.timeoutMs }}</TIMEOUT-MS>
-                      {% endif %}
-                    </SERVER-COM-SPEC>
-                  </PROVIDED-COM-SPECS>
-                  {% endif %}
-                  {% elif p.interfaceType == "modeSwitch" %}
-                  <PROVIDED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
-                  {% endif %}
-                </P-PORT-PROTOTYPE>
-                  {% else %}
-                <R-PORT-PROTOTYPE>
-                  <SHORT-NAME>{{ p.name }}</SHORT-NAME>
-                  {% if p.interfaceType == "senderReceiver" %}
-                  <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
-                  {% if p.comSpec %}
-                  <REQUIRED-COM-SPECS>
-                    {% if p.comSpec.mode == "queued" %}
-                    <QUEUED-RECEIVER-COM-SPEC>
-                      <QUEUE-LENGTH>{{ p.comSpec.queueLength }}</QUEUE-LENGTH>
-                    </QUEUED-RECEIVER-COM-SPEC>
-                    {% else %}
-                    <NONQUEUED-RECEIVER-COM-SPEC>
-                      {% if p.comSpec.mode == "explicit" %}
-                      <ENABLE-UPDATE>true</ENABLE-UPDATE>
-                      {% elif p.comSpec.mode == "implicit" %}
-                      <ENABLE-UPDATE>false</ENABLE-UPDATE>
-                      {% endif %}
-                    </NONQUEUED-RECEIVER-COM-SPEC>
-                    {% endif %}
-                  </REQUIRED-COM-SPECS>
-                  {% endif %}
-                  {% elif p.interfaceType == "clientServer" %}
-                  <REQUIRED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
-                  {% if p.comSpec and p.comSpec.callMode %}
-                  <REQUIRED-COM-SPECS>
-                    <CLIENT-COM-SPEC>
-                      <CALL-MODE>{{ p.comSpec.callMode }}</CALL-MODE>
-                      {% if p.comSpec.callMode == "synchronous" and p.comSpec.timeoutMs is not none %}
-                      <TIMEOUT-MS>{{ p.comSpec.timeoutMs }}</TIMEOUT-MS>
-                      {% endif %}
-                    </CLIENT-COM-SPEC>
-                  </REQUIRED-COM-SPECS>
-                  {% endif %}
-                  {% elif p.interfaceType == "modeSwitch" %}
-                  <REQUIRED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
-                  {% endif %}
-                </R-PORT-PROTOTYPE>
-                  {% endif %}
-                {% endfor %}
-              </PORTS>
-
-              <INTERNAL-BEHAVIORS>
-                <SWC-INTERNAL-BEHAVIOR>
-                  <SHORT-NAME>IB_{{ swc.name }}</SHORT-NAME>
-
-                  <RUNNABLES>
-                    {% for r in swc.runnables %}
-                    <RUNNABLE-ENTITY>
-                      <SHORT-NAME>{{ r.name }}</SHORT-NAME>
-                      <CAN-BE-INVOKED-CONCURRENTLY>false</CAN-BE-INVOKED-CONCURRENTLY>
-                      {% if r.reads %}
-                      <DATA-RECEIVE-POINT-BY-ARGUMENTS>
-                        {% for read in r.reads %}
-                        <VARIABLE-ACCESS>
-                          <SHORT-NAME>DRP_{{ read.port }}_{{ read.dataElement }}</SHORT-NAME>
-                          <ACCESSED-VARIABLE>
-                            <AUTOSAR-VARIABLE-IREF>
-                              <PORT-PROTOTYPE-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ read.port }}</PORT-PROTOTYPE-REF>
-                              {% set read_port = (swc.ports | selectattr("name", "equalto", read.port) | list | first) %}
-                              <TARGET-DATA-PROTOTYPE-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ read_port.interfaceRef if read_port else '' }}/{{ read.dataElement }}</TARGET-DATA-PROTOTYPE-REF>
-                            </AUTOSAR-VARIABLE-IREF>
-                          </ACCESSED-VARIABLE>
-                        </VARIABLE-ACCESS>
-                        {% endfor %}
-                      </DATA-RECEIVE-POINT-BY-ARGUMENTS>
-                      {% endif %}
-                      {% if r.writes %}
-                      <DATA-SEND-POINTS>
-                        {% for write in r.writes %}
-                        <VARIABLE-ACCESS>
-                          <SHORT-NAME>DSP_{{ write.port }}_{{ write.dataElement }}</SHORT-NAME>
-                          <ACCESSED-VARIABLE>
-                            <AUTOSAR-VARIABLE-IREF>
-                              <PORT-PROTOTYPE-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ write.port }}</PORT-PROTOTYPE-REF>
-                              {% set write_port = (swc.ports | selectattr("name", "equalto", write.port) | list | first) %}
-                              <TARGET-DATA-PROTOTYPE-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ write_port.interfaceRef if write_port else '' }}/{{ write.dataElement }}</TARGET-DATA-PROTOTYPE-REF>
-                            </AUTOSAR-VARIABLE-IREF>
-                          </ACCESSED-VARIABLE>
-                        </VARIABLE-ACCESS>
-                        {% endfor %}
-                      </DATA-SEND-POINTS>
-                      {% endif %}
-                      {% if r.calls %}
-                      <SERVER-CALL-POINTS>
-                        {% for call in r.calls %}
-                        {% set call_port = (swc.ports | selectattr("name", "equalto", call.port) | list | first) %}
-                        {% set call_mode = call_port.comSpec.callMode if call_port and call_port.comSpec and call_port.comSpec.callMode else "synchronous" %}
-                        {% if call_mode == "asynchronous" %}
-                        <ASYNCHRONOUS-SERVER-CALL-POINT>
-                          <SHORT-NAME>SCP_{{ call.port }}_{{ call.operation }}</SHORT-NAME>
-                          <OPERATION-IREF>
-                            <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ call.port }}</CONTEXT-R-PORT-REF>
-                            <TARGET-REQUIRED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ call_port.interfaceRef if call_port else '' }}/{{ call.operation }}</TARGET-REQUIRED-OPERATION-REF>
-                          </OPERATION-IREF>
-                        </ASYNCHRONOUS-SERVER-CALL-POINT>
-                        {% else %}
-                        <SYNCHRONOUS-SERVER-CALL-POINT>
-                          <SHORT-NAME>SCP_{{ call.port }}_{{ call.operation }}</SHORT-NAME>
-                          <OPERATION-IREF>
-                            <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ call.port }}</CONTEXT-R-PORT-REF>
-                            <TARGET-REQUIRED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ call_port.interfaceRef if call_port else '' }}/{{ call.operation }}</TARGET-REQUIRED-OPERATION-REF>
-                          </OPERATION-IREF>
-                        </SYNCHRONOUS-SERVER-CALL-POINT>
-                        {% endif %}
-                        {% endfor %}
-                      </SERVER-CALL-POINTS>
-                      {% endif %}
-                      {% if r.raisesErrors %}
-                      <RAISED-APPLICATION-ERROR-REFS>
-                        {% for raised in r.raisesErrors %}
-                        {% set bound_event = (r.operationInvokedEvents | selectattr("operation", "equalto", raised.operation) | list | first) %}
-                        {% set bound_port = (swc.ports | selectattr("name", "equalto", bound_event.port) | list | first) if bound_event else none %}
-                        {% if bound_event and bound_port %}
-                        <RAISED-APPLICATION-ERROR-REF>
-                          <CONTEXT-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ bound_event.port }}</CONTEXT-P-PORT-REF>
-                          <TARGET-PROVIDED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ bound_port.interfaceRef }}/{{ raised.operation }}</TARGET-PROVIDED-OPERATION-REF>
-                          <TARGET-APPLICATION-ERROR-REF DEST="APPLICATION-ERROR">/{{ root_pkg }}/Interfaces/{{ bound_port.interfaceRef }}/{{ raised.error }}</TARGET-APPLICATION-ERROR-REF>
-                        </RAISED-APPLICATION-ERROR-REF>
-                        {% endif %}
-                        {% endfor %}
-                      </RAISED-APPLICATION-ERROR-REFS>
-                      {% endif %}
-                    </RUNNABLE-ENTITY>
-                    {% endfor %}
-                  </RUNNABLES>
-
-                  <EVENTS>
-                    {% for r in swc.runnables %}
-                    {% if r.initEvent %}
-                    <INIT-EVENT>
-                      <SHORT-NAME>IE_{{ r.name }}</SHORT-NAME>
-                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-                    </INIT-EVENT>
-                    {% endif %}
-                    {% if r.timingEventMs is not none %}
-                    <TIMING-EVENT>
-                      <SHORT-NAME>TE_{{ r.name }}</SHORT-NAME>
-                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-                      <PERIOD>{{ (r.timingEventMs / 1000.0) }}</PERIOD>
-                    </TIMING-EVENT>
-                    {% endif %}
-                    {% for oie in r.operationInvokedEvents %}
-                    {% set oie_port = (swc.ports | selectattr("name", "equalto", oie.port) | list | first) %}
-                    <OPERATION-INVOKED-EVENT>
-                      <SHORT-NAME>OIE_{{ r.name }}_{{ oie.port }}_{{ oie.operation }}</SHORT-NAME>
-                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-                      <OPERATION-IREF>
-                        <CONTEXT-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ oie.port }}</CONTEXT-P-PORT-REF>
-                        <TARGET-PROVIDED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ oie_port.interfaceRef if oie_port else '' }}/{{ oie.operation }}</TARGET-PROVIDED-OPERATION-REF>
-                      </OPERATION-IREF>
-                    </OPERATION-INVOKED-EVENT>
-                    {% endfor %}
-                    {% for dre in r.dataReceiveEvents %}
-                    {% set dre_port = (swc.ports | selectattr("name", "equalto", dre.port) | list | first) %}
-                    <DATA-RECEIVE-EVENT>
-                      <SHORT-NAME>DRE_{{ r.name }}_{{ dre.port }}_{{ dre.dataElement }}</SHORT-NAME>
-                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-                      <DATA-IREF>
-                        <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ dre.port }}</CONTEXT-R-PORT-REF>
-                        <TARGET-DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ dre_port.interfaceRef if dre_port else '' }}/{{ dre.dataElement }}</TARGET-DATA-ELEMENT-REF>
-                      </DATA-IREF>
-                    </DATA-RECEIVE-EVENT>
-                    {% endfor %}
-                    {% for mse in r.modeSwitchEvents %}
-                    {% set mse_port = (swc.ports | selectattr("name", "equalto", mse.port) | list | first) %}
-                    <MODE-SWITCH-EVENT>
-                      <SHORT-NAME>MSE_{{ r.name }}_{{ mse.port }}_{{ mse.mode }}</SHORT-NAME>
-                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-                      <MODE-IREFS>
-                        <MODE-IREF>
-                          <CONTEXT-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ mse.port }}</CONTEXT-PORT-REF>
-                          <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ mse_port.interfaceRef if mse_port else '' }}/{{ mse_port.interfaceRef if mse_port else '' }}_ModeGroup</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
-                          <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ mse_port.modeGroupRef if mse_port else '' }}/{{ mse.mode }}</TARGET-MODE-DECLARATION-REF>
-                        </MODE-IREF>
-                      </MODE-IREFS>
-                    </MODE-SWITCH-EVENT>
-                    {% endfor %}
-                    {% endfor %}
-                  </EVENTS>
-
-                </SWC-INTERNAL-BEHAVIOR>
-              </INTERNAL-BEHAVIORS>
-            </{{ swc.component_type_tag }}>
+            {{ arxml.render_swc_component(swc, root_pkg) }}
             {% endfor %}
             {% for subcomposition in subcompositions %}
             <COMPOSITION-SW-COMPONENT-TYPE>
@@ -499,29 +175,7 @@
               {% if subcomposition.ports %}
               <PORTS>
                 {% for p in subcomposition.ports %}
-                  {% if p.direction == "provides" %}
-                <P-PORT-PROTOTYPE>
-                  <SHORT-NAME>{{ p.name }}</SHORT-NAME>
-                  {% if p.interfaceType == "senderReceiver" %}
-                  <PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
-                  {% elif p.interfaceType == "clientServer" %}
-                  <PROVIDED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
-                  {% elif p.interfaceType == "modeSwitch" %}
-                  <PROVIDED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</PROVIDED-INTERFACE-TREF>
-                  {% endif %}
-                </P-PORT-PROTOTYPE>
-                  {% else %}
-                <R-PORT-PROTOTYPE>
-                  <SHORT-NAME>{{ p.name }}</SHORT-NAME>
-                  {% if p.interfaceType == "senderReceiver" %}
-                  <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
-                  {% elif p.interfaceType == "clientServer" %}
-                  <REQUIRED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
-                  {% elif p.interfaceType == "modeSwitch" %}
-                  <REQUIRED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ p.interfaceRef }}</REQUIRED-INTERFACE-TREF>
-                  {% endif %}
-                </R-PORT-PROTOTYPE>
-                  {% endif %}
+                {{ arxml.render_port(p, root_pkg) }}
                 {% endfor %}
               </PORTS>
               {% endif %}
@@ -535,35 +189,10 @@
               </COMPONENTS>
               <CONNECTORS>
                 {% for c in subcomposition.connections %}
-                <ASSEMBLY-SW-CONNECTOR>
-                  <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
-                  <PROVIDER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.provider.context_component_ref }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-P-PORT-REF DEST="{{ c.provider.port.dest }}">{{ c.provider.port.ref }}</TARGET-P-PORT-REF>
-                  </PROVIDER-IREF>
-                  <REQUESTER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.requester.context_component_ref }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-R-PORT-REF DEST="{{ c.requester.port.dest }}">{{ c.requester.port.ref }}</TARGET-R-PORT-REF>
-                  </REQUESTER-IREF>
-                </ASSEMBLY-SW-CONNECTOR>
+                {{ arxml.render_assembly_connector(c) }}
                 {% endfor %}
                 {% for c in subcomposition.delegation_connectors %}
-                <DELEGATION-SW-CONNECTOR>
-                  <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
-                  {% if c.outer.dest == "P-PORT-PROTOTYPE" %}
-                  <INNER-PORT-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.inner.context_component_ref }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-P-PORT-REF DEST="{{ c.inner.port.dest }}">{{ c.inner.port.ref }}</TARGET-P-PORT-REF>
-                  </INNER-PORT-IREF>
-                  <OUTER-PORT-REF DEST="{{ c.outer.dest }}">{{ c.outer.ref }}</OUTER-PORT-REF>
-                  {% else %}
-                  <INNER-PORT-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.inner.context_component_ref }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-R-PORT-REF DEST="{{ c.inner.port.dest }}">{{ c.inner.port.ref }}</TARGET-R-PORT-REF>
-                  </INNER-PORT-IREF>
-                  <OUTER-PORT-REF DEST="{{ c.outer.dest }}">{{ c.outer.ref }}</OUTER-PORT-REF>
-                  {% endif %}
-                </DELEGATION-SW-CONNECTOR>
+                {{ arxml.render_delegation_connector(c) }}
                 {% endfor %}
               </CONNECTORS>
             </COMPOSITION-SW-COMPONENT-TYPE>
@@ -586,17 +215,7 @@
               </COMPONENTS>
               <CONNECTORS>
                 {% for c in connections %}
-                <ASSEMBLY-SW-CONNECTOR>
-                  <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
-                  <PROVIDER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.provider.context_component_ref }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-P-PORT-REF DEST="{{ c.provider.port.dest }}">{{ c.provider.port.ref }}</TARGET-P-PORT-REF>
-                  </PROVIDER-IREF>
-                  <REQUESTER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">{{ c.requester.context_component_ref }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-R-PORT-REF DEST="{{ c.requester.port.dest }}">{{ c.requester.port.ref }}</TARGET-R-PORT-REF>
-                  </REQUESTER-IREF>
-                </ASSEMBLY-SW-CONNECTOR>
+                {{ arxml.render_assembly_connector(c) }}
                 {% endfor %}
               </CONNECTORS>
             </COMPOSITION-SW-COMPONENT-TYPE>

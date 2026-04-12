@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+{% import "_autosar_macros.j2" as arxml %}
 <AUTOSAR xmlns="http://autosar.org/schema/r4.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-2-2.xsd">
@@ -75,18 +76,7 @@
           <SHORT-NAME>ApplicationDataTypes</SHORT-NAME>
           <ELEMENTS>
             {% for dt in application_types %}
-            <APPLICATION-PRIMITIVE-DATA-TYPE>
-              <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
-              {% if dt.constraint %}
-              <DATA-CONSTR-REF DEST="DATA-CONSTR">/{{ root_pkg }}/DataConstrs/DC_{{ dt.name }}</DATA-CONSTR-REF>
-              {% endif %}
-              {% if dt.unitRef %}
-              <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ dt.unitRef }}</UNIT-REF>
-              {% endif %}
-              {% if dt.compuMethodRef %}
-              <COMPU-METHOD-REF DEST="COMPU-METHOD">/{{ root_pkg }}/CompuMethods/{{ dt.compuMethodRef }}</COMPU-METHOD-REF>
-              {% endif %}
-            </APPLICATION-PRIMITIVE-DATA-TYPE>
+            {{ arxml.render_application_primitive_data_type(dt, root_pkg) }}
             {% endfor %}
           </ELEMENTS>
         </AR-PACKAGE>
@@ -128,35 +118,7 @@
           <SHORT-NAME>CompuMethods</SHORT-NAME>
           <ELEMENTS>
             {% for c in compu_methods %}
-            <COMPU-METHOD>
-              <SHORT-NAME>{{ c.name }}</SHORT-NAME>
-              <CATEGORY>{{ c.category }}</CATEGORY>
-              {% if c.category == "linear" %}
-              <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ c.unitRef }}</UNIT-REF>
-              <FACTOR>{{ c.factor }}</FACTOR>
-              <OFFSET>{{ c.offset }}</OFFSET>
-              {% if c.physMin is not none %}
-              <PHYS-MIN>{{ c.physMin }}</PHYS-MIN>
-              {% endif %}
-              {% if c.physMax is not none %}
-              <PHYS-MAX>{{ c.physMax }}</PHYS-MAX>
-              {% endif %}
-              {% elif c.category == "textTable" %}
-              <COMPU-INTERNAL-TO-PHYS>
-                <COMPU-SCALES>
-                  {% for entry in c.entries %}
-                  <COMPU-SCALE>
-                    <LOWER-LIMIT>{{ entry.value }}</LOWER-LIMIT>
-                    <UPPER-LIMIT>{{ entry.value }}</UPPER-LIMIT>
-                    <COMPU-CONST>
-                      <VT>{{ entry.label }}</VT>
-                    </COMPU-CONST>
-                  </COMPU-SCALE>
-                  {% endfor %}
-                </COMPU-SCALES>
-              </COMPU-INTERNAL-TO-PHYS>
-              {% endif %}
-            </COMPU-METHOD>
+            {{ arxml.render_compu_method(c, root_pkg) }}
             {% endfor %}
           </ELEMENTS>
         </AR-PACKAGE>
@@ -187,80 +149,15 @@
           <ELEMENTS>
 
             {% for itf in sr_interfaces %}
-            <SENDER-RECEIVER-INTERFACE>
-              <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
-              <DATA-ELEMENTS>
-                {% for de in itf.dataElements %}
-                <VARIABLE-DATA-PROTOTYPE>
-                  <SHORT-NAME>{{ de.name }}</SHORT-NAME>
-                  {% set tref = type_trefs.get(de.typeRef) %}
-                  <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ tref.package if tref else 'ImplementationDataTypes' }}/{{ de.typeRef }}</TYPE-TREF>
-                </VARIABLE-DATA-PROTOTYPE>
-                {% endfor %}
-              </DATA-ELEMENTS>
-            </SENDER-RECEIVER-INTERFACE>
+            {{ arxml.render_sr_interface(itf, root_pkg, type_trefs) }}
             {% endfor %}
 
             {% for itf in cs_interfaces %}
-            <CLIENT-SERVER-INTERFACE>
-              <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
-              {% if cs_interface_errors[itf.name] %}
-              <POSSIBLE-ERRORS>
-                {% for possible_error in cs_interface_errors[itf.name] %}
-                <APPLICATION-ERROR>
-                  <SHORT-NAME>{{ possible_error.name }}</SHORT-NAME>
-                  {% if possible_error.code is not none %}
-                  <ERROR-CODE>{{ possible_error.code }}</ERROR-CODE>
-                  {% endif %}
-                </APPLICATION-ERROR>
-                {% endfor %}
-              </POSSIBLE-ERRORS>
-              {% endif %}
-              <OPERATIONS>
-                {% for op in itf.operations %}
-                <CLIENT-SERVER-OPERATION>
-                  <SHORT-NAME>{{ op.name }}</SHORT-NAME>
-                  {% if op.arguments or op.returnType != "void" %}
-                  <ARGUMENTS>
-                    {% for arg in op.arguments %}
-                    {% set tref = type_trefs.get(arg.typeRef) %}
-                    <ARGUMENT-DATA-PROTOTYPE>
-                      <SHORT-NAME>{{ arg.name }}</SHORT-NAME>
-                      <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ tref.package if tref else 'ImplementationDataTypes' }}/{{ arg.typeRef }}</TYPE-TREF>
-                      <DIRECTION>{{ arg.direction | upper }}</DIRECTION>
-                    </ARGUMENT-DATA-PROTOTYPE>
-                    {% endfor %}
-                    {% if op.returnType != "void" %}
-                    {% set return_tref = type_trefs.get(op.returnType) %}
-                    <ARGUMENT-DATA-PROTOTYPE>
-                      <SHORT-NAME>ReturnValue</SHORT-NAME>
-                      <TYPE-TREF DEST="{{ return_tref.dest if return_tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ return_tref.package if return_tref else 'ImplementationDataTypes' }}/{{ op.returnType }}</TYPE-TREF>
-                      <DIRECTION>OUT</DIRECTION>
-                    </ARGUMENT-DATA-PROTOTYPE>
-                    {% endif %}
-                  </ARGUMENTS>
-                  {% endif %}
-                  {% if op.possibleErrors %}
-                  <POSSIBLE-ERROR-REFS>
-                    {% for possible_error in op.possibleErrors %}
-                    <POSSIBLE-ERROR-REF DEST="APPLICATION-ERROR">/{{ root_pkg }}/Interfaces/{{ itf.name }}/{{ possible_error.name }}</POSSIBLE-ERROR-REF>
-                    {% endfor %}
-                  </POSSIBLE-ERROR-REFS>
-                  {% endif %}
-                </CLIENT-SERVER-OPERATION>
-                {% endfor %}
-              </OPERATIONS>
-            </CLIENT-SERVER-INTERFACE>
+            {{ arxml.render_cs_interface(itf, root_pkg, type_trefs, cs_interface_errors) }}
             {% endfor %}
 
             {% for itf in ms_interfaces %}
-            <MODE-SWITCH-INTERFACE>
-              <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
-              <MODE-GROUP>
-                <SHORT-NAME>{{ itf.name }}_ModeGroup</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/{{ root_pkg }}/Modes/{{ itf.modeGroupRef }}</TYPE-TREF>
-              </MODE-GROUP>
-            </MODE-SWITCH-INTERFACE>
+            {{ arxml.render_ms_interface(itf, root_pkg) }}
             {% endfor %}
 
           </ELEMENTS>

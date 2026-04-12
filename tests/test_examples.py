@@ -209,6 +209,30 @@ def _extract_r_port_fragment(xml: str, port_name: str) -> str:
     return match.group(1)
 
 
+def _extract_element_fragment(xml: str, tag_pattern: str, short_name: str) -> str:
+    match = re.search(
+        rf"<(?:{tag_pattern})>\s*<SHORT-NAME>{re.escape(short_name)}</SHORT-NAME>(.*?)</(?:{tag_pattern})>",
+        xml,
+        flags=re.DOTALL,
+    )
+    assert match is not None, f"Missing element {short_name} for tag pattern {tag_pattern}"
+    return match.group(0)
+
+
+def _extract_internal_behavior_fragment(xml: str, swc_name: str) -> str:
+    match = re.search(
+        rf"<SWC-INTERNAL-BEHAVIOR>\s*<SHORT-NAME>IB_{re.escape(swc_name)}</SHORT-NAME>(.*?)</SWC-INTERNAL-BEHAVIOR>",
+        xml,
+        flags=re.DOTALL,
+    )
+    assert match is not None, f"Missing internal behavior for {swc_name}"
+    return match.group(0)
+
+
+def _normalize_xml_fragment(xml: str) -> str:
+    return re.sub(r">\s+<", "><", xml).strip()
+
+
 @pytest.mark.parametrize(
     "fixture_path",
     _invalid_project_fixtures(),
@@ -967,6 +991,8 @@ def test_split_export_subcomposition_file_contains_reusable_composition_type(tmp
     assert "<TYPE-TREF DEST=\"APPLICATION-SW-COMPONENT-TYPE\">/DEMO/Components/SpeedDisplay</TYPE-TREF>" in composition_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedSensor_1</CONTEXT-COMPONENT-REF>" in composition_xml
     assert "/DEMO/Components/SubComposition_SpeedCluster/SpeedDisplay_1</CONTEXT-COMPONENT-REF>" in composition_xml
+    assert "<P-PORT-IN-COMPOSITION-INSTANCE-REF>" in composition_xml
+    assert "<R-PORT-IN-COMPOSITION-INSTANCE-REF>" in composition_xml
     assert "/DEMO/Components/SpeedSensor/Pp_VehicleSpeed</TARGET-P-PORT-REF>" in composition_xml
     assert "/DEMO/Components/SpeedDisplay/Rp_VehicleSpeed</TARGET-R-PORT-REF>" in composition_xml
     assert "/DEMO/Components/SpeedDisplay/Rp_VehicleSpeedImplicit</TARGET-R-PORT-REF>" in composition_xml
@@ -1034,6 +1060,10 @@ def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) ->
     assert "<SHORT-NAME>SLEEP</SHORT-NAME>" in shared_xml
     assert "<MODE-SWITCH-INTERFACE>" in shared_xml
     assert "<TYPE-TREF DEST=\"MODE-DECLARATION-GROUP\">/DEMO/Modes/Mdg_PowerState</TYPE-TREF>" in shared_xml
+    assert "<IS-SERVICE>false</IS-SERVICE>" in shared_xml
+    assert "<SW-DATA-DEF-PROPS>" in shared_xml
+    assert "<COMPU-INTERNAL-TO-PHYS>" in shared_xml
+    assert "<FACTOR>" not in shared_xml
 
 
 def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Path) -> None:
@@ -1169,6 +1199,93 @@ def test_split_export_orders_outputs_deterministically(tmp_path: Path) -> None:
         "SpeedSensor.arxml",
         SUBCOMPOSITION_EXAMPLE_OUTPUT,
     ]
+
+
+def test_monolithic_and_split_shared_type_fragments_are_equivalent(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    monolithic_out = tmp_path / "DemoProject.arxml"
+    split_out = tmp_path / "split"
+
+    _ = write_outputs(project, template_dir=template_dir, out=monolithic_out, split_by_swc=False)
+    _ = write_outputs(project, template_dir=template_dir, out=split_out, split_by_swc=True)
+
+    monolithic_xml = monolithic_out.read_text(encoding="utf-8")
+    shared_xml = (split_out / SHARED_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
+
+    mono_app_type = _extract_element_fragment(monolithic_xml, "APPLICATION-PRIMITIVE-DATA-TYPE", "App_VehicleSpeed")
+    split_app_type = _extract_element_fragment(shared_xml, "APPLICATION-PRIMITIVE-DATA-TYPE", "App_VehicleSpeed")
+    assert "<SW-DATA-DEF-PROPS>" in mono_app_type
+    assert "<SW-DATA-DEF-PROPS>" in split_app_type
+    assert "<DATA-CONSTR-REF DEST=\"DATA-CONSTR\">/DEMO/DataConstrs/DC_App_VehicleSpeed</DATA-CONSTR-REF>" in mono_app_type
+    assert "<DATA-CONSTR-REF DEST=\"DATA-CONSTR\">/DEMO/DataConstrs/DC_App_VehicleSpeed</DATA-CONSTR-REF>" in split_app_type
+    assert _normalize_xml_fragment(mono_app_type) == _normalize_xml_fragment(split_app_type)
+
+    mono_compu = _extract_element_fragment(monolithic_xml, "COMPU-METHOD", "CM_VehicleSpeed_Kph")
+    split_compu = _extract_element_fragment(shared_xml, "COMPU-METHOD", "CM_VehicleSpeed_Kph")
+    assert "<COMPU-INTERNAL-TO-PHYS>" in mono_compu
+    assert "<COMPU-INTERNAL-TO-PHYS>" in split_compu
+    assert "<FACTOR>" not in mono_compu
+    assert "<FACTOR>" not in split_compu
+    assert _normalize_xml_fragment(mono_compu) == _normalize_xml_fragment(split_compu)
+
+
+def test_monolithic_and_split_swc_fragments_are_equivalent(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    monolithic_out = tmp_path / "DemoProject.arxml"
+    split_out = tmp_path / "split"
+
+    _ = write_outputs(project, template_dir=template_dir, out=monolithic_out, split_by_swc=False)
+    _ = write_outputs(project, template_dir=template_dir, out=split_out, split_by_swc=True)
+
+    monolithic_xml = monolithic_out.read_text(encoding="utf-8")
+    split_xml = (split_out / "SpeedDisplay.arxml").read_text(encoding="utf-8")
+
+    mono_behavior = _extract_internal_behavior_fragment(monolithic_xml, "SpeedDisplay")
+    split_behavior = _extract_internal_behavior_fragment(split_xml, "SpeedDisplay")
+    assert mono_behavior.index("<EVENTS>") < mono_behavior.index("<RUNNABLES>")
+    assert split_behavior.index("<EVENTS>") < split_behavior.index("<RUNNABLES>")
+    assert _normalize_xml_fragment(mono_behavior) == _normalize_xml_fragment(split_behavior)
+
+    mono_component = _extract_element_fragment(
+        monolithic_xml,
+        "APPLICATION-SW-COMPONENT-TYPE|SERVICE-SW-COMPONENT-TYPE|COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE",
+        "SpeedDisplay",
+    )
+    split_component = _extract_element_fragment(
+        split_xml,
+        "APPLICATION-SW-COMPONENT-TYPE|SERVICE-SW-COMPONENT-TYPE|COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE",
+        "SpeedDisplay",
+    )
+    mono_r_port = _extract_r_port_fragment(mono_component, "Rp_VehicleSpeed")
+    split_r_port = _extract_r_port_fragment(split_component, "Rp_VehicleSpeed")
+    assert mono_r_port.index("<REQUIRED-COM-SPECS>") < mono_r_port.index("<REQUIRED-INTERFACE-TREF")
+    assert split_r_port.index("<REQUIRED-COM-SPECS>") < split_r_port.index("<REQUIRED-INTERFACE-TREF")
+    assert _normalize_xml_fragment(mono_r_port) == _normalize_xml_fragment(split_r_port)
+
+
+def test_monolithic_and_split_subcomposition_fragments_are_equivalent(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    monolithic_out = tmp_path / "DemoProject.arxml"
+    split_out = tmp_path / "split"
+
+    _ = write_outputs(project, template_dir=template_dir, out=monolithic_out, split_by_swc=False)
+    _ = write_outputs(project, template_dir=template_dir, out=split_out, split_by_swc=True)
+
+    monolithic_xml = monolithic_out.read_text(encoding="utf-8")
+    split_xml = (split_out / SUBCOMPOSITION_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
+
+    mono_subcomposition = _extract_element_fragment(monolithic_xml, "COMPOSITION-SW-COMPONENT-TYPE", "SubComposition_SpeedCluster")
+    split_subcomposition = _extract_element_fragment(split_xml, "COMPOSITION-SW-COMPONENT-TYPE", "SubComposition_SpeedCluster")
+    assert "<P-PORT-IN-COMPOSITION-INSTANCE-REF>" in mono_subcomposition
+    assert "<P-PORT-IN-COMPOSITION-INSTANCE-REF>" in split_subcomposition
+    assert "<R-PORT-IN-COMPOSITION-INSTANCE-REF>" in mono_subcomposition
+    assert "<R-PORT-IN-COMPOSITION-INSTANCE-REF>" in split_subcomposition
+    assert re.search(r"<INNER-PORT-IREF>\s*<CONTEXT-COMPONENT-REF", mono_subcomposition) is None
+    assert re.search(r"<INNER-PORT-IREF>\s*<CONTEXT-COMPONENT-REF", split_subcomposition) is None
+    assert _normalize_xml_fragment(mono_subcomposition) == _normalize_xml_fragment(split_subcomposition)
 
 
 @pytest.mark.parametrize(
