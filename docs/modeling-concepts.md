@@ -18,11 +18,15 @@ baseTypes:
     bitLength: 8
     signedness: "unsigned"
     nativeDeclaration: "uint8"
+    category: "fixedLength"
   - name: "uint16"
     bitLength: 16
     signedness: "unsigned"
     nativeDeclaration: "uint16"
+    category: "fixedLength"
 ```
+
+`category` is optional for the current primitive base types. The YAML authoring form is intentionally human-friendly: values such as `fixedLength` are normalized during export to the AUTOSAR literal `FIXED_LENGTH`.
 
 ### Implementation data types
 
@@ -143,6 +147,8 @@ interface:
 
 Each data element references an application data type. Multiple data elements per interface are supported.
 
+When a sender-receiver port uses `comSpec`, the current ARXML export path expects the referenced interface to contain exactly one data element so the receiver ComSpec can emit an unambiguous data-element reference. That constraint is enforced by validation.
+
 ### Client-server interfaces
 
 ```yaml
@@ -217,6 +223,14 @@ ports:
     direction: "requires"
     interfaceRef: "If_VehicleSpeed"
     comSpec:
+      mode: "explicit"
+      initValue: 0
+
+  # sender-receiver queued require port
+  - name: "Rp_VehicleSpeedQueued"
+    direction: "requires"
+    interfaceRef: "If_VehicleSpeed"
+    comSpec:
       mode: "queued"
       queueLength: 8
 
@@ -249,6 +263,10 @@ ports:
 **SR ComSpec modes:** `implicit`, `explicit`, `queued`. Queued ports require `queueLength >= 1`.
 
 In exported ARXML, `implicit` and `explicit` receiver ports remain nonqueued, but ARForge preserves the distinction on `NONQUEUED-RECEIVER-COM-SPEC` through receiver-side update metadata instead of collapsing both modes to an identical empty com-spec block.
+
+`initValue` is supported on required nonqueued sender-receiver ports. This is useful when an AUTOSAR checker expects a delegated receiver port to define an initial value. `initValue` is rejected on provided sender-receiver ports, queued sender-receiver ports, client-server ports, and mode-switch ports.
+
+For sender-receiver ports with `comSpec`, validation currently requires the referenced interface to have exactly one data element. This matches the current export model, where receiver ComSpecs emit a single `DATA-ELEMENT-REF`.
 
 **CS ComSpec call modes:** `synchronous`, `asynchronous`. Synchronous ports may specify `timeoutMs`. Asynchronous ports must not carry `timeoutMs` or `queueLength`.
 
@@ -310,6 +328,8 @@ runnables:
 ```
 
 The `port` must be a required mode-switch port. The `mode` must be declared in the referenced `ModeDeclarationGroup`.
+
+In exported ARXML, these are rendered as `SWC-MODE-SWITCH-EVENT`.
 
 ### Runnable access definitions
 

@@ -85,6 +85,12 @@ Checks ComSpec on SWC ports against the port kind and call mode.
 
 SR ComSpec rules: `mode` must be `implicit`, `explicit`, or `queued`. Queued ports require `queueLength >= 1`. Non-queued ports must not carry `queueLength`. SR ports must not carry CS fields.
 
+Additional SR ComSpec constraints in the current export model:
+
+- `initValue` is allowed only on `requires` sender-receiver ports
+- queued sender-receiver ports must not define `initValue`
+- sender-receiver ports using `comSpec` must reference an interface with exactly one data element, because export emits a single receiver `DATA-ELEMENT-REF`
+
 CS ComSpec rules: `callMode` is required. Synchronous ports may carry `timeoutMs`; asynchronous ports must not. CS ports must not carry SR fields.
 
 Mode-switch ports do not support ComSpec.
@@ -187,3 +193,5 @@ Example: producer at 5 ms, consumer at 10 ms -> `CORE-051` warning. Equal period
 The `tests/` directory contains pytest coverage for all validation behavior. `examples/invalid/` contains a corpus of deliberately broken model fixtures - one per finding code - used to verify that each rule fires exactly when expected and not otherwise. See `examples/invalid/README.md` for the fixture naming convention and contribution guidance.
 
 Every validation rule has explicit test cases for both valid and invalid inputs. This corpus is also useful as a reference for understanding exactly what each rule checks.
+
+Some checker-oriented export completeness concerns are intentionally tracked separately from semantic validation. For example, `ModeDeclarationGroup` `EXPLICIT_ORDER` completeness is still a known scoped limitation rather than a hidden promise of full AUTOSAR coverage.

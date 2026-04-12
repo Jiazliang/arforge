@@ -2,7 +2,7 @@
 
 ## What ARForge does
 
-ARForge takes a set of YAML files describing an AUTOSAR Classic project - data types, interfaces, mode declaration groups, SWC types, and a system composition - validates them against a semantic rule engine, exports standards-compliant ARXML, and generates derived developer artifacts such as C skeletons and architecture diagrams.
+ARForge takes a set of YAML files describing an AUTOSAR Classic project - data types, interfaces, mode declaration groups, SWC types, and a system composition - validates them against a semantic rule engine, exports deterministic AUTOSAR-aligned ARXML for the currently supported scope, and generates derived developer artifacts such as C skeletons and architecture diagrams.
 
 The full pipeline in one line:
 
@@ -44,14 +44,14 @@ ARForge runs on Linux and Windows. Both platforms are supported for CLI usage, V
 
 ## VS Code integration
 
-ARForge ships with a `.vscode/` configuration that activates YAML schema autocomplete and inline diagnostics automatically when you open the project in VS Code. Tasks for validate, export, diagram generation, code generation, init, and pytest are available without any manual setup. See the [README](../README.md#vs-code-integration) and [Project Structure](./project-structure.md#vs-code-setup) for details.
+ARForge ships with a `.vscode/` configuration that activates YAML schema autocomplete and inline diagnostics automatically when you open the project in VS Code. Tasks for validate, export, diagram generation, code generation, init, and pytest are available without manual setup. See [Project Structure](./project-structure.md#vs-code-setup) for the canonical setup guide.
 
 ## What is currently supported
 
 ARForge targets a practical AUTOSAR Classic 4.2 subset:
 
 - base, implementation, and application data types with constraints, units, and compu methods
-- sender-receiver interfaces with data elements and ComSpec (implicit, explicit, queued)
+- sender-receiver interfaces with data elements and ComSpec (implicit, explicit, queued, optional receiver init values)
 - client-server interfaces with operations, arguments, return types, possible errors, and sync/async ComSpec
 - mode-switch interfaces with `ModeDeclarationGroup` references
 - `ModeDeclarationGroup` definitions as first-class model artifacts
@@ -59,7 +59,7 @@ ARForge targets a practical AUTOSAR Classic 4.2 subset:
 - runnable access definitions - reads, writes, calls, raised errors - validated against port and interface semantics
 - system compositions with component prototypes and port-level assembly connectors for SR, CS, and mode-switch flows
 - semantic validation with stable finding codes across three severity levels
-- Jinja2-based ARXML export, monolithic or split by SWC, with deterministic ordering
+- Jinja2-based ARXML export, monolithic or split by SWC, with deterministic ordering and shared rendering logic across both modes
 - template-driven C code skeleton generation for SWC runnables
 - PlantUML diagram generation for architecture and behavior views
 
@@ -72,3 +72,5 @@ Validate before export. Generation is blocked when error-severity findings exist
 Stable finding codes. Every semantic rule has a stable `CORE-XXX` identifier. Finding codes do not change between versions. CI scripts and suppression lists can rely on them.
 
 Explicit scope. ARForge covers the SWC design layer. It deliberately does not model OS configuration, memory mapping, BSW modules, or RTE internals. Staying in scope keeps the tool maintainable and the outputs trustworthy.
+
+Current AUTOSAR support is intentionally scoped. ARForge aims for clean, checker-friendly export for the supported subset, but some completeness details outside that subset may still remain open and are tracked in the roadmap rather than hidden behind stronger compliance claims.

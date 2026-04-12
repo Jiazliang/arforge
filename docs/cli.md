@@ -87,7 +87,7 @@ summary:
 
 ## `export`
 
-Validate the project and, if validation passes, export ARXML.
+Validate the project and, if validation passes, export deterministic AUTOSAR-aligned ARXML for the currently supported feature set.
 
 ```bash
 python -m arforge.cli export <project.yaml> --out <path> [options]

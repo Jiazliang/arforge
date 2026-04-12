@@ -68,7 +68,7 @@ All paths are resolved relative to the manifest file. This means the manifest an
 
 **`types/`** - data type definitions, split across three files by convention.
 
-- `base_types.yaml` - platform-level types (`uint8`, `uint16`, etc.)
+- `base_types.yaml` - platform-level types (`uint8`, `uint16`, etc.), including a human-friendly `category` field such as `fixedLength`
 - `implementation_types.yaml` - implementation data types backed by base types; scalars, arrays, structs
 - `application_types.yaml` - application data types with optional constraints, unit references, and compu method references
 
@@ -169,6 +169,8 @@ Change this path to point to your own project manifest. The validate, export, an
 | `arforge: pytest` | `pytest -q` |
 
 Tasks resolve the correct Python executable for both Linux and Windows using VS Code's `${workspaceFolder}` variable, so no manual path editing is needed on either platform.
+
+This page is the canonical VS Code setup reference. The README and overview intentionally keep only a short summary to avoid repeating the same task table in multiple places.
 
 ## Repository-level layout
 
