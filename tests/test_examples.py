@@ -380,6 +380,8 @@ def test_generate_diagrams_contain_expected_smoke_fragments(
     assert "Pp_VehicleSpeedOut" in subcomposition_text
     assert "Pp_VehicleSpeed" in subcomposition_text
     assert "Rp_PowerStateIn" in subcomposition_text
+    assert '#f1e3d3 {' in subcomposition_text
+    assert "#f8f9fa" not in subcomposition_text
     assert "..[#2e8b57,bold].>" in subcomposition_text
     assert "..[#8e44ad,bold,dashed].>" in subcomposition_text
     assert interface_name in interfaces_contracts_text

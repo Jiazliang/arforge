@@ -70,6 +70,7 @@ class CompositionDiagramView:
     composition_name: str
     boundary_name: str | None
     boundary_id: str
+    boundary_fill_color: str
     boundary_incoming_ports: List[CompositionPortView]
     boundary_outgoing_ports: List[CompositionPortView]
     grid_columns: int
@@ -507,6 +508,7 @@ def _build_composition_diagram_view(
         composition_name=composition_name,
         boundary_name=boundary_name,
         boundary_id=_node_id(composition_name),
+        boundary_fill_color=_subcomposition_fill_color() if boundary_name is not None else "#f8f9fa",
         boundary_incoming_ports=boundary_incoming_ports,
         boundary_outgoing_ports=boundary_outgoing_ports,
         grid_columns=grid_columns,

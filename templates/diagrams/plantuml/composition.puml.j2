@@ -6,7 +6,7 @@ skinparam legendBorderColor #FFFFFF
 skinparam legendEntrySeparator #FFFFFF
 
 {% if view.boundary_name %}
-component "{{ view.boundary_name }}" as {{ view.boundary_id }} #f8f9fa {
+component "{{ view.boundary_name }}" as {{ view.boundary_id }} {{ view.boundary_fill_color }} {
 {% for port in view.boundary_incoming_ports %}
   portin "{{ port.name }}" as {{ port.id }} {{ port.fill_color }}
 {% endfor %}
