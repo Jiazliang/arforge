@@ -1,0 +1,8 @@
+# ARForge: Support fixture
+# Defines the nested subcomposition type so the parent fixture can be rejected explicitly for nesting.
+subcomposition:
+  name: "SubComposition_Nested"
+  components:
+    - name: "SpeedSensor_1"
+      typeRef: "SpeedSensor"
+  connectors: []

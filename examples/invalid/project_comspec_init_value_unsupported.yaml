@@ -1,0 +1,20 @@
+# ARForge: Invalid example fixture
+# Domain: project-level validation.
+# Tests validation failure for initValue on an unsupported sender-receiver provides port.
+autosar:
+  version: "4.2"
+  rootPackage: "DEMO"
+
+inputs:
+  baseTypes: "../types/base_types.yaml"
+  implementationDataTypes: "../types/implementation_types.yaml"
+  applicationDataTypes: "../types/application_types.yaml"
+  units:
+    - "../units/*.yaml"
+  compuMethods:
+    - "../compu_methods/*.yaml"
+  interfaces:
+    - "../interfaces/*.yaml"
+  swcs:
+    - "swcs/SrProvider_init_value_invalid.yaml"
+  system: "system_init_value_invalid.yaml"

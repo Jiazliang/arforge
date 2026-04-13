@@ -1,0 +1,12 @@
+# ARForge: Invalid support system fixture
+# Reuses the main hierarchical example structure for feature-specific invalid project fixtures.
+system:
+  name: "DemoSystem"
+  composition:
+    name: "Composition_DemoSystem"
+    components:
+      - name: "SpeedCluster_0"
+        typeRef: "SubComposition_SpeedCluster"
+      - name: "DiagManager_0"
+        typeRef: "DiagManager"
+    connectors: []

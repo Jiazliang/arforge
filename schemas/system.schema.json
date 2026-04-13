@@ -72,6 +72,14 @@
         "to": {
           "$ref": "#/$defs/endpoint",
           "description": "Target endpoint in the form InstanceName.PortName."
+        },
+        "dataElement": {
+          "$ref": "#/$defs/name",
+          "description": "Optional sender-receiver selector. Current ARForge wiring is port-level; this is accepted for forward compatibility."
+        },
+        "operation": {
+          "$ref": "#/$defs/name",
+          "description": "Optional client-server selector. Current ARForge wiring is port-level; this is accepted for forward compatibility."
         }
       },
       "additionalProperties": false,
@@ -135,7 +143,6 @@
             "connectors": {
               "type": "array",
               "description": "Assembly connectors between component instances.",
-              "minItems": 1,
               "items": {
                 "$ref": "#/$defs/connector"
               }

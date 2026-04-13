@@ -152,6 +152,19 @@
             ]
           ]
         },
+        "subcompositions": {
+          "type": "array",
+          "description": "Optional reusable subcomposition definition files. Each entry may be a concrete file or a glob pattern.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [
+            [
+              "subcompositions/*.yaml"
+            ]
+          ]
+        },
         "system": {
           "type": "string",
           "description": "System composition file that wires component instances together.",
@@ -212,6 +225,9 @@
         ],
         "swcs": [
           "swcs/*.yaml"
+        ],
+        "subcompositions": [
+          "subcompositions/*.yaml"
         ],
         "system": "system.yaml"
       }

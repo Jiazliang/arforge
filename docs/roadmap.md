@@ -6,7 +6,7 @@ This roadmap describes what ARForge currently supports and where it is going. It
 
 ## Current capabilities
 
-ARForge currently provides a complete SWC design and generation pipeline for AUTOSAR Classic 4.2, running on Linux and Windows with VS Code integration.
+ARForge currently provides a practical SWC design and generation pipeline for an AUTOSAR Classic 4.2-aligned subset, running on Linux and Windows with VS Code integration.
 
 ### CLI and tooling
 
@@ -20,7 +20,7 @@ ARForge currently provides a complete SWC design and generation pipeline for AUT
 
 ### Data types
 
-- base types with bit length, signedness, and native declaration
+- base types with bit length, signedness, native declaration, and normalized export category
 - implementation data types - scalar, array, struct with nested struct validation and cycle detection
 - application data types with physical constraints, unit references, and compu method references
 - units and compu methods - `linear` and `textTable` (enumeration) categories
@@ -37,7 +37,7 @@ ARForge currently provides a complete SWC design and generation pipeline for AUT
 
 - SWC categories: `application`, `service`, `complexDeviceDriver`
 - provides and requires ports for all three interface kinds
-- ComSpec - SR implicit/explicit/queued with queue length validation; CS synchronous/asynchronous with timeout configuration
+- ComSpec - SR implicit/explicit/queued with queue length validation and optional receiver init values; CS synchronous/asynchronous with timeout configuration
 - runnable definitions with all standard AUTOSAR event triggers: `TimingEvent`, `InitEvent`, `OperationInvokedEvent`, `DataReceiveEvent`, `ModeSwitchEvent`
 - runnable access definitions: `reads`, `writes`, `calls`, `raisesErrors` - all validated against port direction and interface kind
 - generated C runnable declarations and stubs with AUTOSAR-style `Rte_Read_*`, `Rte_Write_*`, and `Rte_Call_*` placeholders
@@ -51,7 +51,7 @@ ARForge currently provides a complete SWC design and generation pipeline for AUT
 ### Validation
 
 - two-stage validation: JSON Schema + semantic
-- 192 stable `CORE-*` finding codes organized in domain modules
+- stable `CORE-*` finding codes organized in domain modules
 - three severity levels: `error`, `warning`, `info`
 - connectivity validation for SR, CS, and mode-switch ports
 - port usage analysis - warnings for connected but unused ports

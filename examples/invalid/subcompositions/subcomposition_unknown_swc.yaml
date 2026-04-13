@@ -1,0 +1,12 @@
+# ARForge: Invalid example fixture
+# Subcomposition references an unknown atomic SWC type.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  components:
+    - name: "SpeedSensor_1"
+      typeRef: "SpeedSensor"
+    - name: "SpeedDisplay_1"
+      typeRef: "DoesNotExist"
+  connectors:
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      to: "SpeedDisplay_1.Rp_VehicleSpeed"

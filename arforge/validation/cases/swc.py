@@ -409,6 +409,14 @@ class ComSpecSemanticCase(ValidationCase):
                             )
                         )
 
+                    if port.direction == "provides" and com_spec.initValue is not None:
+                        findings.append(
+                            self.finding(
+                                f"SWC '{swc.name}' port '{port.name}' senderReceiver provides comSpec must not define initValue.",
+                                code="CORE-025-SR-COMSPEC-INITVALUE-DIRECTION",
+                            )
+                        )
+
                     if com_spec.mode is None:
                         findings.append(
                             self.finding(
@@ -427,6 +435,13 @@ class ComSpecSemanticCase(ValidationCase):
                         continue
 
                     if com_spec.mode == "queued":
+                        if com_spec.initValue is not None:
+                            findings.append(
+                                self.finding(
+                                    f"SWC '{swc.name}' port '{port.name}' queued comSpec must not define initValue.",
+                                    code="CORE-025-SR-COMSPEC-QUEUED-INITVALUE",
+                                )
+                            )
                         if com_spec.queueLength is None:
                             findings.append(
                                 self.finding(
@@ -448,6 +463,15 @@ class ComSpecSemanticCase(ValidationCase):
                             self.finding(
                                 f"SWC '{swc.name}' port '{port.name}' comSpec mode '{com_spec.mode}' must not define queueLength.",
                                 code="CORE-025-COMSPEC-NONQUEUED-QUEUE-LENGTH",
+                            )
+                        )
+
+                    data_elements = itf.dataElements or []
+                    if len(data_elements) != 1:
+                        findings.append(
+                            self.finding(
+                                f"SWC '{swc.name}' port '{port.name}' senderReceiver comSpec export requires exactly one data element on interface '{itf.name}', found {len(data_elements)}.",
+                                code="CORE-025-SR-COMSPEC-DATAELEMENT-COUNT",
                             )
                         )
                     continue
@@ -475,6 +499,13 @@ class ComSpecSemanticCase(ValidationCase):
                         self.finding(
                             f"SWC '{swc.name}' port '{port.name}' clientServer comSpec must not define mode.",
                             code="CORE-025-CS-COMSPEC-MODE",
+                        )
+                    )
+                if com_spec.initValue is not None:
+                    findings.append(
+                        self.finding(
+                            f"SWC '{swc.name}' port '{port.name}' clientServer comSpec must not define initValue.",
+                            code="CORE-025-CS-COMSPEC-INITVALUE",
                         )
                     )
                 if com_spec.callMode is None:

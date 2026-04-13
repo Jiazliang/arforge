@@ -4,14 +4,28 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 import re
 from time import perf_counter
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .model import CompuMethod, Connection, Interface, ModeDeclarationGroup, Operation, Project, Runnable, Swc
+from .model import (
+    CompuMethod,
+    ComponentPrototype,
+    Composition,
+    Connection,
+    DelegationConnector,
+    Interface,
+    ModeDeclarationGroup,
+    Operation,
+    Project,
+    Runnable,
+    SubcompositionType,
+    Swc,
+)
 
 SHARED_TEMPLATE = "shared_42.arxml.j2"
 SWC_TEMPLATE = "swc_42.arxml.j2"
+COMPOSITION_TEMPLATE = "composition_42.arxml.j2"
 SYSTEM_TEMPLATE = "system_42.arxml.j2"
 MONOLITHIC_TEMPLATE = "all_42.arxml.j2"
 
@@ -32,6 +46,7 @@ class ExportInputSummary:
     mode_declaration_group_patterns: List[InputPatternExpansion]
     interface_patterns: List[InputPatternExpansion]
     swc_patterns: List[InputPatternExpansion]
+    subcomposition_patterns: List[InputPatternExpansion]
     system_file: Optional[Path]
 
 
@@ -44,6 +59,7 @@ class ExportModelSummary:
     cs_interfaces_count: int
     ms_interfaces_count: int
     swcs_count: int
+    subcompositions_count: int
     instances_count: int
     connectors_count: int
 
@@ -65,6 +81,59 @@ class ExportReport:
     model_summary: ExportModelSummary
     timings_ms: Dict[str, float]
     outputs: List[OutputArtifact]
+
+
+@dataclass(frozen=True)
+class ArxmlPortRef:
+    dest: str
+    ref: str
+
+
+@dataclass(frozen=True)
+class ArxmlPrototypePortRef:
+    context_component_ref: str
+    port: ArxmlPortRef
+
+
+@dataclass(frozen=True)
+class ArxmlAssemblyConnector:
+    short_name: str
+    provider: ArxmlPrototypePortRef
+    requester: ArxmlPrototypePortRef
+
+
+@dataclass(frozen=True)
+class ArxmlDelegationConnector:
+    short_name: str
+    inner: ArxmlPrototypePortRef
+    outer: ArxmlPortRef
+
+
+@dataclass(frozen=True)
+class SrPortComSpecMetadata:
+    data_element_name: str
+    data_element_ref: str
+    unit_ref: str | None = None
+
+
+CompositionOwnerKind = Literal["component_type", "root_system"]
+
+
+@dataclass(frozen=True)
+class CompositionArxmlContext:
+    root_package: str
+    owner_kind: CompositionOwnerKind
+    owner_name: str
+
+    def component_prototype_ref(self, prototype_name: str) -> str:
+        if self.owner_kind == "component_type":
+            return f"/{self.root_package}/Components/{self.owner_name}/{prototype_name}"
+        return f"/{self.root_package}/System/{self.owner_name}/{prototype_name}"
+
+    def composition_outer_port_ref(self, port_name: str) -> str:
+        if self.owner_kind != "component_type":
+            raise ValueError("Outer composition ports are only valid on reusable composition types.")
+        return f"/{self.root_package}/Components/{self.owner_name}/{port_name}"
 
 
 def _env(template_dir: Path) -> Environment:
@@ -184,8 +253,127 @@ def _sort_swc(swc: Swc) -> Swc:
     )
 
 
-def _swc_type_dests(project: Project) -> Dict[str, str]:
-    return {swc.name: swc.component_type_dest for swc in project.swcs}
+def _delegation_sort_key(conn: DelegationConnector) -> tuple[str, str, str]:
+    return (
+        conn.outer_port,
+        conn.inner_instance,
+        conn.inner_port,
+    )
+
+
+def _sort_subcomposition(subcomposition: SubcompositionType) -> SubcompositionType:
+    return replace(
+        subcomposition,
+        ports=sorted(subcomposition.ports, key=lambda port: port.name),
+        components=sorted(subcomposition.components, key=lambda component: component.name),
+        connectors=sorted(subcomposition.connectors, key=_connection_sort_key),
+        delegationConnectors=sorted(subcomposition.delegationConnectors, key=_delegation_sort_key),
+    )
+
+
+def _component_type_dests(project: Project) -> Dict[str, str]:
+    dests = {swc.name: swc.component_type_dest for swc in project.swcs}
+    dests.update({subcomposition.name: "COMPOSITION-SW-COMPONENT-TYPE" for subcomposition in project.subcompositions})
+    return dests
+
+
+def _component_type_refs(project: Project) -> Dict[str, str]:
+    refs = {swc.name: f"/{project.rootPackage}/Components/{swc.name}" for swc in project.swcs}
+    refs.update(
+        {subcomposition.name: f"/{project.rootPackage}/Components/{subcomposition.name}" for subcomposition in project.subcompositions}
+    )
+    return refs
+
+
+def _build_sr_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, SrPortComSpecMetadata]:
+    interfaces_by_name = {interface.name: interface for interface in project.interfaces}
+    application_types_by_name = {data_type.name: data_type for data_type in project.applicationDataTypes}
+    metadata: dict[str, SrPortComSpecMetadata] = {}
+    for port in swc.ports:
+        if port.interfaceType != "senderReceiver" or port.comSpec is None:
+            continue
+        interface = interfaces_by_name.get(port.interfaceRef)
+        if interface is None or not interface.dataElements:
+            continue
+        data_element = interface.dataElements[0]
+        application_type = application_types_by_name.get(data_element.typeRef)
+        metadata[port.name] = SrPortComSpecMetadata(
+            data_element_name=data_element.name,
+            data_element_ref=f"/{project.rootPackage}/Interfaces/{interface.name}/{data_element.name}",
+            unit_ref=application_type.unitRef if application_type is not None else None,
+        )
+    return metadata
+
+
+def _component_type_path(root_package: str, component_type_name: str) -> str:
+    return f"/{root_package}/Components/{component_type_name}"
+
+
+def _component_type_port_ref(
+    root_package: str,
+    component_type_name: str,
+    port_name: str,
+    direction: str,
+) -> ArxmlPortRef:
+    if direction == "provides":
+        dest = "P-PORT-PROTOTYPE"
+    elif direction == "requires":
+        dest = "R-PORT-PROTOTYPE"
+    else:
+        raise ValueError(f"Unsupported port direction: {direction}")
+    return ArxmlPortRef(
+        dest=dest,
+        ref=f"{_component_type_path(root_package, component_type_name)}/{port_name}",
+    )
+
+
+def _component_port_by_name(component_ports: list[object]) -> dict[str, object]:
+    return {port.name: port for port in component_ports}
+
+
+def _build_component_ports_by_type(project: Project) -> dict[str, dict[str, object]]:
+    ports_by_type: dict[str, dict[str, object]] = {}
+    for swc in project.swcs:
+        ports_by_type[swc.name] = _component_port_by_name(swc.ports)
+    for subcomposition in project.subcompositions:
+        ports_by_type[subcomposition.name] = _component_port_by_name(subcomposition.ports)
+    return ports_by_type
+
+
+def _resolve_prototype_port_ref(
+    *,
+    context: CompositionArxmlContext,
+    instance_by_name: dict[str, ComponentPrototype],
+    component_ports_by_type: dict[str, dict[str, object]],
+    instance_name: str,
+    port_name: str,
+    expected_direction: str,
+) -> ArxmlPrototypePortRef:
+    instance = instance_by_name.get(instance_name)
+    if instance is None:
+        raise ValueError(f"Unknown component prototype '{instance_name}' in composition '{context.owner_name}'.")
+
+    type_ports = component_ports_by_type.get(instance.typeRef)
+    if type_ports is None:
+        raise ValueError(f"Unknown component type '{instance.typeRef}' for prototype '{instance_name}'.")
+
+    port = type_ports.get(port_name)
+    if port is None:
+        raise ValueError(f"Unknown port '{port_name}' on component type '{instance.typeRef}'.")
+    if port.direction != expected_direction:
+        raise ValueError(
+            f"Port '{instance.typeRef}.{port_name}' has direction '{port.direction}', expected '{expected_direction}'."
+        )
+
+    return ArxmlPrototypePortRef(
+        context_component_ref=context.component_prototype_ref(instance_name),
+        port=_component_type_port_ref(
+            context.root_package,
+            component_type_name=instance.typeRef,
+            port_name=port_name,
+            direction=port.direction,
+        ),
+    )
 
 
 def _safe_filename_stem(value: Optional[str], fallback: str) -> str:
@@ -233,6 +421,10 @@ def _sort_project_for_export(project: Project) -> Project:
         ),
         interfaces=sorted((_sort_interface(interface) for interface in project.interfaces), key=lambda interface: interface.name),
         swcs=sorted((_sort_swc(swc) for swc in project.swcs), key=lambda swc: swc.name),
+        subcompositions=sorted(
+            (_sort_subcomposition(subcomposition) for subcomposition in project.subcompositions),
+            key=lambda subcomposition: subcomposition.name,
+        ),
         system=replace(
             project.system,
             composition=replace(
@@ -260,14 +452,21 @@ def _model_summary(project: Project) -> ExportModelSummary:
         cs_interfaces_count=len(cs),
         ms_interfaces_count=len(ms),
         swcs_count=len(project.swcs),
+        subcompositions_count=len(project.subcompositions),
         instances_count=len(project.system.composition.components),
         connectors_count=len(project.system.composition.connectors),
     )
 
 
-def _build_connections(project: Project) -> List[Dict[str, object]]:
+def _build_connections_for_composition(
+    project: Project,
+    context: CompositionArxmlContext,
+    components: List[ComponentPrototype],
+    connectors: List[Connection],
+) -> List[ArxmlAssemblyConnector]:
     swc_by_name = {swc.name: swc for swc in project.swcs}
-    instance_by_name = {instance.name: instance for instance in project.system.composition.components}
+    instance_by_name = {instance.name: instance for instance in components}
+    component_ports_by_type = _build_component_ports_by_type(project)
 
     def _is_sender_receiver(conn) -> bool:
         from_instance = instance_by_name.get(conn.from_instance)
@@ -283,7 +482,7 @@ def _build_connections(project: Project) -> List[Dict[str, object]]:
 
     unique_connectors = []
     seen_port_pairs: set[tuple[str, str, str, str]] = set()
-    for connector in project.system.composition.connectors:
+    for connector in connectors:
         if _is_sender_receiver(connector):
             if connector.port_pair_key in seen_port_pairs:
                 continue
@@ -295,16 +494,70 @@ def _build_connections(project: Project) -> List[Dict[str, object]]:
         unique_connectors.append(connector)
 
     return [
-        {
-            "from_instance": c.from_instance,
-            "from_port": c.from_port,
-            "to_instance": c.to_instance,
-            "to_port": c.to_port,
-            "dataElement": c.dataElement,
-            "operation": c.operation,
-            "short_name": f"Conn_{idx}",
-        }
+        ArxmlAssemblyConnector(
+            short_name=f"Conn_{idx}",
+            provider=_resolve_prototype_port_ref(
+                context=context,
+                instance_by_name=instance_by_name,
+                component_ports_by_type=component_ports_by_type,
+                instance_name=c.from_instance,
+                port_name=c.from_port,
+                expected_direction="provides",
+            ),
+            requester=_resolve_prototype_port_ref(
+                context=context,
+                instance_by_name=instance_by_name,
+                component_ports_by_type=component_ports_by_type,
+                instance_name=c.to_instance,
+                port_name=c.to_port,
+                expected_direction="requires",
+            ),
+        )
         for idx, c in enumerate(unique_connectors, start=1)
+    ]
+
+
+def _build_connections(project: Project) -> List[ArxmlAssemblyConnector]:
+    return _build_connections_for_composition(
+        project,
+        CompositionArxmlContext(
+            root_package=project.rootPackage,
+            owner_kind="root_system",
+            owner_name=project.system.composition.name,
+        ),
+        project.system.composition.components,
+        project.system.composition.connectors,
+    )
+
+
+def _build_delegation_connectors(project: Project, subcomposition: SubcompositionType) -> List[ArxmlDelegationConnector]:
+    context = CompositionArxmlContext(
+        root_package=project.rootPackage,
+        owner_kind="component_type",
+        owner_name=subcomposition.name,
+    )
+    instance_by_name = {instance.name: instance for instance in subcomposition.components}
+    component_ports_by_type = _build_component_ports_by_type(project)
+    outer_ports_by_name = {port.name: port for port in subcomposition.ports}
+    return [
+        ArxmlDelegationConnector(
+            short_name=f"DelegationConn_{idx}",
+            inner=_resolve_prototype_port_ref(
+                context=context,
+                instance_by_name=instance_by_name,
+                component_ports_by_type=component_ports_by_type,
+                instance_name=connector.inner_instance,
+                port_name=connector.inner_port,
+                expected_direction=outer_ports_by_name[connector.outer_port].direction,
+            ),
+            outer=_component_type_port_ref(
+                project.rootPackage,
+                component_type_name=subcomposition.name,
+                port_name=connector.outer_port,
+                direction=outer_ports_by_name[connector.outer_port].direction,
+            ),
+        )
+        for idx, connector in enumerate(subcomposition.delegationConnectors, start=1)
     ]
 
 
@@ -349,7 +602,48 @@ def render_swc(project: Project, swc: Swc, template_dir: Path, template_name: st
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
     swc = next(candidate for candidate in project.swcs if candidate.name == swc.name)
-    return tpl.render(root_pkg=project.rootPackage, swc=swc)
+    return tpl.render(
+        root_pkg=project.rootPackage,
+        swc=swc,
+        sr_port_metadata=_build_sr_port_comspec_metadata(project, swc),
+    )
+
+
+def render_composition_type(
+    project: Project,
+    subcomposition: SubcompositionType,
+    template_dir: Path,
+    template_name: str = COMPOSITION_TEMPLATE,
+) -> str:
+    env = _env(template_dir)
+    tpl = env.get_template(template_name)
+    project = _sort_project_for_export(project)
+    subcomposition = next(candidate for candidate in project.subcompositions if candidate.name == subcomposition.name)
+    component_type_dests = _component_type_dests(project)
+    component_type_refs = _component_type_refs(project)
+    composition_model = {
+        "name": subcomposition.name,
+        "description": subcomposition.description,
+        "ports": subcomposition.ports,
+        "components": subcomposition.components,
+        "connections": _build_connections_for_composition(
+            project,
+            CompositionArxmlContext(
+                root_package=project.rootPackage,
+                owner_kind="component_type",
+                owner_name=subcomposition.name,
+            ),
+            subcomposition.components,
+            subcomposition.connectors,
+        ),
+        "delegation_connectors": _build_delegation_connectors(project, subcomposition),
+    }
+    return tpl.render(
+        root_pkg=project.rootPackage,
+        composition=composition_model,
+        component_type_dests=component_type_dests,
+        component_type_refs=component_type_refs,
+    )
 
 
 def render_system(project: Project, template_dir: Path, template_name: str = SYSTEM_TEMPLATE) -> str:
@@ -357,13 +651,16 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
     connections = _build_connections(project)
+    component_type_dests = _component_type_dests(project)
+    component_type_refs = _component_type_refs(project)
     return tpl.render(
         root_pkg=project.rootPackage,
         system_name=project.system.name,
         composition_name=project.system.composition.name,
         components=project.system.composition.components,
         connections=connections,
-        swc_type_dests=_swc_type_dests(project),
+        component_type_dests=component_type_dests,
+        component_type_refs=component_type_refs,
     )
 
 
@@ -404,7 +701,28 @@ def write_outputs_with_report(
         swcs = project.swcs
         sr, cs, ms = _split_interfaces(project)
         connections = _build_connections(project)
-        swc_type_dests = _swc_type_dests(project)
+        component_type_dests = _component_type_dests(project)
+        component_type_refs = _component_type_refs(project)
+        subcompositions = [
+            {
+                "name": subcomposition.name,
+                "description": subcomposition.description,
+                "ports": subcomposition.ports,
+                "components": subcomposition.components,
+                "connections": _build_connections_for_composition(
+                    project,
+                    CompositionArxmlContext(
+                        root_package=project.rootPackage,
+                        owner_kind="component_type",
+                        owner_name=subcomposition.name,
+                    ),
+                    subcomposition.components,
+                    subcomposition.connectors,
+                ),
+                "delegation_connectors": _build_delegation_connectors(project, subcomposition),
+            }
+            for subcomposition in project.subcompositions
+        ]
         rendered = {
             out: tpl.render(
                 root_pkg=project.rootPackage,
@@ -420,11 +738,14 @@ def write_outputs_with_report(
                 ms_interfaces=ms,
                 cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
                 swcs=swcs,
+                swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc) for swc in swcs},
+                subcompositions=subcompositions,
                 system_name=project.system.name,
                 composition_name=project.system.composition.name,
                 instances=project.system.composition.components,
                 connections=connections,
-                swc_type_dests=swc_type_dests,
+                component_type_dests=component_type_dests,
+                component_type_refs=component_type_refs,
             )
         }
         layout = "monolithic"
@@ -435,11 +756,19 @@ def write_outputs_with_report(
         rendered[target_dir / _shared_output_name(project)] = render_shared(project, template_dir, template_name=SHARED_TEMPLATE)
         for swc in project.swcs:
             rendered[target_dir / f"{swc.name}.arxml"] = render_swc(project, swc=swc, template_dir=template_dir, template_name=SWC_TEMPLATE)
+        for subcomposition in project.subcompositions:
+            rendered[target_dir / f"{subcomposition.name}.arxml"] = render_composition_type(
+                project,
+                subcomposition=subcomposition,
+                template_dir=template_dir,
+                template_name=COMPOSITION_TEMPLATE,
+            )
         rendered[target_dir / _system_output_name(project)] = render_system(project, template_dir, template_name=SYSTEM_TEMPLATE)
         layout = "split-by-swc"
         templates = {
             "shared": SHARED_TEMPLATE,
             "swc": SWC_TEMPLATE,
+            "composition": COMPOSITION_TEMPLATE,
             "system": SYSTEM_TEMPLATE,
         }
     timings_ms["rendering"] = (perf_counter() - render_started) * 1000.0

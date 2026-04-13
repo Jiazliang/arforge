@@ -7,6 +7,12 @@ from typing import Any, Dict, List, Tuple
 SWC_CATEGORY_APPLICATION = "application"
 SWC_CATEGORY_SERVICE = "service"
 SWC_CATEGORY_COMPLEX_DEVICE_DRIVER = "complexDeviceDriver"
+BASE_TYPE_CATEGORY_FIXED_LENGTH = "FIXED_LENGTH"
+BASE_TYPE_CATEGORY_ALIASES = {
+    "fixedLength": BASE_TYPE_CATEGORY_FIXED_LENGTH,
+    "fixed_length": BASE_TYPE_CATEGORY_FIXED_LENGTH,
+    BASE_TYPE_CATEGORY_FIXED_LENGTH: BASE_TYPE_CATEGORY_FIXED_LENGTH,
+}
 
 SWC_CATEGORY_TO_COMPONENT_TYPE = {
     SWC_CATEGORY_APPLICATION: "APPLICATION-SW-COMPONENT-TYPE",
@@ -21,6 +27,7 @@ class BaseType:
     bitLength: int | None = None
     signedness: str | None = None
     nativeDeclaration: str | None = None
+    category: str = BASE_TYPE_CATEGORY_FIXED_LENGTH
 
 
 @dataclass(frozen=True)
@@ -207,6 +214,7 @@ class ComSpec:
     queueLength: int | None = None
     callMode: str | None = None
     timeoutMs: int | None = None
+    initValue: int | float | str | bool | None = None
 
 @dataclass(frozen=True)
 class Port:
@@ -272,11 +280,41 @@ class ComponentPrototype:
 
 
 @dataclass(frozen=True)
+class DelegationConnector:
+    inner_instance: str
+    inner_port: str
+    outer_port: str
+    description: str | None = None
+
+    @property
+    def inner_ref(self) -> str:
+        return f"{self.inner_instance}.{self.inner_port}"
+
+    @property
+    def identity_key(self) -> tuple[str, str, str]:
+        return (
+            self.inner_instance,
+            self.inner_port,
+            self.outer_port,
+        )
+
+
+@dataclass(frozen=True)
 class Composition:
     name: str
     components: List[ComponentPrototype]
     connectors: List[Connection]
     description: str | None = None
+
+
+@dataclass(frozen=True)
+class SubcompositionType:
+    name: str
+    components: List[ComponentPrototype]
+    connectors: List[Connection]
+    description: str | None = None
+    ports: List[Port] = field(default_factory=list)
+    delegationConnectors: List[DelegationConnector] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -305,6 +343,7 @@ class Project:
     modeDeclarationGroups: List[ModeDeclarationGroup]
     interfaces: List[Interface]
     swcs: List[Swc]
+    subcompositions: List[SubcompositionType]
     system: System
 
     @property
@@ -341,9 +380,88 @@ def _parse_application_errors(errors: List[Any]) -> List[ApplicationError]:
         ),
     )
 
+
+def _parse_components(components: List[Dict[str, Any]]) -> List[ComponentPrototype]:
+    return [
+        ComponentPrototype(
+            name=component["name"],
+            typeRef=component["typeRef"],
+            description=component.get("description"),
+        )
+        for component in components
+    ]
+
+
+def _parse_connectors(connectors: List[Dict[str, Any]]) -> List[Connection]:
+    parsed: List[Connection] = []
+    for connector in connectors:
+        from_instance, from_port = _split_endpoint(connector["from"])
+        to_instance, to_port = _split_endpoint(connector["to"])
+        parsed.append(
+            Connection(
+                from_instance=from_instance,
+                from_port=from_port,
+                to_instance=to_instance,
+                to_port=to_port,
+                description=connector.get("description"),
+                dataElement=connector.get("dataElement"),
+                operation=connector.get("operation"),
+            )
+        )
+    return parsed
+
+
+def _parse_delegation_connectors(connectors: List[Dict[str, Any]]) -> List[DelegationConnector]:
+    parsed: List[DelegationConnector] = []
+    for connector in connectors:
+        inner_instance, inner_port = _split_endpoint(connector["inner"])
+        parsed.append(
+            DelegationConnector(
+                inner_instance=inner_instance,
+                inner_port=inner_port,
+                outer_port=connector["outer"],
+                description=connector.get("description"),
+            )
+        )
+    return parsed
+
+
+def _build_port(port_data: Dict[str, Any], iface_by_name: Dict[str, Interface]) -> Port:
+    interface_name = port_data["interfaceRef"]
+    interface = iface_by_name.get(interface_name)
+    # interfaceType is used by templates; unknown handled by validation layer
+    interface_type = interface.type if interface else "senderReceiver"
+    com_spec_data = port_data.get("comSpec")
+    com_spec = ComSpec(**com_spec_data) if com_spec_data is not None else None
+    return Port(
+        name=port_data["name"],
+        direction=port_data["direction"],
+        interfaceRef=interface_name,
+        interfaceType=interface_type,
+        modeGroupRef=interface.modeGroupRef if interface and interface.type == "modeSwitch" else None,
+        description=port_data.get("description"),
+        comSpec=com_spec,
+    )
+
+
+def _parse_ports(ports: List[Dict[str, Any]], iface_by_name: Dict[str, Interface]) -> List[Port]:
+    return [_build_port(port_data, iface_by_name) for port_data in ports]
+
+
+def _normalize_base_type_category(category: str | None) -> str:
+    return BASE_TYPE_CATEGORY_ALIASES.get(category or "fixedLength", BASE_TYPE_CATEGORY_FIXED_LENGTH)
+
 def from_dict(d: Dict[str, Any]) -> Project:
     autosar = d["autosar"]
-    base_types = [BaseType(**bt) for bt in d.get("baseTypes", [])]
+    base_types = [
+        BaseType(
+            **{
+                **bt,
+                "category": _normalize_base_type_category(bt.get("category")),
+            }
+        )
+        for bt in d.get("baseTypes", [])
+    ]
     impl_types = []
     for idt in d.get("implementationDataTypes", []):
         impl_types.append(
@@ -492,65 +610,36 @@ def from_dict(d: Dict[str, Any]) -> Project:
             )
             for r in s.get("runnables", [])
         ]
-        ports: List[Port] = []
-        for p in s.get("ports", []):
-            it_name = p["interfaceRef"]
-            it = iface_by_name.get(it_name)
-            # interfaceType is used by templates; unknown handled by validation layer
-            interfaceType = it.type if it else "senderReceiver"
-            com_spec_data = p.get("comSpec")
-            com_spec = ComSpec(**com_spec_data) if com_spec_data is not None else None
-            ports.append(
-                Port(
-                    name=p["name"],
-                    direction=p["direction"],
-                    interfaceRef=it_name,
-                    interfaceType=interfaceType,
-                    modeGroupRef=it.modeGroupRef if it and it.type == "modeSwitch" else None,
-                    description=p.get("description"),
-                    comSpec=com_spec,
-                )
-            )
         swcs.append(
             Swc(
                 name=s["name"],
                 runnables=runs,
-                ports=ports,
+                ports=_parse_ports(s.get("ports", []), iface_by_name),
                 description=s.get("description"),
                 category=s.get("category", SWC_CATEGORY_APPLICATION),
+            )
+        )
+
+    subcompositions: List[SubcompositionType] = []
+    for subcomposition_data in d.get("subcompositions", []):
+        subcompositions.append(
+            SubcompositionType(
+                name=subcomposition_data["name"],
+                description=subcomposition_data.get("description"),
+                ports=_parse_ports(subcomposition_data.get("ports", []), iface_by_name),
+                components=_parse_components(subcomposition_data.get("components", [])),
+                connectors=_parse_connectors(subcomposition_data.get("connectors", [])),
+                delegationConnectors=_parse_delegation_connectors(subcomposition_data.get("delegationConnectors", [])),
             )
         )
 
     system_data = d.get("system")
     if system_data:
         composition_data = system_data["composition"]
-        instances = [
-            ComponentPrototype(
-                name=i["name"],
-                typeRef=i["typeRef"],
-                description=i.get("description"),
-            )
-            for i in composition_data.get("components", [])
-        ]
-        conns: List[Connection] = []
-        for c in composition_data.get("connectors", []):
-            fs, fp = _split_endpoint(c["from"])
-            ts, tp = _split_endpoint(c["to"])
-            conns.append(
-                Connection(
-                    from_instance=fs,
-                    from_port=fp,
-                    to_instance=ts,
-                    to_port=tp,
-                    description=c.get("description"),
-                    dataElement=c.get("dataElement"),
-                    operation=c.get("operation"),
-                )
-            )
         composition = Composition(
             name=composition_data["name"],
-            components=instances,
-            connectors=conns,
+            components=_parse_components(composition_data.get("components", [])),
+            connectors=_parse_connectors(composition_data.get("connectors", [])),
             description=composition_data.get("description"),
         )
         system = System(
@@ -572,5 +661,6 @@ def from_dict(d: Dict[str, Any]) -> Project:
         modeDeclarationGroups=mode_declaration_groups,
         interfaces=ifaces,
         swcs=swcs,
+        subcompositions=subcompositions,
         system=system,
     )

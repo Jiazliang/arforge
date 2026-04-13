@@ -87,7 +87,7 @@ summary:
 
 ## `export`
 
-Validate the project and, if validation passes, export ARXML.
+Validate the project and, if validation passes, export deterministic AUTOSAR-aligned ARXML for the currently supported feature set.
 
 ```bash
 python -m arforge.cli export <project.yaml> --out <path> [options]
@@ -98,7 +98,7 @@ python -m arforge.cli export <project.yaml> --out <path> [options]
 | Option | Description |
 |---|---|
 | `--out PATH` | Output path. Required. For split export, a directory path. For monolithic export, a file path ending in `.arxml`. |
-| `--split-by-swc` | Split output into shared types, one file per SWC, and a system file. |
+| `--split-by-swc` | Split output into shared types, one file per component type, and one root system composition file. |
 | `--templates DIR` | Use an alternate Jinja2 template directory instead of the built-in templates. |
 | `-v` | Verbose output. |
 | `-vv` | Very verbose output. |
@@ -113,12 +113,14 @@ python -m arforge.cli export examples/autosar.project.yaml --out build/out --spl
 
 Produces:
 
-```
+```text
 build/out/
-├── DEMO_SharedTypes.arxml
-├── SpeedSensor.arxml
-├── SpeedDisplay.arxml
-└── DemoSystem.arxml
+|- DEMO_SharedTypes.arxml
+|- DiagManager.arxml
+|- SpeedSensor.arxml
+|- SpeedDisplay.arxml
+|- SubComposition_SpeedCluster.arxml
+`- DemoSystem.arxml
 ```
 
 **Monolithic export:**
@@ -156,6 +158,7 @@ python -m arforge.cli generate diagram <project.yaml> --out <dir>
 | File pattern | Purpose |
 |---|---|
 | `composition_<System>.<ext>` | Composition / topology view with instances, ports, and connectors |
+| `subcomposition_<Subcomposition>.<ext>` | Reusable subcomposition view with boundary ports, inner instances, assembly connectors, and delegation connectors |
 | `interfaces_wiring.<ext>` | Interface wiring view with component instances, instantiated ports, and referenced interfaces |
 | `interfaces_contracts.<ext>` | Interface contract view with interfaces, referenced types, compu methods, and mode groups |
 | `behavior_<SWC>.<ext>` | Behavior view per SWC type with ports, runnables, and behavior relations |

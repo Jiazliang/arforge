@@ -6,29 +6,32 @@ An ARForge project is a set of YAML files referenced by a single aggregator mani
 
 Running `arforge init my-project` produces this layout:
 
-```
+```text
 my-project/
-├── autosar.project.yaml       <- aggregator manifest
-├── types/
-│   ├── base_types.yaml
-│   ├── implementation_types.yaml
-│   └── application_types.yaml
-├── units/
-│   └── units.yaml
-├── compu_methods/
-│   └── compu_methods.yaml
-├── modes/
-│   └── power_state.yaml
-├── interfaces/
-│   ├── If_VehicleSpeed.yaml
-│   └── If_PowerState.yaml
-├── swcs/
-│   ├── SpeedSensor.yaml
-│   └── SpeedDisplay.yaml
-└── system.yaml
+|-- autosar.project.yaml       <- aggregator manifest
+|-- types/
+|   |-- base_types.yaml
+|   |-- implementation_types.yaml
+|   `-- application_types.yaml
+|-- units/
+|   `-- units.yaml
+|-- compu_methods/
+|   `-- compu_methods.yaml
+|-- modes/
+|   `-- power_state.yaml
+|-- interfaces/
+|   |-- If_VehicleSpeed.yaml
+|   `-- If_PowerState.yaml
+|-- subcompositions/
+|   `-- subcomposition_speed_cluster.yaml
+|-- swcs/
+|   |-- SpeedSensor.yaml
+|   |-- SpeedDisplay.yaml
+|   `-- DiagManager.yaml
+`-- system.yaml
 ```
 
-This is a convention, not a constraint. The manifest can point to files in any layout. Glob patterns are supported for interfaces, SWCs, units, compu methods, and mode declaration groups.
+This is a convention, not a constraint. The manifest can point to files in any layout. Glob patterns are supported for interfaces, SWCs, subcompositions, units, compu methods, and mode declaration groups.
 
 ## The aggregator manifest
 
@@ -54,6 +57,8 @@ inputs:
     - "interfaces/*.yaml"
   swcs:
     - "swcs/*.yaml"
+  subcompositions:
+    - "subcompositions/*.yaml"
   system: "system.yaml"
 ```
 
@@ -63,7 +68,7 @@ All paths are resolved relative to the manifest file. This means the manifest an
 
 **`types/`** - data type definitions, split across three files by convention.
 
-- `base_types.yaml` - platform-level types (`uint8`, `uint16`, etc.)
+- `base_types.yaml` - platform-level types (`uint8`, `uint16`, etc.), including a human-friendly `category` field such as `fixedLength`
 - `implementation_types.yaml` - implementation data types backed by base types; scalars, arrays, structs
 - `application_types.yaml` - application data types with optional constraints, unit references, and compu method references
 
@@ -75,38 +80,59 @@ All paths are resolved relative to the manifest file. This means the manifest an
 
 **`interfaces/`** - one file per interface. Each file defines a single sender-receiver, client-server, or mode-switch interface. Keeping one interface per file makes diffs clean and makes glob patterns in the manifest work well.
 
-**`swcs/`** - one file per SWC type. Each file defines a single SWC type with its ports, runnables, events, and ComSpec.
+**`swcs/`** - one file per atomic SWC type. Each file defines a single SWC type with its ports, runnables, events, and ComSpec.
 
-**`system.yaml`** - the system composition. Declares component prototypes (instances of SWC types) and the port-level assembly connectors between them. There is one system file per project.
+**`subcompositions/`** - reusable composition type definitions. Each file defines one subcomposition type with optional composition boundary ports, inner component prototypes, internal assembly connectors, and optional `delegationConnectors` that map outer composition ports to inner component ports. Subcompositions may instantiate atomic SWCs only in the current hierarchy depth.
+
+```yaml
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  delegationConnectors:
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"
+```
+
+**`system.yaml`** - the top-level system composition. Declares component prototypes whose `typeRef` may target either an atomic SWC type or a subcomposition type. There is one system file per project.
 
 ## Build output
 
 Export output is written to the path passed to `arforge export`. By convention this lives under `build/` and should not be committed to source control if it is generated in CI.
 
-Split export (`--split-by-swc`) produces one file per SWC plus shared types and the system composition:
+Split export (`--split-by-swc`) produces shared/common ARXML, one file per component type, and a distinct root system composition ARXML:
 
-```
+```text
 build/
-├── MY_PROJECT_SharedTypes.arxml
-├── SpeedSensor.arxml
-├── SpeedDisplay.arxml
-└── DemoSystem.arxml
+|-- MY_PROJECT_SharedTypes.arxml
+|-- DiagManager.arxml
+|-- SpeedSensor.arxml
+|-- SpeedDisplay.arxml
+|-- SubComposition_SpeedCluster.arxml
+`-- DemoSystem.arxml
 ```
 
 Monolithic export produces a single combined file:
 
-```
+```text
 build/all.arxml
 ```
 
 Code generation writes per-SWC starter artifacts under the path passed to `arforge generate code`, for example:
 
-```
+```text
 build/code/
-├── SpeedSensor.h
-├── SpeedSensor.c
-├── SpeedDisplay.h
-└── SpeedDisplay.c
+|-- DiagManager.h
+|-- DiagManager.c
+|-- SpeedSensor.h
+|-- SpeedSensor.c
+|-- SpeedDisplay.h
+`-- SpeedDisplay.c
 ```
 
 ## VS Code setup
@@ -118,7 +144,7 @@ ARForge ships with a `.vscode/` directory that configures the editor automatical
 - [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
 - [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) (Red Hat)
 
-Once both extensions are installed, YAML schema autocomplete and inline validation diagnostics activate for all ARForge YAML files without any manual configuration.
+Once both extensions are installed, YAML schema autocomplete and inline validation diagnostics activate for the standard ARForge YAML file layout without any manual configuration.
 
 **Configuring the active project file:**
 
@@ -128,27 +154,29 @@ The VS Code tasks resolve the project manifest from a single setting in `.vscode
 "arforge.projectFile": "examples/autosar.project.yaml"
 ```
 
-Change this path to point to your own project manifest. All tasks - validate, export, generate, init, and pytest - pick it up automatically.
+Change this path to point to your own project manifest. The validate, export, and generate tasks pick it up automatically.
 
 **Available tasks** (`Terminal -> Run Task`):
 
 | Task | What it runs |
 |---|---|
-| `arforge: validate project` | `arforge validate <projectFile> -vv` |
-| `arforge: export project (split by swc)` | `arforge export <projectFile> --out build --split-by-swc -vv` |
-| `arforge: export project (monolithic)` | `arforge export <projectFile> --out build/DemoProject.arxml -vv` |
-| `arforge: generate Plantuml` | `arforge generate diagram <projectFile> --out build/diagrams_plantuml` |
-| `arforge: generate C-code` | `arforge generate code <projectFile> --lang c --out build/code` |
-| `arforge: init project` | `arforge init demo-project` |
+| `arforge: validate project` | `python -m arforge.cli validate <projectFile> -vv` |
+| `arforge: export project (split by swc)` | `python -m arforge.cli export <projectFile> --out build/arxml --split-by-swc -vv` |
+| `arforge: export project (monolithic)` | `python -m arforge.cli export <projectFile> --out build/arxml/DemoProject.arxml -vv` |
+| `arforge: generate Plantuml` | `python -m arforge.cli generate diagram <projectFile> --out build/diagrams_plantuml` |
+| `arforge: generate C-code` | `python -m arforge.cli generate code <projectFile> --lang c --out build/code` |
+| `arforge: init project` | `python -m arforge.cli init demo-project` |
 | `arforge: pytest` | `pytest -q` |
 
 Tasks resolve the correct Python executable for both Linux and Windows using VS Code's `${workspaceFolder}` variable, so no manual path editing is needed on either platform.
+
+This page is the canonical VS Code setup reference. The README and overview intentionally keep only a short summary to avoid repeating the same task table in multiple places.
 
 ## Repository-level layout
 
 At the repository level, the ARForge implementation itself is organized as follows. This is relevant for contributors.
 
-```
+```text
 arforge/                    <- CLI, loader, model, validation, export, codegen, scaffold
 arforge/validation/cases/   <- domain-organized semantic validation cases
 schemas/                    <- JSON Schema files for all input categories

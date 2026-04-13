@@ -1,0 +1,20 @@
+# ARForge: Invalid subcomposition fixture
+# Tests validation failure for duplicate composition boundary port names.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  description: "Reusable subcomposition with duplicate outer composition port names."
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+    - name: "Rp_VehicleSpeedIn"
+      direction: "provides"
+      interfaceRef: "If_PowerState"
+  components:
+    - name: "SpeedSensor_1"
+      typeRef: "SpeedSensor"
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  connectors:
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      to: "SpeedDisplay_1.Rp_VehicleSpeed"

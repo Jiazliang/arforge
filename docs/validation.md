@@ -6,7 +6,7 @@ ARForge validates every project in two stages before allowing export. Both stage
 
 Schema validation checks the structure of each YAML file against a JSON Schema. It catches missing required fields, wrong value types, and unsupported keys. Schema errors are reported immediately during loading, before semantic validation runs.
 
-Schemas exist for every input category: aggregator manifests, base types, implementation types, application types, units, compu methods, mode declaration groups, interfaces, SWCs, and system files.
+Schemas exist for every input category: aggregator manifests, base types, implementation types, application types, units, compu methods, mode declaration groups, interfaces, SWCs, subcompositions, and system files.
 
 ## Stage 2 - Semantic validation
 
@@ -37,7 +37,7 @@ arforge validate project.yaml -vv    # adds case descriptions and full detail
 ## Validation rules
 
 ### CORE-001 - GlobalUniqueness
-Checks that all globally named elements are unique across the project. Covers data type names, interface names, SWC names, unit names, compu method names, and system composition instance names.
+Checks that all globally named elements are unique across the project. Covers data type names, interface names, SWC names, subcomposition names, unit names, compu method names, system composition instance names, and duplicate component prototype names inside a subcomposition.
 
 ### CORE-002 - BaseTypeMetadata
 Checks that base type definitions are internally consistent: no duplicate names, required fields present, valid bit length and signedness values.
@@ -85,6 +85,12 @@ Checks ComSpec on SWC ports against the port kind and call mode.
 
 SR ComSpec rules: `mode` must be `implicit`, `explicit`, or `queued`. Queued ports require `queueLength >= 1`. Non-queued ports must not carry `queueLength`. SR ports must not carry CS fields.
 
+Additional SR ComSpec constraints in the current export model:
+
+- `initValue` is allowed only on `requires` sender-receiver ports
+- queued sender-receiver ports must not define `initValue`
+- sender-receiver ports using `comSpec` must reference an interface with exactly one data element, because export emits a single receiver `DATA-ELEMENT-REF`
+
 CS ComSpec rules: `callMode` is required. Synchronous ports may carry `timeoutMs`; asynchronous ports must not. CS ports must not carry SR fields.
 
 Mode-switch ports do not support ComSpec.
@@ -99,10 +105,43 @@ Checks `dataReceiveEvents` bindings: port must exist, must be a `requires` SR po
 Checks `modeSwitchEvents` bindings: port must exist, must be a `requires` mode-switch port, the referenced mode must be declared in the resolved `ModeDeclarationGroup`.
 
 ### CORE-030 - SystemInstanceTypes
-Checks that every component prototype in the system composition references a known SWC type by name.
+Checks that every component prototype in the top-level system composition references a known atomic SWC type or subcomposition type by name.
+
+### CORE-031 - SubcompositionInstanceTypes
+Checks that every component prototype inside a subcomposition resolves to a known atomic SWC type. Nested subcomposition instantiation is intentionally rejected in this first iteration.
+
+### CORE-032 - SubcompositionConnectionSemantics
+Checks every connector inside each subcomposition.
+
+- both endpoint instances must exist within the subcomposition
+- both endpoint ports must exist on the resolved atomic SWC types
+- `from` port must be a `provides` port; `to` port must be a `requires` port
+- both ports must reference the same interface
+- interface kind must be consistent (SR-to-SR, CS-to-CS, MS-to-MS)
+- duplicate port pairs are rejected
+
+### CORE-033 - SubcompositionPortDefinitions
+Checks subcomposition boundary port definitions.
+
+- composition port names must be unique within the subcomposition
+- `direction` must be `provides` or `requires`
+- `interfaceRef` must resolve to an existing senderReceiver, clientServer, or modeSwitch interface
+- open composition ports are allowed; this rule validates the port declarations themselves
+
+### CORE-034 - SubcompositionDelegationConnectors
+Checks delegation connectors inside each subcomposition.
+
+- `outer` must reference a declared subcomposition composition port
+- `inner` instance must exist inside the subcomposition
+- `inner` port must exist on the resolved atomic SWC type
+- outer and inner ports must have the same direction
+- outer and inner ports must reference the same interface
+- interface kind must be consistent (`senderReceiver`, `clientServer`, or `modeSwitch`)
+- duplicate delegation mappings are rejected
+- top-level connectors may only target declared subcomposition boundary ports, so undeclared inner-port bypass is rejected
 
 ### CORE-040 - ConnectionSemantics
-Checks every connector in the system composition.
+Checks every connector in the top-level system composition.
 
 - both endpoint instances must exist
 - both endpoint ports must exist on those instances
@@ -154,3 +193,5 @@ Example: producer at 5 ms, consumer at 10 ms -> `CORE-051` warning. Equal period
 The `tests/` directory contains pytest coverage for all validation behavior. `examples/invalid/` contains a corpus of deliberately broken model fixtures - one per finding code - used to verify that each rule fires exactly when expected and not otherwise. See `examples/invalid/README.md` for the fixture naming convention and contribution guidance.
 
 Every validation rule has explicit test cases for both valid and invalid inputs. This corpus is also useful as a reference for understanding exactly what each rule checks.
+
+Some checker-oriented export completeness concerns are intentionally tracked separately from semantic validation. For example, `ModeDeclarationGroup` `EXPLICIT_ORDER` completeness is still a known scoped limitation rather than a hidden promise of full AUTOSAR coverage.

@@ -88,6 +88,28 @@ def _print_validation_summary(report) -> None:
     console.print(f" - infos: {counts['info']}")
 
 
+def _case_status_label(case) -> tuple[str, str]:
+    if case.status == "skip":
+        return "SKIP", "dim"
+    if any(finding.severity == "error" for finding in case.findings):
+        return "ERROR", "red"
+    if any(finding.severity == "warning" for finding in case.findings):
+        return "WARNING", "yellow"
+    return "RUN OK", "green"
+
+
+def _print_case_status(prefix: str, case, reason: str | None = None) -> None:
+    label, style = _case_status_label(case)
+    suffix = f" ({reason})" if reason else ""
+    console.print(f"{prefix}[{style}]{label}[/{style}]{suffix} {_format_case_metrics(case)}")
+
+
+def _print_case_line(prefix: str, case, reason: str | None = None) -> None:
+    label, style = _case_status_label(case)
+    suffix = f" ({reason})" if reason else ""
+    console.print(f"{prefix}{case.case_id} {case.name} [{style}]{label}[/{style}]{suffix} {_format_case_metrics(case)}")
+
+
 @app.command()
 def validate(
     project: Path,
@@ -98,7 +120,7 @@ def validate(
         count=True,
         help=(
             "Validation verbosity:\n"
-            "-v  show which validation cases ran (OK/SKIP/FAIL)\n"
+            "-v  show which validation cases ran (RUN OK/WARNING/ERROR/SKIP)\n"
             "-vv also show per-case timing and finding counts"
         ),
     ),
@@ -117,19 +139,19 @@ def validate(
                     if verbose >= 2:
                         console.print(f" - {case.case_id} {case.name}")
                         console.print(f"   {case.description}")
-                        console.print(f"   SKIP ({case.reason}) {_format_case_metrics(case)}")
+                        _print_case_status("   ", case, reason=case.reason)
                     else:
-                        console.print(f" - {case.case_id} {case.name} SKIP ({case.reason}) {_format_case_metrics(case)}")
+                        _print_case_line(" - ", case, reason=case.reason)
                     continue
 
                 if verbose >= 2:
                     console.print(f" - {case.case_id} {case.name}")
                     console.print(f"   {case.description}")
-                    console.print(f"   RUN {case.outcome.upper()} {_format_case_metrics(case)}")
+                    _print_case_status("   ", case)
                     for finding in case.findings:
                         _print_colored_finding("   ", finding)
                 else:
-                    console.print(f" - {case.case_id} {case.name} RUN {case.outcome.upper()} {_format_case_metrics(case)}")
+                    _print_case_line(" - ", case)
         elif report.findings:
             for finding in report.findings:
                 _print_colored_finding("", finding)
@@ -155,7 +177,7 @@ def export(
     split_by_swc: bool = typer.Option(
         False,
         "--split-by-swc",
-        help="Write <Project>_SharedTypes.arxml + one <SWC>.arxml per component + <System>.arxml",
+        help="Write shared types + one ARXML per component type + one root system ARXML",
     ),
     templates: Path = typer.Option(None, help="Template directory"),
     verbose: int = typer.Option(
@@ -227,6 +249,10 @@ def export(
                 InputPatternExpansion(pattern=p.pattern, matched_files=p.matched_files)
                 for p in load_report.swc_patterns
             ],
+            subcomposition_patterns=[
+                InputPatternExpansion(pattern=p.pattern, matched_files=p.matched_files)
+                for p in load_report.subcomposition_patterns
+            ],
             system_file=load_report.system_file,
         )
         export_report = write_outputs_with_report(
@@ -260,11 +286,13 @@ def export(
                 _print_pattern_summary("modeDeclarationGroups", export_report.input_summary.mode_declaration_group_patterns)
             _print_pattern_summary("interfaces", export_report.input_summary.interface_patterns)
             _print_pattern_summary("swcs", export_report.input_summary.swc_patterns)
+            if export_report.input_summary.subcomposition_patterns:
+                _print_pattern_summary("subcompositions", export_report.input_summary.subcomposition_patterns)
             if export_report.input_summary.system_file:
                 console.print(f"system: {export_report.input_summary.system_file}")
 
         if export_report.layout == "split-by-swc":
-            console.print("layout=split-by-swc (shared types + per-SWC + system)")
+            console.print("layout=split-by-swc (shared types + atomic/component-type ARXMLs + root system)")
         else:
             console.print("layout=monolithic")
 
@@ -274,6 +302,7 @@ def export(
                 "templates: "
                 f"shared={export_report.templates['shared']} "
                 f"swc={export_report.templates['swc']} "
+                f"composition={export_report.templates['composition']} "
                 f"system={export_report.templates['system']}"
             )
         else:
@@ -287,6 +316,7 @@ def export(
                 f"modeDeclarationGroups={ms.mode_declaration_groups_count} "
                 f"interfaces={ms.interfaces_count} (SR={ms.sr_interfaces_count}, CS={ms.cs_interfaces_count}, MS={ms.ms_interfaces_count}) "
                 f"swcs={ms.swcs_count} "
+                f"subcompositions={ms.subcompositions_count} "
                 f"instances={ms.instances_count} connectors={ms.connectors_count}"
             )
             console.print("timings (ms):")

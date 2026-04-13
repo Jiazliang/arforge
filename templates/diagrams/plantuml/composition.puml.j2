@@ -1,10 +1,30 @@
 @startuml
-title Composition View - {{ view.system_name }}
+title {% if view.boundary_name %}Subcomposition View{% else %}Composition View{% endif %} - {{ view.system_name }}
 left to right direction
 skinparam legendBackgroundColor #FFFFFF
 skinparam legendBorderColor #FFFFFF
 skinparam legendEntrySeparator #FFFFFF
 
+{% if view.boundary_name %}
+component "{{ view.boundary_name }}" as {{ view.boundary_id }} {{ view.boundary_fill_color }} {
+{% for port in view.boundary_incoming_ports %}
+  portin "{{ port.name }}" as {{ port.id }} {{ port.fill_color }}
+{% endfor %}
+{% for port in view.boundary_outgoing_ports %}
+  portout "{{ port.name }}" as {{ port.id }} {{ port.fill_color }}
+{% endfor %}
+{% for instance in view.instances %}
+  component "{{ instance.name }}" as {{ instance.id }} {{ instance.fill_color }} {
+{% for port in instance.incoming_ports %}
+    portin "{{ port.name }}" as {{ port.id }} {{ port.fill_color }}
+{% endfor %}
+{% for port in instance.outgoing_ports %}
+    portout "{{ port.name }}" as {{ port.id }} {{ port.fill_color }}
+{% endfor %}
+  }
+{% endfor %}
+}
+{% else %}
 {% for instance in view.instances %}
 component "{{ instance.name }}" as {{ instance.id }} {{ instance.fill_color }} {
 {% for port in instance.incoming_ports %}
@@ -15,6 +35,7 @@ component "{{ instance.name }}" as {{ instance.id }} {{ instance.fill_color }} {
 {% endfor %}
 }
 {% endfor %}
+{% endif %}
 
 {% for connector in view.assembly_connectors %}
 {{ connector.source_id }} -{{ connector.line_style }}-> {{ connector.target_id }}
@@ -25,6 +46,7 @@ component "{{ instance.name }}" as {{ instance.id }} {{ instance.fill_color }} {
 
 legend bottom
 |=    |= SWC Type |
+|<back:#f1e3d3>        </back>| Subcomposition |
 |<back:#d6e4ff>        </back>| Application SWC |
 |<back:#d8f3dc>        </back>| Service SWC |
 |<back:#ffe5b4>        </back>| Complex Device Driver |

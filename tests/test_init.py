@@ -50,6 +50,8 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
         "interfaces/If_PowerState.yaml",
         "swcs/SpeedSensor.yaml",
         "swcs/SpeedDisplay.yaml",
+        "swcs/DiagManager.yaml",
+        "subcompositions/subcomposition_speed_cluster.yaml",
         "system.yaml",
     ]
     for rel in expected_files:
@@ -64,6 +66,8 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     mode_interface_yaml = (project_dir / "interfaces" / "If_PowerState.yaml").read_text(encoding="utf-8")
     producer_yaml = (project_dir / "swcs" / "SpeedSensor.yaml").read_text(encoding="utf-8")
     consumer_yaml = (project_dir / "swcs" / "SpeedDisplay.yaml").read_text(encoding="utf-8")
+    diag_manager_yaml = (project_dir / "swcs" / "DiagManager.yaml").read_text(encoding="utf-8")
+    subcomposition_yaml = (project_dir / "subcompositions" / "subcomposition_speed_cluster.yaml").read_text(encoding="utf-8")
     application_types_yaml = (project_dir / "types" / "application_types.yaml").read_text(encoding="utf-8")
     implementation_types_yaml = (project_dir / "types" / "implementation_types.yaml").read_text(encoding="utf-8")
     assert project_yaml.startswith("# ARForge: Project input manifest")
@@ -71,28 +75,45 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert interface_yaml.startswith("# ARForge: Interface definition")
     assert producer_yaml.startswith("# ARForge: Software Component Type")
     assert consumer_yaml.startswith("# ARForge: Software Component Type")
+    assert diag_manager_yaml.startswith("# ARForge: Software Component Type")
+    assert subcomposition_yaml.startswith("# ARForge: Subcomposition type")
     assert modes_yaml.startswith("# ARForge: Mode declaration groups")
-    assert "instantiates those SWC types as component prototypes" in readme
+    assert "instantiates that subcomposition type plus one standalone atomic SWC" in readme
     assert "modes/power_state.yaml" in readme
     assert "interfaces/If_PowerState.yaml" in readme
+    assert "subcompositions/subcomposition_speed_cluster.yaml" in readme
+    assert "delegation connectors" in readme
     assert "python -m arforge.cli validate autosar.project.yaml" in readme
     assert "python -m arforge.cli export autosar.project.yaml --out build/out --split-by-swc" in readme
     assert "python -m arforge.cli generate code autosar.project.yaml --lang c --out build/code" in readme
     assert 'modeDeclarationGroups:' in project_yaml
     assert '- "modes/*.yaml"' in project_yaml
+    assert 'subcompositions:' in project_yaml
     assert 'description: "Power state modes used by the scaffolded mode-switch interface."' in modes_yaml
-    assert 'typeRef points to the SWC type defined in swcs/*.yaml.' in system_yaml
-    assert 'name: "SpeedSensor_1"' in system_yaml
-    assert 'typeRef: "SpeedSensor"' in system_yaml
-    assert 'name: "SpeedDisplay_1"' in system_yaml
-    assert 'description: "Connects the ECU power-state mode to the display instance."' in system_yaml
+    assert 'typeRef may point to either an atomic SWC type or a reusable subcomposition type.' in system_yaml
+    assert 'name: "SpeedCluster_0"' in system_yaml
+    assert 'typeRef: "SubComposition_SpeedCluster"' in system_yaml
+    assert 'name: "DiagManager_0"' in system_yaml
+    assert 'from: "DiagManager_0.Pp_PowerState"' in system_yaml
+    assert 'to: "SpeedCluster_0.Rp_PowerStateIn"' in system_yaml
+    assert 'from: "SpeedCluster_0.Pp_VehicleSpeedOut"' in system_yaml
+    assert 'to: "DiagManager_0.Rp_VehicleSpeed"' in system_yaml
     assert 'description: "Sender-receiver interface for the current vehicle speed."' in interface_yaml
     assert 'description: "Mode switch interface for ECU power state."' in mode_interface_yaml
     assert 'modeGroupRef: "Mdg_PowerState"' in mode_interface_yaml
-    assert 'description: "SWC type that publishes the current vehicle speed."' in producer_yaml
-    assert 'description: "Provided mode switch port for ECU power state."' in producer_yaml
-    assert 'description: "SWC type that reads vehicle speed and could display it to a user."' in consumer_yaml
+    assert 'description: "SWC type that reacts to the external power-state input and publishes the current vehicle speed."' in producer_yaml
+    assert 'description: "Required mode switch port delegated from the subcomposition boundary."' in producer_yaml
+    assert 'description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."' in consumer_yaml
     assert 'description: "Required mode switch port for ECU power state."' in consumer_yaml
+    assert 'description: "Standalone atomic SWC type used to show that one top-level SWC can connect to a reusable subcomposition through boundary ports."' in diag_manager_yaml
+    assert 'name: "SubComposition_SpeedCluster"' in subcomposition_yaml
+    assert 'name: "Rp_PowerStateIn"' in subcomposition_yaml
+    assert 'name: "Pp_VehicleSpeedOut"' in subcomposition_yaml
+    assert 'category: "fixedLength"' in base_types_yaml
+    assert 'typeRef: "SpeedSensor"' in subcomposition_yaml
+    assert 'typeRef: "SpeedDisplay"' in subcomposition_yaml
+    assert 'name: "Runnable_ReadClusterSpeed"' in diag_manager_yaml
+    assert 'delegationConnectors:' in subcomposition_yaml
     assert 'modeSwitchEvents:' in consumer_yaml
     assert 'mode: "ON"' in consumer_yaml
     assert 'description: "Vehicle speed value shared between the demo SWC types."' in application_types_yaml
@@ -114,12 +135,14 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     written = write_outputs(project, template_dir=TEMPLATE_DIR, out=out_dir, split_by_swc=True)
     assert [path.name for path in written] == [
         "DEMOSYSTEM_SharedTypes.arxml",
+        "DiagManager.arxml",
         "SpeedDisplay.arxml",
         "SpeedSensor.arxml",
+        "SubComposition_SpeedCluster.arxml",
         "DemoSystem.arxml",
     ]
     speed_display_xml = (out_dir / "SpeedDisplay.arxml").read_text(encoding="utf-8")
-    assert "<MODE-SWITCH-EVENT>" in speed_display_xml
+    assert "<SWC-MODE-SWITCH-EVENT>" in speed_display_xml
     assert "<SHORT-NAME>MSE_Runnable_OnPowerOn_Rp_PowerState_ON</SHORT-NAME>" in speed_display_xml
 
 
@@ -144,14 +167,17 @@ def test_init_no_example_creates_structure_only_project(tmp_path: Path) -> None:
 
     assert (project_dir / "interfaces").is_dir()
     assert (project_dir / "swcs").is_dir()
+    assert (project_dir / "subcompositions").is_dir()
     assert list((project_dir / "interfaces").glob("*.yaml")) == []
     assert list((project_dir / "swcs").glob("*.yaml")) == []
+    assert list((project_dir / "subcompositions").glob("*.yaml")) == []
     readme = (project_dir / "README.md").read_text(encoding="utf-8")
     system_yaml = (project_dir / "system.yaml").read_text(encoding="utf-8")
     project_yaml = (project_dir / "autosar.project.yaml").read_text(encoding="utf-8")
     modes_yaml = (project_dir / "modes" / "power_state.yaml").read_text(encoding="utf-8")
     assert "without example interfaces or SWCs" in readme
     assert "mode declaration groups under `modes/`" in readme
+    assert "subcomposition types under `subcompositions/`" in readme
     assert system_yaml.startswith("# ARForge: System composition")
     assert "Example shape:" in system_yaml
     assert 'modeDeclarationGroups:' in project_yaml

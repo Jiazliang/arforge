@@ -39,6 +39,7 @@ class AggregatorLoadReport:
     mode_declaration_group_patterns: List[InputPatternReport]
     interface_patterns: List[InputPatternReport]
     swc_patterns: List[InputPatternReport]
+    subcomposition_patterns: List[InputPatternReport]
     system_file: Optional[Path]
     load_schema_ms: float
     model_build_ms: float
@@ -120,6 +121,7 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
         "modeDeclarationGroups": [],
         "interfaces": [],
         "swcs": [],
+        "subcompositions": [],
         "system": None,
     }
 
@@ -129,6 +131,7 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
     unit_patterns: List[InputPatternReport] = []
     compu_method_patterns: List[InputPatternReport] = []
     mode_declaration_group_patterns: List[InputPatternReport] = []
+    subcomposition_patterns: List[InputPatternReport] = []
 
     uses_split = all(k in inputs for k in ["baseTypes", "implementationDataTypes", "applicationDataTypes"])
     if not uses_split:
@@ -215,6 +218,16 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
             raise ValidationError(errs)
         merged["swcs"].append(data["swc"])
 
+    if "subcompositions" in inputs:
+        subcomposition_schema = _load_json(_schema_dir() / "subcomposition.schema.json")
+        subcomposition_files, subcomposition_patterns = _expand_patterns_with_details(base_dir, inputs["subcompositions"])
+        for p in subcomposition_files:
+            data = _load_yaml(p)
+            errs = _validate_with_schema(data, subcomposition_schema, str(p))
+            if errs:
+                raise ValidationError(errs)
+            merged["subcompositions"].append(data["subcomposition"])
+
     system_file: Optional[Path] = None
     s_path = (base_dir / inputs["system"]).resolve()
     s_data = _load_yaml(s_path)
@@ -241,6 +254,7 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
         mode_declaration_group_patterns=mode_declaration_group_patterns,
         interface_patterns=interface_patterns,
         swc_patterns=swc_patterns,
+        subcomposition_patterns=subcomposition_patterns,
         system_file=system_file,
         load_schema_ms=load_schema_ms,
         model_build_ms=model_build_ms,

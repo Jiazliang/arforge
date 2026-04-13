@@ -21,4 +21,4 @@ inputs:
   swcs:
     - "../swcs/SpeedSensor.yaml"
     - "swcs/SpeedDisplay_NoModeUsage.yaml"
-  system: "../system.yaml"
+  system: "support/system_mode_switch_connected.yaml"

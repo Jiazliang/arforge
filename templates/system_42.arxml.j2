@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+{% import "_autosar_macros.j2" as arxml %}
 <AUTOSAR xmlns="http://autosar.org/schema/r4.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-2-2.xsd">
@@ -16,23 +17,13 @@
                 {% for c in components %}
                 <SW-COMPONENT-PROTOTYPE>
                   <SHORT-NAME>{{ c.name }}</SHORT-NAME>
-                  <TYPE-TREF DEST="{{ swc_type_dests[c.typeRef] }}">/{{ root_pkg }}/Components/{{ c.typeRef }}</TYPE-TREF>
+                  <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
                 </SW-COMPONENT-PROTOTYPE>
                 {% endfor %}
               </COMPONENTS>
               <CONNECTORS>
                 {% for c in connections %}
-                <ASSEMBLY-SW-CONNECTOR>
-                  <SHORT-NAME>{{ c.short_name }}</SHORT-NAME>
-                  <PROVIDER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/System/{{ composition_name }}/{{ c.from_instance }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/System/{{ composition_name }}/{{ c.from_instance }}/{{ c.from_port }}</TARGET-P-PORT-REF>
-                  </PROVIDER-IREF>
-                  <REQUESTER-IREF>
-                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/{{ root_pkg }}/System/{{ composition_name }}/{{ c.to_instance }}</CONTEXT-COMPONENT-REF>
-                    <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/System/{{ composition_name }}/{{ c.to_instance }}/{{ c.to_port }}</TARGET-R-PORT-REF>
-                  </REQUESTER-IREF>
-                </ASSEMBLY-SW-CONNECTOR>
+                {{ arxml.render_assembly_connector(c) }}
                 {% endfor %}
               </CONNECTORS>
             </COMPOSITION-SW-COMPONENT-TYPE>

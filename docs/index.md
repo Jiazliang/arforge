@@ -1,6 +1,6 @@
 # ARForge Documentation
 
-ARForge is a YAML-first AUTOSAR Classic modeling tool. You describe your project in plain text, ARForge validates it semantically, and exports standards-compliant ARXML.
+ARForge is a YAML-first AUTOSAR Classic modeling tool. You describe your project in plain text, ARForge validates it semantically, and exports deterministic AUTOSAR-aligned ARXML for the currently supported scope.
 
 ## Where to start
 

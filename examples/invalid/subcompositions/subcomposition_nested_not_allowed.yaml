@@ -1,0 +1,8 @@
+# ARForge: Invalid example fixture
+# Subcomposition nesting is intentionally rejected in this first iteration.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  components:
+    - name: "NestedCluster_1"
+      typeRef: "SubComposition_Nested"
+  connectors: []

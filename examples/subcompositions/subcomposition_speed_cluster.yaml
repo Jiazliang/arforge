@@ -1,0 +1,39 @@
+# ARForge: Subcomposition type
+# Defines reusable inner component prototypes and their internal assembly connectors.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  description: "Reusable subcomposition that accepts a boundary power-state input, keeps the sensor-to-display wiring internal, and exposes a boundary speed output."
+  ports:
+    - name: "Rp_PowerStateIn"
+      description: "Required outer composition port delegated to the internal sensor power-state input."
+      direction: "requires"
+      interfaceRef: "If_PowerState"
+    - name: "Pp_VehicleSpeedOut"
+      description: "Provided outer composition port delegated from the internal display speed output."
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "SpeedSensor_1"
+      description: "Internal speed publisher instance."
+      typeRef: "SpeedSensor"
+    - name: "SpeedDisplay_1"
+      description: "Internal speed consumer instance."
+      typeRef: "SpeedDisplay"
+  connectors:
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      description: "Connects the published speed sample to the explicit receiver port."
+      to: "SpeedDisplay_1.Rp_VehicleSpeed"
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      description: "Connects the published speed sample to the implicit receiver port."
+      to: "SpeedDisplay_1.Rp_VehicleSpeedImplicit"
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      description: "Connects the published speed sample to the queued receiver port."
+      to: "SpeedDisplay_1.Rp_VehicleSpeedQueued"
+    - from: "SpeedSensor_1.Pp_PowerState"
+      description: "Connects the ECU power-state mode to the display instance."
+      to: "SpeedDisplay_1.Rp_PowerState"
+  delegationConnectors:
+    - inner: "SpeedSensor_1.Rp_PowerStateIn"
+      outer: "Rp_PowerStateIn"
+    - inner: "SpeedDisplay_1.Pp_VehicleSpeedOut"
+      outer: "Pp_VehicleSpeedOut"

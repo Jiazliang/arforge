@@ -1,0 +1,16 @@
+# ARForge: Invalid subcomposition fixture
+# Tests validation failure for a delegation connector referencing an unknown inner component instance.
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  description: "Reusable subcomposition with an unknown inner delegation instance."
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  connectors: []
+  delegationConnectors:
+    - inner: "Missing_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"

@@ -18,11 +18,15 @@ baseTypes:
     bitLength: 8
     signedness: "unsigned"
     nativeDeclaration: "uint8"
+    category: "fixedLength"
   - name: "uint16"
     bitLength: 16
     signedness: "unsigned"
     nativeDeclaration: "uint16"
+    category: "fixedLength"
 ```
+
+`category` is optional for the current primitive base types. The YAML authoring form is intentionally human-friendly: values such as `fixedLength` are normalized during export to the AUTOSAR literal `FIXED_LENGTH`.
 
 ### Implementation data types
 
@@ -143,6 +147,8 @@ interface:
 
 Each data element references an application data type. Multiple data elements per interface are supported.
 
+When a sender-receiver port uses `comSpec`, the current ARXML export path expects the referenced interface to contain exactly one data element so the receiver ComSpec can emit an unambiguous data-element reference. That constraint is enforced by validation.
+
 ### Client-server interfaces
 
 ```yaml
@@ -217,6 +223,14 @@ ports:
     direction: "requires"
     interfaceRef: "If_VehicleSpeed"
     comSpec:
+      mode: "explicit"
+      initValue: 0
+
+  # sender-receiver queued require port
+  - name: "Rp_VehicleSpeedQueued"
+    direction: "requires"
+    interfaceRef: "If_VehicleSpeed"
+    comSpec:
       mode: "queued"
       queueLength: 8
 
@@ -249,6 +263,10 @@ ports:
 **SR ComSpec modes:** `implicit`, `explicit`, `queued`. Queued ports require `queueLength >= 1`.
 
 In exported ARXML, `implicit` and `explicit` receiver ports remain nonqueued, but ARForge preserves the distinction on `NONQUEUED-RECEIVER-COM-SPEC` through receiver-side update metadata instead of collapsing both modes to an identical empty com-spec block.
+
+`initValue` is supported on required nonqueued sender-receiver ports. This is useful when an AUTOSAR checker expects a delegated receiver port to define an initial value. `initValue` is rejected on provided sender-receiver ports, queued sender-receiver ports, client-server ports, and mode-switch ports.
+
+For sender-receiver ports with `comSpec`, validation currently requires the referenced interface to have exactly one data element. This matches the current export model, where receiver ComSpecs emit a single `DATA-ELEMENT-REF`.
 
 **CS ComSpec call modes:** `synchronous`, `asynchronous`. Synchronous ports may specify `timeoutMs`. Asynchronous ports must not carry `timeoutMs` or `queueLength`.
 
@@ -311,6 +329,8 @@ runnables:
 
 The `port` must be a required mode-switch port. The `mode` must be declared in the referenced `ModeDeclarationGroup`.
 
+In exported ARXML, these are rendered as `SWC-MODE-SWITCH-EVENT`.
+
 ### Runnable access definitions
 
 Runnable access definitions describe what a runnable reads, writes, calls, or raises. These are validated against the port direction and interface kind.
@@ -345,23 +365,23 @@ runnables:
       - port: "Pp_Diag"
         operation: "ReadDTC"
     raisesErrors:
-      - port: "Pp_Diag"
-        operation: "ReadDTC"
+      - operation: "ReadDTC"
         error: "DTC_NOT_FOUND"
 ```
 
 ---
 
-## System composition
+## System composition and subcompositions
 
-The system file defines the composition — which SWC types are instantiated and how their ports are connected.
+The system file defines the top-level composition. Subcomposition files define reusable inner compositions that can be instantiated from the system.
 
 ### The type vs. instance distinction
 
 This distinction is fundamental in AUTOSAR and ARForge models it correctly:
 
 - An SWC type is defined in `swcs/SpeedSensor.yaml`. It is the reusable blueprint.
-- A component prototype is an instance of that type inside the composition.
+- A subcomposition type is defined in `subcompositions/subcomposition_speed_cluster.yaml`. It is a reusable composition made of atomic SWC instances.
+- A component prototype is an instance of either an atomic SWC type or, at the top level, a subcomposition type.
 
 Connectors are wired between instantiated ports, not between SWC type definitions. The same SWC type can be instantiated multiple times.
 
@@ -371,18 +391,63 @@ system:
   composition:
     name: "Composition_DemoSystem"
     components:
-      - name: "SpeedSensor_1"
-        typeRef: "SpeedSensor"
-      - name: "SpeedDisplay_1"
-        typeRef: "SpeedDisplay"
-    connectors:
-      - from: "SpeedSensor_1.Pp_VehicleSpeed"
-        to: "SpeedDisplay_1.Rp_VehicleSpeed"
-      - from: "SpeedSensor_1.Pp_PowerState"
-        to: "SpeedDisplay_1.Rp_PowerState"
+      - name: "SpeedCluster_0"
+        typeRef: "SubComposition_SpeedCluster"
+      - name: "DiagManager_0"
+        typeRef: "DiagManager"
+    connectors: []
 ```
 
 Connector endpoints use `InstanceName.PortName` syntax. Both the instance and the port must exist. Interface compatibility between connected ports is validated by `CORE-040`.
+
+### Subcomposition definitions
+
+Subcompositions are defined in dedicated files and may expose composition boundary ports in addition to their internal atomic SWC instances and assembly connectors.
+
+```yaml
+subcomposition:
+  name: "SubComposition_SpeedCluster"
+  ports:
+    - name: "Rp_VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+    - name: "Pp_PowerStateOut"
+      direction: "provides"
+      interfaceRef: "If_PowerState"
+  components:
+    - name: "SpeedSensor_1"
+      typeRef: "SpeedSensor"
+    - name: "SpeedDisplay_1"
+      typeRef: "SpeedDisplay"
+  connectors:
+    - from: "SpeedSensor_1.Pp_VehicleSpeed"
+      to: "SpeedDisplay_1.Rp_VehicleSpeed"
+  delegationConnectors:
+    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
+      outer: "Rp_VehicleSpeedIn"
+    - inner: "SpeedSensor_1.Pp_PowerState"
+      outer: "Pp_PowerStateOut"
+```
+
+Composition ports and delegation connectors play different roles:
+
+- composition ports define the external API of the subcomposition
+- delegation connectors map that external API to specific inner component ports
+- `outer` references a declared subcomposition port
+- `inner` references an internal component instance port using `InstanceName.PortName`
+- outer and inner ports must match on direction, interface reference, and interface kind
+- in exported ARXML, composition ports are referenced on the composition type, while inner ports are referenced on the owning inner component type together with the inner component prototype context
+
+In the current iteration:
+
+- top-level `system.yaml` may instantiate atomic SWCs and subcomposition types
+- subcompositions may instantiate atomic SWCs only
+- subcompositions may declare their own external composition ports
+- subcompositions may wire those external ports to inner component ports with `delegationConnectors`
+- nested subcompositions are rejected by semantic validation (`CORE-031`)
+- delegation connectors are the only supported way to expose inner functionality through the subcomposition boundary
+- direct top-level access to undeclared inner subcomposition ports is not supported
+- top-level connectors to a subcomposition instance therefore go through the subcomposition's exposed composition ports, never directly to nested inner component ports
 
 ### What connectors do not carry
 

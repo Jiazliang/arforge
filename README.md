@@ -8,7 +8,7 @@
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey)
 ![Tests](https://img.shields.io/badge/tests-pytest-yellow)
 
-ARForge lets you design AUTOSAR Classic SWCs and compositions in plain YAML, validate them against semantic rules, and export standards-compliant ARXML — without a GUI tool or license server. It runs on Linux and Windows, integrates with Visual Studio Code, and fits naturally into any CI pipeline.
+ARForge lets you design AUTOSAR Classic SWCs and compositions in plain YAML, validate them against semantic rules, and export deterministic AUTOSAR-aligned ARXML for the currently supported scope — without a GUI tool or license server. It runs on Linux and Windows, integrates with Visual Studio Code, and fits naturally into any CI pipeline.
 
 ---
 
@@ -19,8 +19,8 @@ AUTOSAR SWC design in GUI-based tools is expensive, opaque, and hostile to versi
 | | |
 |---|---|
 | **Text-first design** | SWCs, compositions, interfaces, modes, and types — all in human-readable YAML |
-| **Semantic validation** | 192 stable finding codes across all supported constructs. Catches design problems before export |
-| **Clean ARXML export** | Deterministic, ordered output — git diffs on generated files are actually readable |
+| **Semantic validation** | Stable finding codes across supported constructs. Catches design problems before export |
+| **Clean ARXML export** | Deterministic, ordered AUTOSAR-aligned output for the currently supported feature set |
 | **CI-ready CLI** | Validate and export in a pipeline with no GUI dependency or license server |
 | **VS Code integration** | YAML schema autocomplete, inline diagnostics, and task runner built in |
 
@@ -39,14 +39,14 @@ Current implementation targets a practical AUTOSAR Classic 4.2 subset:
 | Area | Details |
 |---|---|
 | **Data types** | Base, implementation, and application types; scalar, array, and struct; units and compu methods (linear, text table) |
-| **Sender-Receiver interfaces** | Data elements, implicit/explicit/queued ComSpec, queue length validation |
+| **Sender-Receiver interfaces** | Data elements, implicit/explicit/queued ComSpec, receiver init values, queue length validation |
 | **Client-Server interfaces** | Operations, in/out/inout arguments, return types, possible errors, sync/async call modes, timeout configuration |
 | **Mode-Switch interfaces** | `ModeDeclarationGroup` definitions, mode manager and user ports, `ModeSwitchEvent` runnable triggers |
 | **SWC types** | Provides/requires ports, runnables, `TimingEvent`, `InitEvent`, `OperationInvokedEvent`, `DataReceiveEvent`, `ModeSwitchEvent` |
 | **Runnable access** | `reads`, `writes`, `calls`, `raisesErrors` — all validated against port direction and interface kind |
 | **System composition** | Component prototypes, SWC type references, port-level assembly connectors for SR, CS, and mode-switch |
-| **Validation** | 192 stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
-| **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering |
+| **Validation** | Stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
+| **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering, shared rendering logic across both modes |
 | **Code skeletons** | Template-driven C `.h` / `.c` starter files generated from validated SWC models |
 | **Diagrams** | Unified `generate diagram` command for PlantUML architecture views |
 
@@ -101,7 +101,7 @@ python -m arforge.cli init my-project
 # Validate — stable finding codes on any semantic issue
 python -m arforge.cli validate examples/autosar.project.yaml
 
-# Export — monolithic or split by SWC
+# Export - monolithic or split by component type
 python -m arforge.cli export examples/autosar.project.yaml --out build/out --split-by-swc
 
 # Generate starter C skeletons for SWCs
@@ -115,6 +115,7 @@ python -m arforge.cli generate diagram examples/autosar.project.yaml --out build
 
 The diagram generator writes:
 - `composition_<System>.puml`
+- `subcomposition_<Subcomposition>.puml`
 - `interfaces_wiring.puml`
 - `interfaces_contracts.puml`
 - `behavior_<SWC>.puml`
@@ -131,33 +132,13 @@ pytest -q
 
 ## VS Code integration
 
-ARForge includes a `.vscode/` configuration that enables YAML schema validation, autocompletion, and task runner integration out of the box.
+ARForge includes a `.vscode/` configuration for YAML schema validation, autocomplete, and task runner integration out of the box.
 
-**Required VS Code extensions:**
-- [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
-- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) (Red Hat)
+The full setup instructions, task list, and `arforge.projectFile` configuration live in [docs/project-structure.md](docs/project-structure.md#vs-code-setup). If you just want the essentials:
 
-Once installed, open the repository root in VS Code. Schema-backed autocompletion and inline diagnostics activate automatically for all ARForge YAML files.
-
-**Built-in tasks** (accessible via `Terminal → Run Task`):
-
-| Task | Description |
-|---|---|
-| `arforge: validate project` | Validate the configured project manifest |
-| `arforge: export project (split by swc)` | Export ARXML, one file per SWC |
-| `arforge: export project (monolithic)` | Export ARXML as a single file |
-| `arforge: generate Plantuml` | Generate the PlantUML diagram set |
-| `arforge: generate C-code` | Generate C SWC starter skeletons |
-| `arforge: init project` | Scaffold a new project |
-| `arforge: pytest` | Run the full test suite |
-
-**Configuring the project file** — set the active project manifest in `.vscode/settings.json`:
-
-```jsonc
-"arforge.projectFile": "examples/autosar.project.yaml"
-```
-
-All tasks resolve this path at runtime, so switching between projects requires changing only this one setting.
+- install the VS Code `Python` and `YAML` extensions
+- open the repository root in VS Code
+- set `arforge.projectFile` in `.vscode/settings.json` if you want tasks to target a different manifest
 
 ---
 

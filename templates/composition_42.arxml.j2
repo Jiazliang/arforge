@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+{% import "_autosar_macros.j2" as arxml %}
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-2-2.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>{{ root_pkg }}</SHORT-NAME>
+      <AR-PACKAGES>
+
+        <AR-PACKAGE>
+          <SHORT-NAME>Components</SHORT-NAME>
+          <ELEMENTS>
+            <COMPOSITION-SW-COMPONENT-TYPE>
+              <SHORT-NAME>{{ composition.name }}</SHORT-NAME>
+              {% if composition.ports %}
+              <PORTS>
+                {% for p in composition.ports %}
+                {{ arxml.render_port(p, root_pkg, {}) }}
+                {% endfor %}
+              </PORTS>
+              {% endif %}
+              <COMPONENTS>
+                {% for c in composition.components %}
+                <SW-COMPONENT-PROTOTYPE>
+                  <SHORT-NAME>{{ c.name }}</SHORT-NAME>
+                  <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
+                </SW-COMPONENT-PROTOTYPE>
+                {% endfor %}
+              </COMPONENTS>
+              <CONNECTORS>
+                {% for c in composition.connections %}
+                {{ arxml.render_assembly_connector(c) }}
+                {% endfor %}
+                {% for c in composition.delegation_connectors %}
+                {{ arxml.render_delegation_connector(c) }}
+                {% endfor %}
+              </CONNECTORS>
+            </COMPOSITION-SW-COMPONENT-TYPE>
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

@@ -56,6 +56,18 @@
           "examples": [
             "uint16"
           ]
+        },
+        "category": {
+          "type": "string",
+          "description": "Human-friendly base type category. Export normalizes this to the AUTOSAR literal.",
+          "enum": [
+            "fixedLength",
+            "fixed_length",
+            "FIXED_LENGTH"
+          ],
+          "examples": [
+            "fixedLength"
+          ]
         }
       },
       "additionalProperties": false,
@@ -64,7 +76,8 @@
           "name": "uint16",
           "bitLength": 16,
           "signedness": "unsigned",
-          "nativeDeclaration": "uint16"
+          "nativeDeclaration": "uint16",
+          "category": "fixedLength"
         }
       ]
     }
@@ -85,7 +98,8 @@
             "name": "uint8",
             "bitLength": 8,
             "signedness": "unsigned",
-            "nativeDeclaration": "uint8"
+            "nativeDeclaration": "uint8",
+            "category": "fixedLength"
           }
         ]
       ]
