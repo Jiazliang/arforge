@@ -119,14 +119,19 @@ Mode declaration groups define the named mode sets used by mode-switch interface
 modeDeclarationGroups:
   - name: "Mdg_PowerState"
     description: "Power state modes for the ECU."
+    category: "explicitOrder"
     initialMode: "OFF"
+    onTransitionValue: 255
     modes:
-      - "OFF"
-      - "ON"
-      - "SLEEP"
+      - name: "OFF"
+        value: 0
+      - name: "ON"
+        value: 1
+      - name: "SLEEP"
+        value: 2
 ```
 
-`initialMode` must be one of the declared modes (`CORE-013`). Duplicate mode names are caught by `CORE-012`. Mode declaration groups that are never referenced by any mode-switch interface produce a `CORE-014` warning.
+`initialMode` must be one of the declared modes (`CORE-013`). `EXPLICIT_ORDER` groups must also define `onTransitionValue` and an explicit integer `value` for every mode (`CORE-012`). Duplicate mode names and duplicate mode values are also caught by `CORE-012`. Mode declaration groups that are never referenced by any mode-switch interface produce a `CORE-014` warning.
 
 ---
 

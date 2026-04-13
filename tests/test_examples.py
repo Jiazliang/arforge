@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+from xml.etree import ElementTree as ET
 
 import pytest
 import yaml
@@ -18,6 +19,7 @@ from arforge.model import (
     ComponentPrototype,
     Composition,
     Interface,
+    ModeDeclaration,
     OperationInvokedEvent,
     Port,
     Project,
@@ -215,8 +217,75 @@ def test_main_example_mode_declaration_group_is_loaded_into_model_ir() -> None:
 
     assert [group.name for group in project.modeDeclarationGroups] == ["Mdg_PowerState"]
     assert project.modeDeclarationGroups[0].description == "Power state modes for the ECU."
+    assert project.modeDeclarationGroups[0].category == "EXPLICIT_ORDER"
     assert project.modeDeclarationGroups[0].initialMode == "OFF"
+    assert project.modeDeclarationGroups[0].onTransitionValue == 255
     assert [mode.name for mode in project.modeDeclarationGroups[0].modes] == ["OFF", "ON", "SLEEP"]
+    assert [mode.value for mode in project.modeDeclarationGroups[0].modes] == [0, 1, 2]
+
+
+def test_mode_group_yaml_category_alias_is_normalized_for_export() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+
+    assert project.modeDeclarationGroups[0].category == "EXPLICIT_ORDER"
+
+
+def test_mode_group_schema_rejects_explicit_order_without_on_transition_value() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        load_aggregator(INVALID_DIR / "project_mode_group_missing_on_transition.yaml")
+
+    assert "onTransitionValue" in "\n".join(excinfo.value.errors)
+
+
+def test_mode_group_schema_rejects_explicit_order_without_mode_value() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        load_aggregator(INVALID_DIR / "project_mode_group_missing_mode_value.yaml")
+
+    assert "value" in "\n".join(excinfo.value.errors)
+
+
+def test_semantic_validation_flags_missing_on_transition_value_for_explicit_order_group() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    group = project.modeDeclarationGroups[0]
+    report = build_semantic_report(
+        replace(project, modeDeclarationGroups=[replace(group, onTransitionValue=None)]),
+        ruleset="core",
+    )
+
+    error_codes = {finding.code for finding in report.error_findings()}
+    assert "CORE-012-MDG-EXPLICIT-ORDER-ON-TRANSITION" in error_codes
+
+
+def test_semantic_validation_flags_missing_mode_value_for_explicit_order_group() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    group = project.modeDeclarationGroups[0]
+    report = build_semantic_report(
+        replace(
+            project,
+            modeDeclarationGroups=[
+                replace(
+                    group,
+                    modes=[
+                        ModeDeclaration(name="OFF", value=0),
+                        ModeDeclaration(name="ON"),
+                        ModeDeclaration(name="SLEEP", value=2),
+                    ],
+                )
+            ],
+        ),
+        ruleset="core",
+    )
+
+    error_codes = {finding.code for finding in report.error_findings()}
+    assert "CORE-012-MDG-EXPLICIT-ORDER-MODE-VALUE" in error_codes
+
+
+def test_semantic_validation_flags_duplicate_mode_values() -> None:
+    project = load_aggregator(INVALID_DIR / "project_mode_group_duplicate_values.yaml")
+    report = build_semantic_report(project, ruleset="core")
+
+    error_codes = {finding.code for finding in report.error_findings()}
+    assert "CORE-012-MDG-DUPLICATE-VALUE" in error_codes
 
 
 def _extract_r_port_fragment(xml: str, port_name: str) -> str:
@@ -249,8 +318,16 @@ def _extract_internal_behavior_fragment(xml: str, swc_name: str) -> str:
     return match.group(0)
 
 
+def _extract_mode_declaration_group_fragment(xml: str, group_name: str) -> str:
+    return _extract_element_fragment(xml, "MODE-DECLARATION-GROUP", group_name)
+
+
 def _normalize_xml_fragment(xml: str) -> str:
     return re.sub(r">\s+<", "><", xml).strip()
+
+
+def _parse_xml_fragment(xml: str) -> ET.Element:
+    return ET.fromstring(xml)
 
 
 @pytest.mark.parametrize(
@@ -1079,7 +1156,12 @@ def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) ->
     assert "<SHORT-NAME>km_per_h</SHORT-NAME>" in shared_xml
     assert "<CATEGORY>FIXED_LENGTH</CATEGORY>" in shared_xml
     assert "<SHORT-NAME>Mdg_PowerState</SHORT-NAME>" in shared_xml
+    assert "<CATEGORY>EXPLICIT_ORDER</CATEGORY>" in shared_xml
+    assert "<ON-TRANSITION-VALUE>255</ON-TRANSITION-VALUE>" in shared_xml
     assert "<INITIAL-MODE-REF DEST=\"MODE-DECLARATION\">/DEMO/Modes/Mdg_PowerState/OFF</INITIAL-MODE-REF>" in shared_xml
+    assert "<VALUE>0</VALUE>" in shared_xml
+    assert "<VALUE>1</VALUE>" in shared_xml
+    assert "<VALUE>2</VALUE>" in shared_xml
     assert "<SHORT-NAME>SLEEP</SHORT-NAME>" in shared_xml
     assert "<MODE-SWITCH-INTERFACE>" in shared_xml
     assert "<TYPE-TREF DEST=\"MODE-DECLARATION-GROUP\">/DEMO/Modes/Mdg_PowerState</TYPE-TREF>" in shared_xml
@@ -1089,6 +1171,60 @@ def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) ->
     assert "<FACTOR>" not in shared_xml
     assert "<CATEGORY>VALUE</CATEGORY>" in shared_xml
     assert "<COMPU-METHOD-REF DEST=\"COMPU-METHOD\">/DEMO/CompuMethods/CM_VehicleSpeed_Kph</COMPU-METHOD-REF>" in shared_xml
+
+
+def test_split_export_mode_declaration_group_fragment_is_schema_aligned(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out_dir = tmp_path / "out"
+
+    _ = write_outputs(project, template_dir=template_dir, out=out_dir, split_by_swc=True)
+
+    shared_xml = (out_dir / SHARED_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
+    fragment = _extract_mode_declaration_group_fragment(shared_xml, "Mdg_PowerState")
+    element = _parse_xml_fragment(fragment)
+
+    assert [child.tag for child in element] == [
+        "SHORT-NAME",
+        "CATEGORY",
+        "INITIAL-MODE-REF",
+        "MODE-DECLARATIONS",
+        "ON-TRANSITION-VALUE",
+    ]
+    assert element.findtext("CATEGORY") == "EXPLICIT_ORDER"
+    assert element.findtext("ON-TRANSITION-VALUE") == "255"
+    assert element.findtext("INITIAL-MODE-REF") == "/DEMO/Modes/Mdg_PowerState/OFF"
+
+    mode_declarations = element.find("MODE-DECLARATIONS")
+    assert mode_declarations is not None
+    declared_modes = [mode.findtext("SHORT-NAME") for mode in mode_declarations.findall("MODE-DECLARATION")]
+    declared_values = [mode.findtext("VALUE") for mode in mode_declarations.findall("MODE-DECLARATION")]
+    assert declared_modes == ["OFF", "ON", "SLEEP"]
+    assert declared_values == ["0", "1", "2"]
+
+
+def test_mode_group_initial_mode_reference_points_to_emitted_mode_declaration(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out_dir = tmp_path / "out"
+
+    _ = write_outputs(project, template_dir=template_dir, out=out_dir, split_by_swc=True)
+
+    shared_xml = (out_dir / SHARED_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
+    fragment = _extract_mode_declaration_group_fragment(shared_xml, "Mdg_PowerState")
+    element = _parse_xml_fragment(fragment)
+
+    initial_mode_ref = element.findtext("INITIAL-MODE-REF")
+    assert initial_mode_ref is not None
+
+    mode_declarations = element.find("MODE-DECLARATIONS")
+    assert mode_declarations is not None
+    emitted_mode_paths = {
+        f"/DEMO/Modes/Mdg_PowerState/{mode.findtext('SHORT-NAME')}"
+        for mode in mode_declarations.findall("MODE-DECLARATION")
+    }
+    assert initial_mode_ref in emitted_mode_paths
+    assert "/DEMO/Modes/Mdg_PowerState/ON" in emitted_mode_paths
 
 
 def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Path) -> None:
@@ -1267,6 +1403,20 @@ def test_monolithic_and_split_shared_type_fragments_are_equivalent(tmp_path: Pat
     assert "<FACTOR>" not in split_compu
     assert _normalize_xml_fragment(mono_compu) == _normalize_xml_fragment(split_compu)
 
+    mono_mode_group = _extract_mode_declaration_group_fragment(monolithic_xml, "Mdg_PowerState")
+    split_mode_group = _extract_mode_declaration_group_fragment(shared_xml, "Mdg_PowerState")
+    assert "<CATEGORY>EXPLICIT_ORDER</CATEGORY>" in mono_mode_group
+    assert "<CATEGORY>EXPLICIT_ORDER</CATEGORY>" in split_mode_group
+    assert "<ON-TRANSITION-VALUE>255</ON-TRANSITION-VALUE>" in mono_mode_group
+    assert "<ON-TRANSITION-VALUE>255</ON-TRANSITION-VALUE>" in split_mode_group
+    assert "<VALUE>0</VALUE>" in mono_mode_group
+    assert "<VALUE>1</VALUE>" in mono_mode_group
+    assert "<VALUE>2</VALUE>" in mono_mode_group
+    mono_mode_group_element = _parse_xml_fragment(mono_mode_group)
+    split_mode_group_element = _parse_xml_fragment(split_mode_group)
+    assert [child.tag for child in mono_mode_group_element] == [child.tag for child in split_mode_group_element]
+    assert _normalize_xml_fragment(mono_mode_group) == _normalize_xml_fragment(split_mode_group)
+
 
 def test_monolithic_and_split_swc_fragments_are_equivalent(tmp_path: Path) -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
@@ -1359,6 +1509,7 @@ def test_monolithic_and_split_subcomposition_fragments_are_equivalent(tmp_path: 
         ("project_struct_unknown_nested_type.yaml", "CORE-010-STRUCT-UNKNOWN-TYPE"),
         ("project_sr_duplicate_port_pair.yaml", "CORE-040-SR-DUPLICATE-PORT-PAIR"),
         ("project_mode_group_duplicate_modes.yaml", "CORE-012-MDG-DUPLICATE-MODE"),
+        ("project_mode_group_duplicate_values.yaml", "CORE-012-MDG-DUPLICATE-VALUE"),
         ("project_mode_group_bad_initial_mode.yaml", "CORE-013-MDG-INITIAL-MODE"),
         ("project_mode_switch_interface_unknown_mode_group.yaml", "CORE-010-MS-UNKNOWN-MODE-GROUP-REF"),
         ("project_mode_switch_event_unknown_port.yaml", "CORE-028-MSE-UNKNOWN-PORT"),
@@ -1478,3 +1629,18 @@ def test_split_export_is_deterministic(tmp_path: Path) -> None:
         data2 = (out2 / rel).read_bytes()
         assert data1 == data2
         assert hashlib.sha256(data1).hexdigest() == hashlib.sha256(data2).hexdigest()
+
+
+def test_monolithic_export_is_deterministic(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out1 = tmp_path / "DemoProject1.arxml"
+    out2 = tmp_path / "DemoProject2.arxml"
+
+    _ = write_outputs(project, template_dir=template_dir, out=out1, split_by_swc=False)
+    _ = write_outputs(project, template_dir=template_dir, out=out2, split_by_swc=False)
+
+    data1 = out1.read_bytes()
+    data2 = out2.read_bytes()
+    assert data1 == data2
+    assert hashlib.sha256(data1).hexdigest() == hashlib.sha256(data2).hexdigest()

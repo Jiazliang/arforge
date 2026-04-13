@@ -1,8 +1,6 @@
-# ARForge: Mode declaration group definitions for the main example project.
 modeDeclarationGroups:
   - name: Mdg_PowerState
-    description: "Power state modes for the ECU."
-    category: "explicitOrder"
+    category: explicitOrder
     initialMode: "OFF"
     onTransitionValue: 255
     modes:
@@ -11,4 +9,4 @@ modeDeclarationGroups:
       - name: "ON"
         value: 1
       - name: "SLEEP"
-        value: 2
+        value: 1

@@ -68,6 +68,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     consumer_yaml = (project_dir / "swcs" / "SpeedDisplay.yaml").read_text(encoding="utf-8")
     diag_manager_yaml = (project_dir / "swcs" / "DiagManager.yaml").read_text(encoding="utf-8")
     subcomposition_yaml = (project_dir / "subcompositions" / "subcomposition_speed_cluster.yaml").read_text(encoding="utf-8")
+    base_types_yaml = (project_dir / "types" / "base_types.yaml").read_text(encoding="utf-8")
     application_types_yaml = (project_dir / "types" / "application_types.yaml").read_text(encoding="utf-8")
     implementation_types_yaml = (project_dir / "types" / "implementation_types.yaml").read_text(encoding="utf-8")
     assert project_yaml.startswith("# ARForge: Project input manifest")

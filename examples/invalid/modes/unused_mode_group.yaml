@@ -4,7 +4,11 @@
 modeDeclarationGroups:
   - name: Mdg_UnusedPowerState
     description: "Unused power state mode group for validation warning coverage."
+    category: "explicitOrder"
     initialMode: "OFF"
+    onTransitionValue: 255
     modes:
-      - "OFF"
-      - "ON"
+      - name: "OFF"
+        value: 0
+      - name: "ON"
+        value: 1

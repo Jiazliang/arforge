@@ -20,6 +20,12 @@ SWC_CATEGORY_TO_COMPONENT_TYPE = {
     SWC_CATEGORY_COMPLEX_DEVICE_DRIVER: "COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE",
 }
 
+MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER = "EXPLICIT_ORDER"
+MODE_DECLARATION_GROUP_CATEGORY_ALIASES = {
+    "explicitOrder": MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER,
+    MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER: MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER,
+}
+
 @dataclass(frozen=True)
 class BaseType:
     name: str
@@ -101,6 +107,7 @@ class CompuMethod:
 @dataclass(frozen=True)
 class ModeDeclaration:
     name: str
+    value: int | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +115,8 @@ class ModeDeclarationGroup:
     name: str
     initialMode: str
     description: str | None = None
+    category: str = MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER
+    onTransitionValue: int | None = None
     modes: List[ModeDeclaration] = field(default_factory=list)
 
 
@@ -507,12 +516,26 @@ def from_dict(d: Dict[str, Any]) -> Project:
         )
     mode_declaration_groups = []
     for mdg in d.get("modeDeclarationGroups", []):
+        raw_category = mdg.get("category", "explicitOrder")
         mode_declaration_groups.append(
             ModeDeclarationGroup(
                 name=mdg["name"],
                 description=mdg.get("description"),
+                category=MODE_DECLARATION_GROUP_CATEGORY_ALIASES.get(
+                    raw_category,
+                    raw_category,
+                ),
                 initialMode=mdg["initialMode"],
-                modes=[ModeDeclaration(name=mode_name) for mode_name in mdg.get("modes", [])],
+                onTransitionValue=mdg.get("onTransitionValue"),
+                modes=[
+                    ModeDeclaration(
+                        name=mode["name"],
+                        value=mode.get("value"),
+                    )
+                    if isinstance(mode, dict)
+                    else ModeDeclaration(name=mode)
+                    for mode in mdg.get("modes", [])
+                ],
             )
         )
 
