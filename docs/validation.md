@@ -51,7 +51,7 @@ Covers: SR data element type references, CS operation argument types and return 
 Checks that application data type constraints are valid given the backing implementation type. Covers: constraint min/max ordering, constraint values within base type range, constraint applicability (structs and arrays cannot carry constraints).
 
 ### CORE-012 - ModeDeclarationGroupStructure
-Checks mode declaration group internal consistency: no duplicate group names, no duplicate mode names within a group, no empty mode names.
+Checks mode declaration group internal consistency: no duplicate group names, no duplicate mode names within a group, no empty mode names, no duplicate mode values, and `EXPLICIT_ORDER` completeness (`onTransitionValue` plus per-mode integer `value`).
 
 ### CORE-013 - ModeDeclarationGroupInitialMode
 Checks that each `initialMode` references one of the declared modes in the same group.
@@ -194,4 +194,4 @@ The `tests/` directory contains pytest coverage for all validation behavior. `ex
 
 Every validation rule has explicit test cases for both valid and invalid inputs. This corpus is also useful as a reference for understanding exactly what each rule checks.
 
-Some checker-oriented export completeness concerns are intentionally tracked separately from semantic validation. For example, `ModeDeclarationGroup` `EXPLICIT_ORDER` completeness is still a known scoped limitation rather than a hidden promise of full AUTOSAR coverage.
+Checker-oriented `ModeDeclarationGroup` `EXPLICIT_ORDER` completeness is validated and exported consistently: the model requires `onTransitionValue` plus per-mode integer `value`, and both monolithic and split ARXML emit the same structure.

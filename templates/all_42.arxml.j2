@@ -128,19 +128,7 @@
           <SHORT-NAME>Modes</SHORT-NAME>
           <ELEMENTS>
             {% for group in mode_declaration_groups %}
-            <MODE-DECLARATION-GROUP>
-              <SHORT-NAME>{{ group.name }}</SHORT-NAME>
-              <CATEGORY>EXPLICIT_ORDER</CATEGORY>
-              <INITIAL-MODE-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ group.name }}/{{ group.initialMode }}</INITIAL-MODE-REF>
-              <MODE-DECLARATIONS>
-                {% for mode in group.modes %}
-                <MODE-DECLARATION>
-                  <SHORT-NAME>{{ mode.name }}</SHORT-NAME>
-                  <VALUE>{{ loop.index0 }}</VALUE>
-                </MODE-DECLARATION>
-                {% endfor %}
-              </MODE-DECLARATIONS>
-            </MODE-DECLARATION-GROUP>
+            {{ arxml.render_mode_declaration_group(group, root_pkg) }}
             {% endfor %}
           </ELEMENTS>
         </AR-PACKAGE>

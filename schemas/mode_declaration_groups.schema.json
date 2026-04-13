@@ -16,6 +16,59 @@
         "OFF"
       ]
     },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "modeDeclarationGroupCategory": {
+      "type": "string",
+      "enum": [
+        "explicitOrder",
+        "EXPLICIT_ORDER"
+      ],
+      "description": "YAML-facing category alias accepted by ARForge and normalized to AUTOSAR ARXML values."
+    },
+    "modeDeclaration": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/modeName"
+        },
+        {
+          "$ref": "#/$defs/modeDeclarationObject"
+        }
+      ]
+    },
+    "modeDeclarationObject": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/modeName"
+        },
+        "value": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      },
+      "additionalProperties": false
+    },
+    "explicitOrderModeDeclaration": {
+      "type": "object",
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/modeName"
+        },
+        "value": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      },
+      "additionalProperties": false
+    },
     "modeDeclarationGroup": {
       "type": "object",
       "description": "AUTOSAR mode declaration group definition.",
@@ -36,35 +89,95 @@
         "description": {
           "$ref": "#/$defs/descriptionProperty"
         },
+        "category": {
+          "$ref": "#/$defs/modeDeclarationGroupCategory",
+          "examples": [
+            "explicitOrder"
+          ]
+        },
         "initialMode": {
           "$ref": "#/$defs/modeName"
+        },
+        "onTransitionValue": {
+          "$ref": "#/$defs/nonNegativeInteger"
         },
         "modes": {
           "type": "array",
           "description": "Ordered list of mode names declared by this group.",
           "minItems": 1,
           "items": {
-            "$ref": "#/$defs/modeName"
+            "$ref": "#/$defs/modeDeclaration"
           },
           "examples": [
             [
-              "OFF",
-              "ON",
-              "SLEEP"
+              {
+                "name": "OFF",
+                "value": 0
+              },
+              {
+                "name": "ACC",
+                "value": 1
+              },
+              {
+                "name": "ON",
+                "value": 2
+              }
             ]
           ]
         }
       },
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "enum": [
+                  "explicitOrder",
+                  "EXPLICIT_ORDER"
+                ]
+              }
+            },
+            "required": [
+              "category"
+            ]
+          },
+          "then": {
+            "required": [
+              "onTransitionValue"
+            ],
+            "properties": {
+              "modes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/explicitOrderModeDeclaration"
+                }
+              }
+            }
+          }
+        }
+      ],
       "examples": [
         {
           "name": "Mdg_PowerState",
           "description": "Power state modes for the ECU.",
+          "category": "explicitOrder",
           "initialMode": "OFF",
+          "onTransitionValue": 255,
           "modes": [
-            "OFF",
-            "ON",
-            "SLEEP"
+            {
+              "name": "OFF",
+              "value": 0
+            },
+            {
+              "name": "ACC",
+              "value": 1
+            },
+            {
+              "name": "ON",
+              "value": 2
+            }
           ]
         }
       ]

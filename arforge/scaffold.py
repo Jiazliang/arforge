@@ -169,11 +169,16 @@ def mode_declaration_groups_yaml() -> str:
 body="""modeDeclarationGroups:
   - name: "Mdg_PowerState"
     description: "Power state modes used by the scaffolded mode-switch interface."
+    category: "explicitOrder"
     initialMode: "OFF"
+    onTransitionValue: 255
     modes:
-      - "OFF"
-      - "ON"
-      - "SLEEP"
+      - name: "OFF"
+        value: 0
+      - name: "ON"
+        value: 1
+      - name: "SLEEP"
+        value: 2
 """,
     )
 

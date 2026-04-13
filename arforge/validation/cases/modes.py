@@ -55,6 +55,65 @@ class ModeDeclarationGroupStructureCase(ValidationCase):
                     )
                 )
 
+            mode_values = [mode.value for mode in group.modes if mode.value is not None]
+            mode_value_counts = Counter(mode_values)
+            for mode_value in sorted(value for value, count in mode_value_counts.items() if count > 1):
+                findings.append(
+                    self.finding(
+                        f"ModeDeclarationGroup '{group.name}' contains duplicate mode value {mode_value}.",
+                        code="CORE-012-MDG-DUPLICATE-VALUE",
+                    )
+                )
+
+            if group.category == "EXPLICIT_ORDER":
+                if group.onTransitionValue is None:
+                    findings.append(
+                        self.finding(
+                            f"ModeDeclarationGroup '{group.name}' with category 'EXPLICIT_ORDER' requires onTransitionValue.",
+                            code="CORE-012-MDG-EXPLICIT-ORDER-ON-TRANSITION",
+                        )
+                    )
+                elif group.onTransitionValue < 0:
+                    findings.append(
+                        self.finding(
+                            f"ModeDeclarationGroup '{group.name}' has negative onTransitionValue {group.onTransitionValue}.",
+                            code="CORE-012-MDG-ON-TRANSITION-NONNEGATIVE",
+                        )
+                    )
+
+                for mode in group.modes:
+                    if mode.value is None:
+                        findings.append(
+                            self.finding(
+                                f"ModeDeclarationGroup '{group.name}' with category 'EXPLICIT_ORDER' requires value on mode '{mode.name}'.",
+                                code="CORE-012-MDG-EXPLICIT-ORDER-MODE-VALUE",
+                            )
+                        )
+                    elif mode.value < 0:
+                        findings.append(
+                            self.finding(
+                                f"ModeDeclarationGroup '{group.name}' mode '{mode.name}' has negative value {mode.value}.",
+                                code="CORE-012-MDG-MODE-VALUE-NONNEGATIVE",
+                            )
+                        )
+            else:
+                if group.onTransitionValue is not None:
+                    findings.append(
+                        self.finding(
+                            f"ModeDeclarationGroup '{group.name}' category '{group.category}' does not support onTransitionValue.",
+                            code="CORE-012-MDG-ON-TRANSITION-UNSUPPORTED",
+                        )
+                    )
+                for mode in group.modes:
+                    if mode.value is None:
+                        continue
+                    findings.append(
+                        self.finding(
+                            f"ModeDeclarationGroup '{group.name}' category '{group.category}' does not support explicit mode value on '{mode.name}'.",
+                            code="CORE-012-MDG-MODE-VALUE-UNSUPPORTED",
+                        )
+                    )
+
         return findings
 
 

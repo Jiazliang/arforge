@@ -184,6 +184,27 @@
 </MODE-SWITCH-INTERFACE>
 {%- endmacro %}
 
+{% macro render_mode_declaration_group(group, root_pkg) -%}
+<MODE-DECLARATION-GROUP>
+  <SHORT-NAME>{{ group.name }}</SHORT-NAME>
+  <CATEGORY>{{ group.category }}</CATEGORY>
+  {% if group.onTransitionValue is not none %}
+  <ON-TRANSITION-VALUE>{{ group.onTransitionValue }}</ON-TRANSITION-VALUE>
+  {% endif %}
+  <INITIAL-MODE-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ group.name }}/{{ group.initialMode }}</INITIAL-MODE-REF>
+  <MODE-DECLARATIONS>
+    {% for mode in group.modes %}
+    <MODE-DECLARATION>
+      <SHORT-NAME>{{ mode.name }}</SHORT-NAME>
+      {% if mode.value is not none %}
+      <VALUE>{{ mode.value }}</VALUE>
+      {% endif %}
+    </MODE-DECLARATION>
+    {% endfor %}
+  </MODE-DECLARATIONS>
+</MODE-DECLARATION-GROUP>
+{%- endmacro %}
+
 {% macro render_port(port, root_pkg, sr_port_metadata) -%}
 {% if port.direction == "provides" %}
 <P-PORT-PROTOTYPE>
