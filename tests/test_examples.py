@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+from xml.etree import ElementTree as ET
 
 import pytest
 import yaml
@@ -323,6 +324,10 @@ def _extract_mode_declaration_group_fragment(xml: str, group_name: str) -> str:
 
 def _normalize_xml_fragment(xml: str) -> str:
     return re.sub(r">\s+<", "><", xml).strip()
+
+
+def _parse_xml_fragment(xml: str) -> ET.Element:
+    return ET.fromstring(xml)
 
 
 @pytest.mark.parametrize(
@@ -1168,6 +1173,60 @@ def test_split_export_shared_types_match_simple_example_model(tmp_path: Path) ->
     assert "<COMPU-METHOD-REF DEST=\"COMPU-METHOD\">/DEMO/CompuMethods/CM_VehicleSpeed_Kph</COMPU-METHOD-REF>" in shared_xml
 
 
+def test_split_export_mode_declaration_group_fragment_is_schema_aligned(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out_dir = tmp_path / "out"
+
+    _ = write_outputs(project, template_dir=template_dir, out=out_dir, split_by_swc=True)
+
+    shared_xml = (out_dir / SHARED_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
+    fragment = _extract_mode_declaration_group_fragment(shared_xml, "Mdg_PowerState")
+    element = _parse_xml_fragment(fragment)
+
+    assert [child.tag for child in element] == [
+        "SHORT-NAME",
+        "CATEGORY",
+        "INITIAL-MODE-REF",
+        "MODE-DECLARATIONS",
+        "ON-TRANSITION-VALUE",
+    ]
+    assert element.findtext("CATEGORY") == "EXPLICIT_ORDER"
+    assert element.findtext("ON-TRANSITION-VALUE") == "255"
+    assert element.findtext("INITIAL-MODE-REF") == "/DEMO/Modes/Mdg_PowerState/OFF"
+
+    mode_declarations = element.find("MODE-DECLARATIONS")
+    assert mode_declarations is not None
+    declared_modes = [mode.findtext("SHORT-NAME") for mode in mode_declarations.findall("MODE-DECLARATION")]
+    declared_values = [mode.findtext("VALUE") for mode in mode_declarations.findall("MODE-DECLARATION")]
+    assert declared_modes == ["OFF", "ON", "SLEEP"]
+    assert declared_values == ["0", "1", "2"]
+
+
+def test_mode_group_initial_mode_reference_points_to_emitted_mode_declaration(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out_dir = tmp_path / "out"
+
+    _ = write_outputs(project, template_dir=template_dir, out=out_dir, split_by_swc=True)
+
+    shared_xml = (out_dir / SHARED_EXAMPLE_OUTPUT).read_text(encoding="utf-8")
+    fragment = _extract_mode_declaration_group_fragment(shared_xml, "Mdg_PowerState")
+    element = _parse_xml_fragment(fragment)
+
+    initial_mode_ref = element.findtext("INITIAL-MODE-REF")
+    assert initial_mode_ref is not None
+
+    mode_declarations = element.find("MODE-DECLARATIONS")
+    assert mode_declarations is not None
+    emitted_mode_paths = {
+        f"/DEMO/Modes/Mdg_PowerState/{mode.findtext('SHORT-NAME')}"
+        for mode in mode_declarations.findall("MODE-DECLARATION")
+    }
+    assert initial_mode_ref in emitted_mode_paths
+    assert "/DEMO/Modes/Mdg_PowerState/ON" in emitted_mode_paths
+
+
 def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Path) -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
     template_dir = REPO_ROOT / "templates"
@@ -1353,6 +1412,9 @@ def test_monolithic_and_split_shared_type_fragments_are_equivalent(tmp_path: Pat
     assert "<VALUE>0</VALUE>" in mono_mode_group
     assert "<VALUE>1</VALUE>" in mono_mode_group
     assert "<VALUE>2</VALUE>" in mono_mode_group
+    mono_mode_group_element = _parse_xml_fragment(mono_mode_group)
+    split_mode_group_element = _parse_xml_fragment(split_mode_group)
+    assert [child.tag for child in mono_mode_group_element] == [child.tag for child in split_mode_group_element]
     assert _normalize_xml_fragment(mono_mode_group) == _normalize_xml_fragment(split_mode_group)
 
 

@@ -188,9 +188,6 @@
 <MODE-DECLARATION-GROUP>
   <SHORT-NAME>{{ group.name }}</SHORT-NAME>
   <CATEGORY>{{ group.category }}</CATEGORY>
-  {% if group.onTransitionValue is not none %}
-  <ON-TRANSITION-VALUE>{{ group.onTransitionValue }}</ON-TRANSITION-VALUE>
-  {% endif %}
   <INITIAL-MODE-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ group.name }}/{{ group.initialMode }}</INITIAL-MODE-REF>
   <MODE-DECLARATIONS>
     {% for mode in group.modes %}
@@ -202,6 +199,9 @@
     </MODE-DECLARATION>
     {% endfor %}
   </MODE-DECLARATIONS>
+  {% if group.onTransitionValue is not none %}
+  <ON-TRANSITION-VALUE>{{ group.onTransitionValue }}</ON-TRANSITION-VALUE>
+  {% endif %}
 </MODE-DECLARATION-GROUP>
 {%- endmacro %}
 
