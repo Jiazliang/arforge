@@ -60,7 +60,10 @@ Domain-organized semantic validation case implementations. Each module covers a 
 Compatibility export surface. Re-exports the domain case modules for backward-compatible imports.
 
 **`arforge/validation_registry.py`**
-Ruleset registry. Maps ruleset names to lists of `ValidationCase` instances. Currently contains one ruleset: `core`. The registry is the extension point for adding OEM-specific or project-specific rulesets.
+Ruleset registry and resolver. Holds the built-in `core` ruleset and builds the active ruleset for profile runs by combining core cases, imported extension cases, and rule enable/disable filters.
+
+**`arforge/validation_profile.py`**
+Validation profile loader and extension-module resolver. Parses `profile.yaml`, validates the profile structure, imports extension modules, and wraps decorated rule functions into normal `ValidationCase` instances.
 
 **`arforge/exporter.py`**
 Export orchestration. Builds the rendering context from the validated model, drives Jinja2 template rendering, and writes output files. Handles split and monolithic layout. Enforces deterministic output ordering.
@@ -85,13 +88,15 @@ VS Code configuration. `settings.json` maps YAML schemas to file patterns for in
 
 ## Validation architecture
 
-Each semantic rule is a `ValidationCase` subclass with:
+Each core semantic rule is a `ValidationCase` subclass with:
 
 - a stable `case_id` (`CORE-XXX`)
 - a `name` and `description`
 - a `run(ctx)` method that returns a list of `Finding` objects
 
 Cases are independent. They do not call each other. The runner executes them in sorted order by code, making execution order deterministic regardless of registration order.
+
+Extension rules use the same runner path. They are authored as decorated functions and wrapped into `ValidationCase` instances at profile-load time, which keeps project-specific validation logic outside the core registry and core case modules.
 
 The `ValidationContext` built by the runner contains pre-built indexes - interface lookup by name, port lookup by SWC, instance lookup by name - so individual cases do not need to traverse the full model for every check.
 
@@ -111,8 +116,16 @@ The `--templates` CLI option allows substituting the built-in template directory
 
 1. Choose the appropriate domain module under `arforge/validation/cases/` or create a new one for a new domain.
 2. Add a new `ValidationCase` subclass with a stable `CORE-XXX` code that does not collide with existing codes.
-3. Register it in the `core` ruleset via `arforge/validation_registry.py`.
+3. Register it in the `core` ruleset via `arforge/validation/cases/__init__.py`.
 4. Add an invalid fixture under `examples/invalid/` that triggers the new finding. Follow the naming convention in `examples/invalid/README.md`.
 5. Add a test case in `tests/test_examples.py` that asserts the expected finding code.
 
 The invalid fixture corpus serves as both documentation and regression protection. Every rule must have at least one fixture that proves it fires.
+
+## Adding a project-specific rule
+
+1. Write a Python module with one or more decorated validation functions.
+2. Reference that module and the rule function names from a validation profile YAML.
+3. Run `python -m arforge.cli validate ... --profile profile.yaml`.
+
+This keeps project-specific policies outside ARForge core while still reusing the same `ValidationContext`, `Finding`, and deterministic execution model.

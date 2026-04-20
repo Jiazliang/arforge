@@ -8,7 +8,7 @@
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey)
 ![Tests](https://img.shields.io/badge/tests-pytest-yellow)
 
-ARForge lets you design AUTOSAR Classic SWCs and compositions in plain YAML, validate them against semantic rules, and export deterministic AUTOSAR-aligned ARXML for the currently supported scope — without a GUI tool or license server. It runs on Linux and Windows, integrates with Visual Studio Code, and fits naturally into any CI pipeline.
+ARForge lets you design AUTOSAR Classic SWCs and compositions in plain YAML, validate them against semantic rules, and export deterministic AUTOSAR-aligned ARXML for the currently supported scope - without a GUI tool or license server. It runs on Linux and Windows, integrates with Visual Studio Code, and fits naturally into any CI pipeline.
 
 ---
 
@@ -18,17 +18,18 @@ AUTOSAR SWC design in GUI-based tools is expensive, opaque, and hostile to versi
 
 | | |
 |---|---|
-| **Text-first design** | SWCs, compositions, interfaces, modes, and types — all in human-readable YAML |
+| **Text-first design** | SWCs, compositions, interfaces, modes, and types - all in human-readable YAML |
 | **Semantic validation** | Stable finding codes across supported constructs. Catches design problems before export |
+| **Validation profiles** | Optional profile YAML for project-specific rule modules, rule enable/disable control, and extensions-only execution |
 | **Clean ARXML export** | Deterministic, ordered AUTOSAR-aligned output for the currently supported feature set |
-| **CI-ready CLI** | Validate and export in a pipeline with no GUI dependency or license server |
+| **CI-ready CLI** | Validate, report, and export in a pipeline with no GUI dependency or license server |
 | **VS Code integration** | YAML schema autocomplete, inline diagnostics, and task runner built in |
 
 ---
 
 ## Who this is for
 
-ARForge is aimed at AUTOSAR engineers, independent consultants, and teams who want SWC design to live in version control and run in CI — without a commercial toolchain. It works well for greenfield SWC development, architecture work done offline, and automated ARXML generation from a controlled source of truth.
+ARForge is aimed at AUTOSAR engineers, independent consultants, and teams who want SWC design to live in version control and run in CI - without a commercial toolchain. It works well for greenfield SWC development, architecture work done offline, and automated ARXML generation from a controlled source of truth.
 
 ---
 
@@ -43,12 +44,13 @@ Current implementation targets a practical AUTOSAR Classic 4.2 subset:
 | **Client-Server interfaces** | Operations, in/out/inout arguments, return types, possible errors, sync/async call modes, timeout configuration |
 | **Mode-Switch interfaces** | `ModeDeclarationGroup` definitions, mode manager and user ports, `ModeSwitchEvent` runnable triggers |
 | **SWC types** | Provides/requires ports, runnables, `TimingEvent`, `InitEvent`, `OperationInvokedEvent`, `DataReceiveEvent`, `ModeSwitchEvent` |
-| **Runnable access** | `reads`, `writes`, `calls`, `raisesErrors` — all validated against port direction and interface kind |
+| **Runnable access** | `reads`, `writes`, `calls`, `raisesErrors` - all validated against port direction and interface kind |
 | **System composition** | Component prototypes, SWC type references, port-level assembly connectors for SR, CS, and mode-switch |
 | **Validation** | Stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
 | **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering, shared rendering logic across both modes |
 | **Code skeletons** | Template-driven C `.h` / `.c` starter files generated from validated SWC models |
 | **Diagrams** | Unified `generate diagram` command for PlantUML architecture views |
+| **Reports** | Deterministic Markdown architecture summaries via `arforge report` |
 
 ---
 
@@ -98,11 +100,17 @@ swc:
 # Initialize a new project scaffold
 python -m arforge.cli init my-project
 
-# Validate — stable finding codes on any semantic issue
+# Validate - stable finding codes on any semantic issue
 python -m arforge.cli validate examples/autosar.project.yaml
+
+# Validate with a project-specific profile
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/profile.yaml
 
 # Export - monolithic or split by component type
 python -m arforge.cli export examples/autosar.project.yaml --out build/out --split-by-swc
+
+# Generate a Markdown architecture report
+python -m arforge.cli report examples/autosar.project.yaml --out build/docs/Report.md
 
 # Generate starter C skeletons for SWCs
 python -m arforge.cli generate code examples/autosar.project.yaml --lang c --out build/code
@@ -134,11 +142,11 @@ pytest -q
 
 ARForge includes a `.vscode/` configuration for YAML schema validation, autocomplete, and task runner integration out of the box.
 
-The full setup instructions, task list, and `arforge.projectFile` configuration live in [docs/project-structure.md](docs/project-structure.md#vs-code-setup). If you just want the essentials:
+The full setup instructions, task list, and VS Code task settings live in [docs/project-structure.md](docs/project-structure.md#vs-code-setup). If you just want the essentials:
 
 - install the VS Code `Python` and `YAML` extensions
 - open the repository root in VS Code
-- set `arforge.projectFile` in `.vscode/settings.json` if you want tasks to target a different manifest
+- set `arforge.projectFile`, optional `arforge.validationProfile`, and `arforge.outputDir` in `.vscode/settings.json`
 
 ---
 
@@ -149,9 +157,10 @@ Start with [docs/index.md](docs/index.md).
 | Doc | Contents |
 |---|---|
 | [Overview](docs/overview.md) | What ARForge does and where it fits in a workflow |
-| [Project Structure](docs/project-structure.md) | Project manifest, scaffold layout, and build output |
+| [Project Structure](docs/project-structure.md) | Project manifest, scaffold layout, build output, and VS Code setup |
 | [Modeling Concepts](docs/modeling-concepts.md) | Full YAML modeling reference with examples |
 | [Validation](docs/validation.md) | Validation rule families and severities |
+| [Validation Profiles](docs/validation-profiles.md) | Project-specific validation extensions and profile format |
 | [CLI](docs/cli.md) | All commands and options |
 | [Architecture](docs/architecture.md) | Internal pipeline, for contributors |
 | [Roadmap](docs/roadmap.md) | Current capabilities and planned features |
@@ -172,4 +181,4 @@ Apache-2.0. See `DISCLAIMER.md` for project independence and affiliation notes.
 
 ## Contact
 
-**Bojan Zivkovic** — questions, feedback, collaboration, or consulting inquiries welcome via [LinkedIn](https://www.linkedin.com/in/bojanzivkovic86) or GitHub Issues.
+**Bojan Zivkovic** - questions, feedback, collaboration, or consulting inquiries welcome via [LinkedIn](https://www.linkedin.com/in/bojanzivkovic86) or GitHub Issues.

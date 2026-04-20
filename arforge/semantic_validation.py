@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
 from time import perf_counter
-from typing import Dict, List, Literal, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple
 
 from .model import ComponentPrototype, Connection, Port, Project, SubcompositionType, Swc
 
@@ -17,6 +17,7 @@ class FindingSeverity(StrEnum):
 Severity = Literal["error", "warning", "info"]
 CaseStatus = Literal["run", "skip"]
 CaseOutcome = Literal["ok", "fail"]
+ValidationRuleFunc = Callable[["ValidationContext"], List["Finding"]]
 
 
 @dataclass(frozen=True)
@@ -481,6 +482,66 @@ class ValidationCase(ABC):
             message=message,
             location=location,
         )
+
+
+@dataclass(frozen=True)
+class ValidationRuleDefinition:
+    code: str
+    name: str
+    description: str
+    tags: Tuple[str, ...] = ()
+    default_severity: Severity = "error"
+
+
+_VALIDATION_RULE_ATTR = "__arforge_validation_rule__"
+
+
+def validation_rule(
+    *,
+    code: str,
+    name: str,
+    description: str,
+    tags: Sequence[str] = (),
+    default_severity: Severity = "error",
+):
+    def decorator(func: ValidationRuleFunc) -> ValidationRuleFunc:
+        setattr(
+            func,
+            _VALIDATION_RULE_ATTR,
+            ValidationRuleDefinition(
+                code=code,
+                name=name,
+                description=description,
+                tags=tuple(tags),
+                default_severity=default_severity,
+            ),
+        )
+        return func
+
+    return decorator
+
+
+class FunctionValidationCase(ValidationCase):
+    def __init__(self, definition: ValidationRuleDefinition, rule: ValidationRuleFunc):
+        self.case_id = definition.code
+        self.name = definition.name
+        self.description = definition.description
+        self.tags = definition.tags
+        self.default_severity = definition.default_severity
+        self._rule = rule
+
+    def run(self, ctx: ValidationContext) -> List[Finding]:
+        return list(self._rule(ctx))
+
+
+def function_validation_case(rule: ValidationRuleFunc) -> ValidationCase:
+    definition = getattr(rule, _VALIDATION_RULE_ATTR, None)
+    if definition is None:
+        qualified_name = getattr(rule, "__qualname__", getattr(rule, "__name__", repr(rule)))
+        raise ValueError(
+            f"Validation rule function '{qualified_name}' is missing @validation_rule metadata."
+        )
+    return FunctionValidationCase(definition=definition, rule=rule)
 
 
 class ValidationRunner:

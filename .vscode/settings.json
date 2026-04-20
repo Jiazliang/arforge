@@ -4,6 +4,8 @@
   "yaml.completion": true,
 
   "arforge.projectFile": "examples/autosar.project.yaml",
+  "arforge.validationProfile": "examples/validation_profiles/profile.yaml",
+  "arforge.outputDir": "build",
 
   "yaml.schemas": {
     "./schemas/aggregator.schema.json": [
