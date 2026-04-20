@@ -23,7 +23,7 @@
       "problemMatcher": []
     },
     {
-      "label": "arforge: validate project",
+      "label": "arforge: validate project (core)",
       "type": "shell",
       "command": "${workspaceFolder}${/}.venv${/}bin${/}python",
       "windows": {
@@ -40,6 +40,30 @@
         "arforge.cli",
         "validate",
         "${config:arforge.projectFile}",
+        "-vv"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "arforge: validate project (extended)",
+      "type": "shell",
+      "command": "${workspaceFolder}${/}.venv${/}bin${/}python",
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      },
+      "linux": {
+        "command": "${workspaceFolder}/.venv/bin/python"
+      },
+      "osx": {
+        "command": "${workspaceFolder}/.venv/bin/python"
+      },
+      "args": [
+        "-m",
+        "arforge.cli",
+        "validate",
+        "${config:arforge.projectFile}",
+        "--profile",
+        "examples/validation_profiles/profile.yaml",
         "-vv"
       ],
       "problemMatcher": []
