@@ -21,6 +21,7 @@ from .validate import (
     load_and_validate_aggregator,
     load_aggregator_with_report,
 )
+from .validation_profile import ValidationProfileError, load_validation_profile
 
 app = typer.Typer(
     add_completion=False,
@@ -114,6 +115,11 @@ def _print_case_line(prefix: str, case, reason: str | None = None) -> None:
 @app.command()
 def validate(
     project: Path,
+    profile: Path | None = typer.Option(
+        None,
+        "--profile",
+        help="Validation profile YAML that adds extension rules and rule filtering.",
+    ),
     verbose: int = typer.Option(
         0,
         "--verbose",
@@ -130,7 +136,8 @@ def validate(
     Use -v/-vv for semantic validation execution details."""
     try:
         parsed = load_aggregator(project)
-        report = build_semantic_report(parsed, ruleset="core")
+        loaded_profile = load_validation_profile(profile) if profile else None
+        report = build_semantic_report(parsed, ruleset="core", profile=loaded_profile)
         has_errors = bool(report.error_findings())
 
         if verbose > 0:
@@ -164,7 +171,7 @@ def validate(
             raise typer.Exit(code=2)
 
         console.print(Panel.fit(f"[green]OK[/green] Valid: {project}", title="validate"))
-    except ValidationError as e:
+    except (ValidationError, ValidationProfileError) as e:
         console.print(Panel.fit(f"[red]FAILED[/red] {project}", title="validate"))
         for msg in e.errors:
             console.print(f" - {msg}")

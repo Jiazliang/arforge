@@ -18,7 +18,8 @@ from .semantic_validation import (
     ValidationRunner,
     format_finding,
 )
-from .validation_registry import get_ruleset
+from .validation_profile import ValidationProfile
+from .validation_registry import resolve_ruleset
 
 
 @dataclass(frozen=True)
@@ -278,9 +279,13 @@ def run_semantic_validation(
     ctx: Optional[ValidationContext] = None,
     *,
     ruleset: str = "core",
+    profile: ValidationProfile | None = None,
 ) -> List[Finding]:
     context = ctx or ValidationContext(project)
-    runner = ValidationRunner(get_ruleset(ruleset))
+    resolved_ruleset = resolve_ruleset(profile)
+    if profile is None and ruleset != "core":
+        raise ValueError("Only the 'core' ruleset is supported without a validation profile.")
+    runner = ValidationRunner(resolved_ruleset.cases)
     return runner.run(context)
 
 
@@ -289,13 +294,17 @@ def build_semantic_report(
     ctx: Optional[ValidationContext] = None,
     *,
     ruleset: str = "core",
+    profile: ValidationProfile | None = None,
 ) -> ValidationReport:
     context = ctx or ValidationContext(project)
-    runner = ValidationRunner(get_ruleset(ruleset))
-    return runner.run_report(context, ruleset=ruleset)
+    resolved_ruleset = resolve_ruleset(profile)
+    if profile is None and ruleset != "core":
+        raise ValueError("Only the 'core' ruleset is supported without a validation profile.")
+    runner = ValidationRunner(resolved_ruleset.cases)
+    return runner.run_report(context, ruleset=resolved_ruleset.name)
 
 
-def validate_semantic(project: Project) -> List[str]:
+def validate_semantic(project: Project, *, profile: ValidationProfile | None = None) -> List[str]:
     # Compatibility shim for existing CLI output.
-    findings = run_semantic_validation(project, None, ruleset="core")
+    findings = run_semantic_validation(project, None, ruleset="core", profile=profile)
     return [format_finding(f) for f in findings if f.severity == FindingSeverity.ERROR]

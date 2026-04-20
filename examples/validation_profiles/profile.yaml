@@ -1,0 +1,16 @@
+profile:
+  name: "ExampleProjectRules"
+  mode: "core+extensions"
+
+rules:
+  enable:
+    - "MY-001"
+    - "MY-002"
+  disable:
+    - "CORE-014"
+
+extensions:
+  - module: "project_validation_rules"
+    rules:
+      - "rule_check_swc_naming"
+      - "rule_require_instance_suffix"

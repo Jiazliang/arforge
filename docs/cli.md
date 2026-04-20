@@ -47,6 +47,7 @@ python -m arforge.cli validate <project.yaml> [options]
 
 | Option | Description |
 |---|---|
+| `--profile PATH` | Optional validation profile YAML for extension rules and rule filtering. |
 | `-v` | Verbose - show per-case execution information. |
 | `-vv` | Very verbose - show case descriptions and full execution detail. |
 
@@ -68,9 +69,14 @@ python -m arforge.cli validate examples/autosar.project.yaml
 # With verbose output
 python -m arforge.cli validate examples/autosar.project.yaml -vv
 
+# With a validation profile
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/profile.yaml
+
 # In CI - fail the pipeline on any error finding
 python -m arforge.cli validate examples/autosar.project.yaml || exit 1
 ```
+
+See [Validation Profiles](./validation-profiles.md) for the profile format and extension authoring API.
 
 **Output format:**
 
