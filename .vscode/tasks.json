@@ -129,7 +129,7 @@
         "diagram",
         "${config:arforge.projectFile}",
         "--out",
-        "build/diagrams_plantuml",
+        "build/diagrams",
       ],
       "problemMatcher": []
     },
@@ -156,6 +156,29 @@
         "c",
         "--out",
         "build/code",
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "arforge: generate report",
+      "type": "shell",
+      "command": "${workspaceFolder}${/}.venv${/}bin${/}python",
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      },
+      "linux": {
+        "command": "${workspaceFolder}/.venv/bin/python"
+      },
+      "osx": {
+        "command": "${workspaceFolder}/.venv/bin/python"
+      },
+      "args": [
+        "-m",
+        "arforge.cli",
+        "report",
+        "${config:arforge.projectFile}",
+        "--out",
+        "build/docs/Report.md",
       ],
       "problemMatcher": []
     }
