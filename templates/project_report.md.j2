@@ -1,0 +1,165 @@
+# Project Report
+
+## Overview
+
+{% if project.path -%}
+- Project manifest: `{{ project.path }}`
+{% endif -%}
+- System: `{{ project.system_name }}`
+- Root package: `{{ project.root_package }}`
+- AUTOSAR basis: `{{ project.autosar_version }}`
+- Summary: {{ project.summary_sentence }}
+
+{{ overview_note }}
+
+## Counts
+
+| Item | Count |
+|---|---:|
+| SWC types | {{ counts.swc_type_count }} |
+| Reusable subcomposition types | {{ counts.subcomposition_type_count }} |
+| Top-level component prototypes | {{ counts.top_level_component_prototype_count }} |
+| Nested subcomposition prototypes | {{ counts.nested_component_prototype_count }} |
+| Total component prototypes | {{ counts.total_component_prototype_count }} |
+| Sender-Receiver interfaces | {{ counts.sender_receiver_interface_count }} |
+| Client-Server interfaces | {{ counts.client_server_interface_count }} |
+| Mode-Switch interfaces | {{ counts.mode_switch_interface_count }} |
+| Total ports | {{ counts.total_port_count }} |
+| Provides ports | {{ counts.provides_port_count }} |
+| Requires ports | {{ counts.requires_port_count }} |
+| Assembly connectors | {{ counts.assembly_connector_count }} |
+| Delegation connectors | {{ counts.delegation_connector_count }} |
+| Total connectors | {{ counts.total_connector_count }} |
+
+## Top-Level Architecture
+
+`{{ top_level_architecture.system_name }}` instantiates {{ counts.top_level_component_prototype_count }} top-level component prototypes:
+{% for component in top_level_architecture.components %}
+- `{{ component.name }}` -> `{{ component.type_name }}` ({{ component.kind_label|lower }}, ports={{ component.port_count }}{% if component.kind == "swc" %}, runnables={{ component.runnable_count }}{% elif component.kind == "subcomposition" %}, inner prototypes={{ component.inner_component_count }}{% endif %})
+{% endfor %}
+
+Communication styles present in the model: {% if communication_categories %}{{ communication_categories|join(", ") }}{% else %}None declared{% endif %}.
+
+{% if top_level_architecture.connectors %}
+Top-level connectors:
+{% for connector in top_level_architecture.connectors %}
+- `{{ connector.label }}`
+{% endfor %}
+{% else %}
+No top-level connectors are declared.
+{% endif %}
+
+## Interfaces
+
+{% if interfaces.sender_receiver %}
+### Sender-Receiver
+{% for interface in interfaces.sender_receiver %}
+- `{{ interface.name }}`{% if interface.data_elements %}: data elements {{ interface.data_elements|join(", ") }}{% endif %}
+{% endfor %}
+{% endif %}
+{% if interfaces.client_server %}
+### Client-Server
+{% for interface in interfaces.client_server %}
+- `{{ interface.name }}`{% if interface.operations %}: operations {{ interface.operations|join(", ") }}{% endif %}
+{% endfor %}
+{% endif %}
+{% if interfaces.mode_switch %}
+### Mode-Switch
+{% for interface in interfaces.mode_switch %}
+- `{{ interface.name }}`{% if interface.mode_group_ref %}: mode group `{{ interface.mode_group_ref }}`{% endif %}
+{% endfor %}
+{% endif %}
+
+## Components and Prototypes
+
+{% for swc in components.swcs %}
+### `{{ swc.name }}`
+{% if swc.description %}{{ swc.description }}{% endif %}
+
+- Category: `{{ swc.category }}`
+- Ports: {{ swc.port_count }}
+- Runnables: {{ swc.runnable_count }}
+- Top-level instances: {% if swc.top_level_instances %}`{{ swc.top_level_instances|join("`, `") }}`{% else %}None{% endif %}
+- Nested instances: {% if swc.nested_instances %}`{{ swc.nested_instances|join("`, `") }}`{% else %}None{% endif %}
+{% endfor %}
+
+{% if components.subcompositions %}
+{% for subcomposition in components.subcompositions %}
+### `{{ subcomposition.name }}`
+{% if subcomposition.description %}{{ subcomposition.description }}{% endif %}
+
+- Boundary ports: {% if subcomposition.ports %}{% for port in subcomposition.ports %}`{{ port.name }}` ({{ port.direction }}, {{ port.interface_type }}){% if not loop.last %}; {% endif %}{% endfor %}{% else %}None{% endif %}
+- Contained prototypes: {% if subcomposition.components %}{% for component in subcomposition.components %}`{{ component.name }}` -> `{{ component.type_name }}`{% if not loop.last %}; {% endif %}{% endfor %}{% else %}None{% endif %}
+{% endfor %}
+{% endif %}
+
+## Connectors
+
+{% if components.subcompositions %}
+{% for subcomposition in components.subcompositions %}
+### `{{ subcomposition.name }}`
+{% if subcomposition.assembly_connectors %}
+Assembly connectors:
+{% for connector in subcomposition.assembly_connectors %}
+- `{{ connector.label }}`
+{% endfor %}
+{% endif %}
+{% if subcomposition.delegation_connectors %}
+Delegation connectors:
+{% for connector in subcomposition.delegation_connectors %}
+- `{{ connector.label }}`
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+## Unconnected Ports
+
+{% if unconnected_ports %}
+Ports without any matching connector are grouped below by composition scope and prototype:
+{% for scope in unconnected_ports %}
+### `{{ scope.scope_name }}` ({{ scope.scope_kind }})
+{% for instance in scope.instances %}
+- `{{ instance.instance_name }}` -> `{{ instance.type_name }}`
+{% if instance.provides %}  Provides: {% for port in instance.provides %}`{{ port.name }}` ({{ port.interface_type }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+{% if instance.requires %}  Requires: {% for port in instance.requires %}`{{ port.name }}` ({{ port.interface_type }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+{% endfor %}
+{% endfor %}
+{% else %}
+All instantiated ports are connected within their declared composition scope.
+{% endif %}
+
+## Unused Elements
+
+{% if unused_elements.unused_declared_ports %}
+Declared ports without runnable usage:
+{% for group in unused_elements.unused_declared_ports %}
+- `{{ group.swc_name }}`: {% for port in group.ports %}`{{ port.name }}` ({{ port.direction }}, {{ port.interface_type }}){% if not loop.last %}, {% endif %}{% endfor %}
+{% endfor %}
+{% else %}
+No declared-but-unused ports were identified from the current runnable model.
+{% endif %}
+
+Unused mode declaration groups: {% if unused_elements.unused_mode_groups %}`{{ unused_elements.unused_mode_groups|join("`, `") }}`{% else %}None{% endif %}
+
+Unused interfaces: {% if unused_elements.unused_interfaces %}`{{ unused_elements.unused_interfaces|join("`, `") }}`{% else %}None{% endif %}
+
+## Timing Overview
+
+{% if timing_overview.cyclic_runnables %}
+Cyclic runnables:
+{% for runnable in timing_overview.cyclic_runnables %}
+- `{{ runnable.swc_name }}.{{ runnable.runnable_name }}`: {{ runnable.period_ms }} ms
+{% endfor %}
+{% else %}
+No cyclic runnables are declared.
+{% endif %}
+
+{% if timing_overview.relationships %}
+Direct sender-receiver timing pairs where both sides are modeled as cyclic runnables:
+{% for relationship in timing_overview.relationships %}
+- `{{ relationship.scope_name }}`: `{{ relationship.provider }}` / `{{ relationship.provider_runnable_name }}` ({{ relationship.producer_period_ms }} ms) -> `{{ relationship.consumer }}` / `{{ relationship.consumer_runnable_name }}` ({{ relationship.consumer_period_ms }} ms), {{ relationship.relation }}, data element `{{ relationship.data_element }}`
+{% endfor %}
+{% else %}
+No direct cyclic sender-receiver timing pairs were derived from the current model.
+{% endif %}

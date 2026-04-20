@@ -11,6 +11,7 @@ from rich.panel import Panel
 from .codegen import supported_languages, write_code_outputs
 from .diagrams import BACKENDS, write_diagram_outputs
 from .exporter import ExportInputSummary, InputPatternExpansion, write_outputs, write_outputs_with_report
+from .reporting import render_project_report, write_project_report
 from .scaffold import scaffold_project
 from .validate import (
     ValidationError,
@@ -168,6 +169,31 @@ def validate(
         for msg in e.errors:
             console.print(f" - {msg}")
         raise typer.Exit(code=2)
+
+
+@app.command()
+def report(
+    project: Path,
+    out: Path | None = typer.Option(None, "--out", help="Output Markdown report path. Prints to stdout when omitted."),
+    templates: Path = typer.Option(None, help="Template directory"),
+):
+    """Generate a Markdown architecture summary without enforcing semantic validation success."""
+    template_dir = templates or _default_template_dir()
+
+    try:
+        project_model = load_aggregator(project)
+        if out is None:
+            typer.echo(render_project_report(project_model, template_dir=template_dir, project_path=project), nl=False)
+            return
+        written = write_project_report(project_model, template_dir=template_dir, out=out, project_path=project)
+    except ValidationError as e:
+        console.print(Panel.fit(f"[red]FAILED[/red] {project}", title="report"))
+        for msg in e.errors:
+            console.print(f" - {msg}")
+        raise typer.Exit(code=2)
+
+    console.print(Panel.fit("[green]Report generation complete[/green]", title="report"))
+    console.print(f" - {written}")
 
 
 @app.command()

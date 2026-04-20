@@ -161,6 +161,7 @@ Change this path to point to your own project manifest. The validate, export, an
 | Task | What it runs |
 |---|---|
 | `arforge: validate project` | `python -m arforge.cli validate <projectFile> -vv` |
+| `arforge: report project` | `python -m arforge.cli report <projectFile> --out build/report.md` |
 | `arforge: export project (split by swc)` | `python -m arforge.cli export <projectFile> --out build/arxml --split-by-swc -vv` |
 | `arforge: export project (monolithic)` | `python -m arforge.cli export <projectFile> --out build/arxml/DemoProject.arxml -vv` |
 | `arforge: generate Plantuml` | `python -m arforge.cli generate diagram <projectFile> --out build/diagrams_plantuml` |

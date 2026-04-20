@@ -139,6 +139,51 @@ The custom template directory must contain the same template filenames as the bu
 
 ---
 
+## `report`
+
+Generate a deterministic Markdown architecture summary for review, pull requests, and CI artifacts.
+
+`report` complements `validate`:
+
+- `validate` answers what is wrong with the model
+- `report` answers what the model contains
+
+The report is rendered through a Jinja2 Markdown template and does not fail just because the model has warning-level architecture weaknesses.
+
+```bash
+python -m arforge.cli report <project.yaml> [--out <file>] [options]
+```
+
+**Options:**
+
+| Option | Description |
+|---|---|
+| `--out FILE` | Output Markdown file path. If omitted, the report is written to stdout. |
+| `--templates DIR` | Use an alternate Jinja2 template directory instead of the built-in templates. |
+
+**Examples:**
+
+```bash
+python -m arforge.cli report examples/autosar.project.yaml --out build/report.md
+
+# stdout
+python -m arforge.cli report examples/autosar.project.yaml
+```
+
+**Typical sections:**
+
+- Overview
+- Counts
+- Top-Level Architecture
+- Interfaces
+- Components and Prototypes
+- Connectors
+- Unconnected Ports
+- Unused Elements
+- Timing Overview
+
+---
+
 ## `generate diagram`
 
 Validate the project and generate the standard architecture diagram set.
