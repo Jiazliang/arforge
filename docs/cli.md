@@ -148,7 +148,7 @@ Generate a deterministic Markdown architecture summary for review, pull requests
 - `validate` answers what is wrong with the model
 - `report` answers what the model contains
 
-The report is rendered through a Jinja2 Markdown template and does not fail just because the model has warning-level architecture weaknesses.
+The report is rendered through a Jinja2 Markdown template and does not fail just because the model has semantic validation findings. It only fails when the project cannot be loaded or rendered.
 
 ```bash
 python -m arforge.cli report <project.yaml> [--out <file>] [options]
