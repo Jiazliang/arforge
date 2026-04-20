@@ -16,7 +16,7 @@
               {% if composition.ports %}
               <PORTS>
                 {% for p in composition.ports %}
-                {{ arxml.render_port(p, root_pkg, {}) }}
+                {{ arxml.render_port(p, root_pkg, {}, {}) }}
                 {% endfor %}
               </PORTS>
               {% endif %}

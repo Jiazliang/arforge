@@ -116,6 +116,12 @@ class SrPortComSpecMetadata:
     unit_ref: str | None = None
 
 
+@dataclass(frozen=True)
+class CsOperationComSpecMetadata:
+    operation_name: str
+    operation_ref: str
+
+
 CompositionOwnerKind = Literal["component_type", "root_system"]
 
 
@@ -302,6 +308,25 @@ def _build_sr_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, SrP
             data_element_ref=f"/{project.rootPackage}/Interfaces/{interface.name}/{data_element.name}",
             unit_ref=application_type.unitRef if application_type is not None else None,
         )
+    return metadata
+
+
+def _build_cs_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, list[CsOperationComSpecMetadata]]:
+    interfaces_by_name = {interface.name: interface for interface in project.interfaces}
+    metadata: dict[str, list[CsOperationComSpecMetadata]] = {}
+    for port in swc.ports:
+        if port.interfaceType != "clientServer" or port.direction != "requires":
+            continue
+        interface = interfaces_by_name.get(port.interfaceRef)
+        if interface is None or not interface.operations:
+            continue
+        metadata[port.name] = [
+            CsOperationComSpecMetadata(
+                operation_name=operation.name,
+                operation_ref=f"/{project.rootPackage}/Interfaces/{interface.name}/{operation.name}",
+            )
+            for operation in interface.operations
+        ]
     return metadata
 
 
@@ -606,6 +631,7 @@ def render_swc(project: Project, swc: Swc, template_dir: Path, template_name: st
         root_pkg=project.rootPackage,
         swc=swc,
         sr_port_metadata=_build_sr_port_comspec_metadata(project, swc),
+        cs_port_metadata=_build_cs_port_comspec_metadata(project, swc),
     )
 
 
@@ -739,6 +765,7 @@ def write_outputs_with_report(
                 cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
                 swcs=swcs,
                 swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc) for swc in swcs},
+                swc_cs_port_metadata={swc.name: _build_cs_port_comspec_metadata(project, swc) for swc in swcs},
                 subcompositions=subcompositions,
                 system_name=project.system.name,
                 composition_name=project.system.composition.name,

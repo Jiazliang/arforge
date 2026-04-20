@@ -124,18 +124,6 @@
 <CLIENT-SERVER-INTERFACE>
   <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
   <IS-SERVICE>false</IS-SERVICE>
-  {% if cs_interface_errors[itf.name] %}
-  <POSSIBLE-ERRORS>
-    {% for possible_error in cs_interface_errors[itf.name] %}
-    <APPLICATION-ERROR>
-      <SHORT-NAME>{{ possible_error.name }}</SHORT-NAME>
-      {% if possible_error.code is not none %}
-      <ERROR-CODE>{{ possible_error.code }}</ERROR-CODE>
-      {% endif %}
-    </APPLICATION-ERROR>
-    {% endfor %}
-  </POSSIBLE-ERRORS>
-  {% endif %}
   <OPERATIONS>
     {% for op in itf.operations %}
     <CLIENT-SERVER-OPERATION>
@@ -170,6 +158,18 @@
     </CLIENT-SERVER-OPERATION>
     {% endfor %}
   </OPERATIONS>
+  {% if cs_interface_errors[itf.name] %}
+  <POSSIBLE-ERRORS>
+    {% for possible_error in cs_interface_errors[itf.name] %}
+    <APPLICATION-ERROR>
+      <SHORT-NAME>{{ possible_error.name }}</SHORT-NAME>
+      {% if possible_error.code is not none %}
+      <ERROR-CODE>{{ possible_error.code }}</ERROR-CODE>
+      {% endif %}
+    </APPLICATION-ERROR>
+    {% endfor %}
+  </POSSIBLE-ERRORS>
+  {% endif %}
 </CLIENT-SERVER-INTERFACE>
 {%- endmacro %}
 
@@ -205,7 +205,7 @@
 </MODE-DECLARATION-GROUP>
 {%- endmacro %}
 
-{% macro render_port(port, root_pkg, sr_port_metadata) -%}
+{% macro render_port(port, root_pkg, sr_port_metadata, cs_port_metadata) -%}
 {% if port.direction == "provides" %}
 <P-PORT-PROTOTYPE>
   <SHORT-NAME>{{ port.name }}</SHORT-NAME>
@@ -272,14 +272,17 @@
   {% endif %}
   <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</REQUIRED-INTERFACE-TREF>
   {% elif port.interfaceType == "clientServer" %}
-  {% if port.comSpec and port.comSpec.callMode %}
+  {% set operations = cs_port_metadata.get(port.name, []) %}
+  {% if operations %}
   <REQUIRED-COM-SPECS>
+    {% for operation in operations %}
     <CLIENT-COM-SPEC>
-      <CALL-MODE>{{ port.comSpec.callMode }}</CALL-MODE>
-      {% if port.comSpec.callMode == "synchronous" and port.comSpec.timeoutMs is not none %}
-      <TIMEOUT-MS>{{ port.comSpec.timeoutMs }}</TIMEOUT-MS>
-      {% endif %}
+      <OPERATION-REF DEST="CLIENT-SERVER-OPERATION">{{ operation.operation_ref }}</OPERATION-REF>
+      {# AUTOSAR 4.2 CLIENT-COM-SPEC does not accept TIMEOUT-MS here.
+         Keep the modeled timeout in-memory for future supported mappings,
+         but do not emit schema-invalid XML. #}
     </CLIENT-COM-SPEC>
+    {% endfor %}
   </REQUIRED-COM-SPECS>
   {% endif %}
   <REQUIRED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</REQUIRED-INTERFACE-TREF>
@@ -319,14 +322,14 @@
   {% endfor %}
   {% for dre in r.dataReceiveEvents %}
   {% set dre_port = (swc.ports | selectattr("name", "equalto", dre.port) | list | first) %}
-  <DATA-RECEIVE-EVENT>
+  <DATA-RECEIVED-EVENT>
     <SHORT-NAME>DRE_{{ r.name }}_{{ dre.port }}_{{ dre.dataElement }}</SHORT-NAME>
     <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
     <DATA-IREF>
       <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ dre.port }}</CONTEXT-R-PORT-REF>
       <TARGET-DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ dre_port.interfaceRef if dre_port else '' }}/{{ dre.dataElement }}</TARGET-DATA-ELEMENT-REF>
     </DATA-IREF>
-  </DATA-RECEIVE-EVENT>
+  </DATA-RECEIVED-EVENT>
   {% endfor %}
   {% for mse in r.modeSwitchEvents %}
   {% set mse_port = (swc.ports | selectattr("name", "equalto", mse.port) | list | first) %}
@@ -409,32 +412,17 @@
       {% endfor %}
     </SERVER-CALL-POINTS>
     {% endif %}
-    {% if r.raisesErrors %}
-    <RAISED-APPLICATION-ERROR-REFS>
-      {% for raised in r.raisesErrors %}
-      {% set bound_event = (r.operationInvokedEvents | selectattr("operation", "equalto", raised.operation) | list | first) %}
-      {% set bound_port = (swc.ports | selectattr("name", "equalto", bound_event.port) | list | first) if bound_event else none %}
-      {% if bound_event and bound_port %}
-      <RAISED-APPLICATION-ERROR-REF>
-        <CONTEXT-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ bound_event.port }}</CONTEXT-P-PORT-REF>
-        <TARGET-PROVIDED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ bound_port.interfaceRef }}/{{ raised.operation }}</TARGET-PROVIDED-OPERATION-REF>
-        <TARGET-APPLICATION-ERROR-REF DEST="APPLICATION-ERROR">/{{ root_pkg }}/Interfaces/{{ bound_port.interfaceRef }}/{{ raised.error }}</TARGET-APPLICATION-ERROR-REF>
-      </RAISED-APPLICATION-ERROR-REF>
-      {% endif %}
-      {% endfor %}
-    </RAISED-APPLICATION-ERROR-REFS>
-    {% endif %}
   </RUNNABLE-ENTITY>
   {% endfor %}
 </RUNNABLES>
 {%- endmacro %}
 
-{% macro render_swc_component(swc, root_pkg, sr_port_metadata) -%}
+{% macro render_swc_component(swc, root_pkg, sr_port_metadata, cs_port_metadata) -%}
 <{{ swc.component_type_tag }}>
   <SHORT-NAME>{{ swc.name }}</SHORT-NAME>
   <PORTS>
     {% for port in swc.ports %}
-    {{ render_port(port, root_pkg, sr_port_metadata) }}
+    {{ render_port(port, root_pkg, sr_port_metadata, cs_port_metadata) }}
     {% endfor %}
   </PORTS>
   <INTERNAL-BEHAVIORS>
