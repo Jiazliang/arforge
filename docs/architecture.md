@@ -4,7 +4,9 @@ This page describes the internal design of ARForge. It is intended for contribut
 
 ## Processing pipeline
 
-Every ARForge command that touches a project runs through the same core pipeline:
+ARForge uses a common load-and-model-build foundation, but not every command takes the same path after that.
+
+Validation and validation-gated generators follow this pipeline:
 
 ```
 project.yaml
@@ -21,6 +23,8 @@ rendered output generation  (only if no error findings)
      ->
 output files
 ```
+
+The `report` command is intentionally different: it loads the project, builds the typed model, and then renders a descriptive architecture summary without requiring semantic validation success. This keeps `report` complementary to `validate` rather than making it another validation surface.
 
 Each stage has a clear responsibility and a hard boundary. The loader does not reason about semantics. The semantic validator does not render output. The rendering backends do not re-validate.
 
@@ -61,20 +65,23 @@ Ruleset registry. Maps ruleset names to lists of `ValidationCase` instances. Cur
 **`arforge/exporter.py`**
 Export orchestration. Builds the rendering context from the validated model, drives Jinja2 template rendering, and writes output files. Handles split and monolithic layout. Enforces deterministic output ordering.
 
+**`arforge/reporting.py`**
+Architecture report orchestration. Builds a normalized report context from the loaded model, summarizes counts and architecture facts, and renders Markdown through Jinja2 templates. Reuses stable model and validation-context analysis helpers where appropriate, but does not act as a validation command.
+
 **`arforge/codegen.py`**
 Code generation orchestration. Builds a normalized per-SWC code-generation model from the validated project, resolves straightforward type mappings, renders language-specific Jinja2 templates, and writes deterministic per-SWC code artifacts.
 
 **`arforge/scaffold.py`**
 Project scaffold generation for `arforge init`. Writes the directory structure and example files.
 
-**`templates/*.j2`**
-Jinja2 templates for all rendered outputs. The current tree includes ARXML export templates, diagram templates, and code-generation templates under `templates/code/c/`.
+**`templates/`**
+Jinja2 templates for all rendered outputs. The current tree groups templates by output kind, including ARXML export templates under `templates/arxml/`, report templates under `templates/reports/`, diagram templates, and code-generation templates under `templates/code/c/`.
 
 **`schemas/*.json`**
 JSON Schema files for each input category. Used by the loader for structural validation before semantic validation runs.
 
 **`.vscode/`**
-VS Code configuration. `settings.json` maps YAML schemas to file patterns for inline autocomplete and diagnostics. `tasks.json` defines platform-aware task runners for validate, export, diagram generation, code generation, init, and pytest - with separate `windows`, `linux`, and `osx` command entries resolving the correct `.venv` Python executable on each platform.
+VS Code configuration. `settings.json` maps YAML schemas to file patterns for inline autocomplete and diagnostics. `tasks.json` defines platform-aware task runners for init, validate, report, export, diagram generation, code generation, and pytest - with separate `windows`, `linux`, and `osx` command entries resolving the correct `.venv` Python executable on each platform.
 
 ## Validation architecture
 
@@ -92,9 +99,11 @@ Findings carry a `code`, `message`, and `severity`. The `code` field uses a hier
 
 ## Rendering architecture
 
-The rendering backends receive the validated model and build rendering contexts - plain data structures that the Jinja2 templates can consume without any further model traversal.
+The rendering backends receive the project model and build rendering contexts - plain data structures that the Jinja2 templates can consume without any further model traversal.
 
 Output ordering is enforced explicitly in the rendering context, not left to dict iteration order. This guarantees that repeated generation runs on the same model produce byte-identical artifacts for a given backend.
+
+Validation-gated backends such as ARXML export and code generation operate on semantically validated models. The architecture report backend operates on a successfully loaded model and intentionally keeps validation findings out of the primary report output.
 
 The `--templates` CLI option allows substituting the built-in template directory with a custom one. This is the designed extension point for OEM-specific output profiles - custom templates can add vendor extensions, change package structure, or enforce naming conventions without modifying ARForge itself.
 

@@ -135,7 +135,52 @@ python -m arforge.cli export examples/autosar.project.yaml --out build/all.arxml
 python -m arforge.cli export examples/autosar.project.yaml --out build/all.arxml --templates my-templates/
 ```
 
-The custom template directory must contain the same template filenames as the built-in `templates/` directory. This is the designed extension point for OEM-specific ARXML conventions without modifying ARForge core.
+The custom template directory must contain the same relative template paths as the built-in `templates/` directory, including the `arxml/` subfolder. This is the designed extension point for OEM-specific ARXML conventions without modifying ARForge core.
+
+---
+
+## `report`
+
+Generate a deterministic Markdown architecture summary for review, pull requests, and CI artifacts.
+
+`report` complements `validate`:
+
+- `validate` answers what is wrong with the model
+- `report` answers what the model contains
+
+The report is rendered through a Jinja2 Markdown template and does not fail just because the model has semantic validation findings. It only fails when the project cannot be loaded or rendered.
+
+```bash
+python -m arforge.cli report <project.yaml> [--out <file>] [options]
+```
+
+**Options:**
+
+| Option | Description |
+|---|---|
+| `--out FILE` | Output Markdown file path. If omitted, the report is written to stdout. |
+| `--templates DIR` | Use an alternate Jinja2 template directory instead of the built-in templates. |
+
+**Examples:**
+
+```bash
+python -m arforge.cli report examples/autosar.project.yaml --out build/report.md
+
+# stdout
+python -m arforge.cli report examples/autosar.project.yaml
+```
+
+**Typical sections:**
+
+- Overview
+- Counts
+- Top-Level Architecture
+- Interfaces
+- Components and Prototypes
+- Connectors
+- Unconnected Ports
+- Unused Elements
+- Timing Overview
 
 ---
 

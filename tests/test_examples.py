@@ -15,6 +15,7 @@ import yaml
 from arforge.codegen import write_code_outputs
 from arforge.exporter import write_outputs, write_outputs_with_report
 from arforge.diagrams import build_diagram_views, write_diagram_outputs
+from arforge.reporting import render_project_report, write_project_report
 from arforge.model import (
     ComponentPrototype,
     Composition,
@@ -390,6 +391,77 @@ def test_cli_generate_code_smoke() -> None:
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_cli_report_smoke() -> None:
+    out_file = REPO_ROOT / "build" / "test_cli_report_examples.md"
+    if out_file.exists():
+        out_file.unlink()
+
+    result = subprocess.run(
+        [sys.executable, "-m", "arforge.cli", "report", str(VALID_PROJECT), "--out", str(out_file)],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert out_file.exists()
+
+
+def test_cli_report_warning_project_still_succeeds() -> None:
+    out_file = REPO_ROOT / "build" / "test_cli_report_warning.md"
+    if out_file.exists():
+        out_file.unlink()
+
+    result = subprocess.run(
+        [sys.executable, "-m", "arforge.cli", "report", str(WARNING_ONLY_PROJECT), "--out", str(out_file)],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert out_file.exists()
+
+
+def test_render_project_report_contains_expected_sections_and_counts() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+
+    report = render_project_report(project, template_dir=REPO_ROOT / "templates", project_path=VALID_PROJECT)
+
+    assert "# Project Report" in report
+    assert "## Overview" in report
+    assert "## Counts" in report
+    assert "## Unconnected Ports" in report
+    assert "## Timing Overview" in report
+    assert "| SWC types | 3 |" in report
+    assert "| Reusable subcomposition types | 1 |" in report
+    assert "| Total component prototypes | 4 |" in report
+    assert "| Sender-Receiver interfaces | 1 |" in report
+    assert "| Client-Server interfaces | 0 |" in report
+    assert "| Mode-Switch interfaces | 1 |" in report
+    assert "### Sender-Receiver" in report
+    assert "### Mode-Switch" in report
+    assert "DiagManager_0" in report
+    assert "This report summarizes modeled architecture. Run `arforge validate` separately for findings." in report
+
+
+def test_project_report_is_deterministic(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    template_dir = REPO_ROOT / "templates"
+    out1 = tmp_path / "report_1.md"
+    out2 = tmp_path / "report_2.md"
+
+    write_project_report(project, template_dir=template_dir, out=out1, project_path=VALID_PROJECT)
+    write_project_report(project, template_dir=template_dir, out=out2, project_path=VALID_PROJECT)
+
+    data1 = out1.read_bytes()
+    data2 = out2.read_bytes()
+    assert data1 == data2
+    assert hashlib.sha256(data1).hexdigest() == hashlib.sha256(data2).hexdigest()
 
 
 @pytest.mark.parametrize(
