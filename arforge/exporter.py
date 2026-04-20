@@ -23,11 +23,11 @@ from .model import (
     Swc,
 )
 
-SHARED_TEMPLATE = "shared_42.arxml.j2"
-SWC_TEMPLATE = "swc_42.arxml.j2"
-COMPOSITION_TEMPLATE = "composition_42.arxml.j2"
-SYSTEM_TEMPLATE = "system_42.arxml.j2"
-MONOLITHIC_TEMPLATE = "all_42.arxml.j2"
+SHARED_TEMPLATE = "arxml/shared_42.arxml.j2"
+SWC_TEMPLATE = "arxml/swc_42.arxml.j2"
+COMPOSITION_TEMPLATE = "arxml/composition_42.arxml.j2"
+SYSTEM_TEMPLATE = "arxml/system_42.arxml.j2"
+MONOLITHIC_TEMPLATE = "arxml/all_42.arxml.j2"
 
 
 @dataclass(frozen=True)

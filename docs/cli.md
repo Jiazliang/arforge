@@ -135,7 +135,7 @@ python -m arforge.cli export examples/autosar.project.yaml --out build/all.arxml
 python -m arforge.cli export examples/autosar.project.yaml --out build/all.arxml --templates my-templates/
 ```
 
-The custom template directory must contain the same template filenames as the built-in `templates/` directory. This is the designed extension point for OEM-specific ARXML conventions without modifying ARForge core.
+The custom template directory must contain the same relative template paths as the built-in `templates/` directory, including the `arxml/` subfolder. This is the designed extension point for OEM-specific ARXML conventions without modifying ARForge core.
 
 ---
 

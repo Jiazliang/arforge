@@ -181,7 +181,7 @@ At the repository level, the ARForge implementation itself is organized as follo
 arforge/                    <- CLI, loader, model, validation, export, codegen, scaffold
 arforge/validation/cases/   <- domain-organized semantic validation cases
 schemas/                    <- JSON Schema files for all input categories
-templates/                  <- Jinja2 ARXML, codegen, and diagram templates
+templates/                  <- Jinja2 templates grouped by output kind (`arxml/`, `reports/`, `code/`, `diagrams/`)
 examples/                   <- valid example project
 examples/invalid/           <- invalid model fixtures used by the test suite
 tests/                      <- pytest coverage

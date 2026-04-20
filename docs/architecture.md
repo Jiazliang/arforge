@@ -67,8 +67,8 @@ Code generation orchestration. Builds a normalized per-SWC code-generation model
 **`arforge/scaffold.py`**
 Project scaffold generation for `arforge init`. Writes the directory structure and example files.
 
-**`templates/*.j2`**
-Jinja2 templates for all rendered outputs. The current tree includes ARXML export templates, diagram templates, and code-generation templates under `templates/code/c/`.
+**`templates/`**
+Jinja2 templates for all rendered outputs. The current tree groups templates by output kind, including ARXML export templates under `templates/arxml/`, report templates under `templates/reports/`, diagram templates, and code-generation templates under `templates/code/c/`.
 
 **`schemas/*.json`**
 JSON Schema files for each input category. Used by the loader for structural validation before semantic validation runs.

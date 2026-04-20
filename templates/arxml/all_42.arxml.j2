@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-{% import "_autosar_macros.j2" as arxml %}
+{% import "arxml/_autosar_macros.j2" as arxml %}
 <AUTOSAR xmlns="http://autosar.org/schema/r4.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-2-2.xsd">
@@ -149,6 +149,74 @@
             {{ arxml.render_ms_interface(itf, root_pkg) }}
             {% endfor %}
 
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+        <AR-PACKAGE>
+          <SHORT-NAME>Components</SHORT-NAME>
+          <ELEMENTS>
+            {% for swc in swcs %}
+            {{ arxml.render_swc_component(swc, root_pkg, swc_sr_port_metadata[swc.name], swc_cs_port_metadata[swc.name]) }}
+            {% endfor %}
+            {% for subcomposition in subcompositions %}
+            <COMPOSITION-SW-COMPONENT-TYPE>
+              <SHORT-NAME>{{ subcomposition.name }}</SHORT-NAME>
+              {% if subcomposition.ports %}
+              <PORTS>
+                {% for p in subcomposition.ports %}
+                {{ arxml.render_port(p, root_pkg, {}, {}) }}
+                {% endfor %}
+              </PORTS>
+              {% endif %}
+              <COMPONENTS>
+                {% for i in subcomposition.components %}
+                <SW-COMPONENT-PROTOTYPE>
+                  <SHORT-NAME>{{ i.name }}</SHORT-NAME>
+                  <TYPE-TREF DEST="{{ component_type_dests[i.typeRef] }}">{{ component_type_refs[i.typeRef] }}</TYPE-TREF>
+                </SW-COMPONENT-PROTOTYPE>
+                {% endfor %}
+              </COMPONENTS>
+              <CONNECTORS>
+                {% for c in subcomposition.connections %}
+                {{ arxml.render_assembly_connector(c) }}
+                {% endfor %}
+                {% for c in subcomposition.delegation_connectors %}
+                {{ arxml.render_delegation_connector(c) }}
+                {% endfor %}
+              </CONNECTORS>
+            </COMPOSITION-SW-COMPONENT-TYPE>
+            {% endfor %}
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+        <AR-PACKAGE>
+          <SHORT-NAME>System</SHORT-NAME>
+          <ELEMENTS>
+            <COMPOSITION-SW-COMPONENT-TYPE>
+              <SHORT-NAME>{{ composition_name }}</SHORT-NAME>
+              <COMPONENTS>
+                {% for i in instances %}
+                <SW-COMPONENT-PROTOTYPE>
+                  <SHORT-NAME>{{ i.name }}</SHORT-NAME>
+                  <TYPE-TREF DEST="{{ component_type_dests[i.typeRef] }}">{{ component_type_refs[i.typeRef] }}</TYPE-TREF>
+                </SW-COMPONENT-PROTOTYPE>
+                {% endfor %}
+              </COMPONENTS>
+              <CONNECTORS>
+                {% for c in connections %}
+                {{ arxml.render_assembly_connector(c) }}
+                {% endfor %}
+              </CONNECTORS>
+            </COMPOSITION-SW-COMPONENT-TYPE>
+            <SYSTEM>
+              <SHORT-NAME>{{ system_name }}</SHORT-NAME>
+              <ROOT-SOFTWARE-COMPOSITIONS>
+                <ROOT-SW-COMPOSITION-PROTOTYPE>
+                  <SHORT-NAME>RootComposition</SHORT-NAME>
+                  <SOFTWARE-COMPOSITION-TREF DEST="COMPOSITION-SW-COMPONENT-TYPE">/{{ root_pkg }}/System/{{ composition_name }}</SOFTWARE-COMPOSITION-TREF>
+                </ROOT-SW-COMPOSITION-PROTOTYPE>
+              </ROOT-SOFTWARE-COMPOSITIONS>
+            </SYSTEM>
           </ELEMENTS>
         </AR-PACKAGE>
 

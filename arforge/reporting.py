@@ -11,7 +11,7 @@ from .model import ComponentPrototype, Connection, DelegationConnector, Port, Pr
 from .semantic_validation import ValidationContext
 
 
-REPORT_TEMPLATE = "project_report.md.j2"
+REPORT_TEMPLATE = "reports/project_report.md.j2"
 
 
 def _env(template_dir: Path) -> Environment:
