@@ -134,11 +134,11 @@ pytest -q
 
 ARForge includes a `.vscode/` configuration for YAML schema validation, autocomplete, and task runner integration out of the box.
 
-The full setup instructions, task list, and `arforge.projectFile` configuration live in [docs/project-structure.md](docs/project-structure.md#vs-code-setup). If you just want the essentials:
+The full setup instructions, task list, and VS Code task settings live in [docs/project-structure.md](docs/project-structure.md#vs-code-setup). If you just want the essentials:
 
 - install the VS Code `Python` and `YAML` extensions
 - open the repository root in VS Code
-- set `arforge.projectFile` in `.vscode/settings.json` if you want tasks to target a different manifest
+- set `arforge.projectFile`, optional `arforge.validationProfile`, and `arforge.outputDir` in `.vscode/settings.json`
 
 ---
 

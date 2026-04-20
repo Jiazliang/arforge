@@ -45,7 +45,7 @@
       "problemMatcher": []
     },
     {
-      "label": "arforge: validate project (extended)",
+      "label": "arforge: validate project (profile)",
       "type": "shell",
       "command": "${workspaceFolder}${/}.venv${/}bin${/}python",
       "windows": {
@@ -63,7 +63,7 @@
         "validate",
         "${config:arforge.projectFile}",
         "--profile",
-        "examples/validation_profiles/profile.yaml",
+        "${config:arforge.validationProfile}",
         "-vv"
       ],
       "problemMatcher": []
@@ -87,7 +87,7 @@
         "export",
         "${config:arforge.projectFile}",
         "--out",
-        "build/arxml/DemoProject.arxml",
+        "${config:arforge.outputDir}/arxml/project.arxml",
         "-vv"
       ],
       "problemMatcher": []
@@ -111,7 +111,7 @@
         "export",
         "${config:arforge.projectFile}",
         "--out",
-        "build/arxml",
+        "${config:arforge.outputDir}/arxml",
         "--split-by-swc",
         "-vv"
       ],
@@ -153,7 +153,7 @@
         "diagram",
         "${config:arforge.projectFile}",
         "--out",
-        "build/diagrams",
+        "${config:arforge.outputDir}/diagrams"
       ],
       "problemMatcher": []
     },
@@ -179,7 +179,7 @@
         "--lang",
         "c",
         "--out",
-        "build/code",
+        "${config:arforge.outputDir}/code"
       ],
       "problemMatcher": []
     },
@@ -202,7 +202,7 @@
         "report",
         "${config:arforge.projectFile}",
         "--out",
-        "build/docs/Report.md",
+        "${config:arforge.outputDir}/docs/Report.md"
       ],
       "problemMatcher": []
     }

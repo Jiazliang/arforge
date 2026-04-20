@@ -146,26 +146,35 @@ ARForge ships with a `.vscode/` directory that configures the editor automatical
 
 Once both extensions are installed, YAML schema autocomplete and inline validation diagnostics activate for the standard ARForge YAML file layout without any manual configuration.
 
-**Configuring the active project file:**
+**Configuring VS Code task settings:**
 
-The VS Code tasks resolve the project manifest from a single setting in `.vscode/settings.json`:
+The VS Code tasks resolve the project manifest, optional validation profile, and shared output root from `.vscode/settings.json`:
 
 ```jsonc
 "arforge.projectFile": "examples/autosar.project.yaml"
+"arforge.validationProfile": "examples/validation_profiles/profile.yaml"
+"arforge.outputDir": "build"
 ```
 
-Change this path to point to your own project manifest. The validate, export, and generate tasks pick it up automatically.
+Settings:
+
+- `arforge.projectFile` - active project manifest used by validate, export, report, and generate tasks
+- `arforge.validationProfile` - optional profile used by the profile-aware validation task
+- `arforge.outputDir` - shared output root for export, report, diagram, and code-generation tasks
+
+Change these to point to your own project files and preferred output root. The tasks pick them up automatically.
 
 **Available tasks** (`Terminal -> Run Task`):
 
 | Task | What it runs |
 |---|---|
-| `arforge: validate project` | `python -m arforge.cli validate <projectFile> -vv` |
-| `arforge: generate report` | `python -m arforge.cli report <projectFile> --out build/docs/Report.md` |
-| `arforge: export project (split by swc)` | `python -m arforge.cli export <projectFile> --out build/arxml --split-by-swc -vv` |
-| `arforge: export project (monolithic)` | `python -m arforge.cli export <projectFile> --out build/arxml/DemoProject.arxml -vv` |
-| `arforge: generate Plantuml` | `python -m arforge.cli generate diagram <projectFile> --out build/diagrams` |
-| `arforge: generate C-code` | `python -m arforge.cli generate code <projectFile> --lang c --out build/code` |
+| `arforge: validate project (core)` | `python -m arforge.cli validate <projectFile> -vv` |
+| `arforge: validate project (profile)` | `python -m arforge.cli validate <projectFile> --profile <validationProfile> -vv` |
+| `arforge: generate report` | `python -m arforge.cli report <projectFile> --out <outputDir>/docs/Report.md` |
+| `arforge: export project (split by swc)` | `python -m arforge.cli export <projectFile> --out <outputDir>/arxml --split-by-swc -vv` |
+| `arforge: export project (monolithic)` | `python -m arforge.cli export <projectFile> --out <outputDir>/arxml/project.arxml -vv` |
+| `arforge: generate Plantuml` | `python -m arforge.cli generate diagram <projectFile> --out <outputDir>/diagrams` |
+| `arforge: generate C-code` | `python -m arforge.cli generate code <projectFile> --lang c --out <outputDir>/code` |
 | `arforge: init project` | `python -m arforge.cli init demo-project` |
 | `arforge: pytest` | `pytest -q` |
 
