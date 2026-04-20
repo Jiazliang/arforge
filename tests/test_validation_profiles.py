@@ -208,6 +208,80 @@ def test_profile_results_are_deterministic(tmp_path: Path) -> None:
     assert cases_one == cases_two
 
 
+def test_profiles_with_same_module_name_are_isolated(tmp_path: Path) -> None:
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    first_root.mkdir()
+    second_root.mkdir()
+
+    first_profile = _write_profile(
+        first_root,
+        """
+        profile:
+          name: "FirstProfile"
+          mode: "extensions-only"
+        extensions:
+          - module: "shared_rules"
+            rules: ["rule_project_name"]
+        """,
+    )
+    second_profile = _write_profile(
+        second_root,
+        """
+        profile:
+          name: "SecondProfile"
+          mode: "extensions-only"
+        extensions:
+          - module: "shared_rules"
+            rules: ["rule_project_name"]
+        """,
+    )
+
+    (first_root / "shared_rules.py").write_text(
+        textwrap.dedent(
+            """
+            from arforge.semantic_validation import Finding, validation_rule
+
+            @validation_rule(
+                code="MY-001",
+                name="SharedRule",
+                description="First profile rule.",
+                default_severity="info",
+            )
+            def rule_project_name(context):
+                return [Finding(code="MY-001-PROJECT", severity="info", message="first-profile")]
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (second_root / "shared_rules.py").write_text(
+        textwrap.dedent(
+            """
+            from arforge.semantic_validation import Finding, validation_rule
+
+            @validation_rule(
+                code="MY-001",
+                name="SharedRule",
+                description="Second profile rule.",
+                default_severity="info",
+            )
+            def rule_project_name(context):
+                return [Finding(code="MY-001-PROJECT", severity="info", message="second-profile")]
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    project = load_aggregator(VALID_PROJECT)
+    first_report = build_semantic_report(project, profile=load_validation_profile(first_profile))
+    second_report = build_semantic_report(project, profile=load_validation_profile(second_profile))
+
+    assert [finding.message for finding in first_report.findings] == ["first-profile"]
+    assert [finding.message for finding in second_report.findings] == ["second-profile"]
+
+
 def test_cli_validate_supports_profile_option() -> None:
     result = subprocess.run(
         [

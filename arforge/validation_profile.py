@@ -118,6 +118,7 @@ def load_extension_rule_functions(
     rule_names: tuple[str, ...],
 ) -> list[ValidationRuleFunc]:
     with _prepend_sys_path(import_root):
+        _clear_profile_local_modules(import_root, module_name)
         try:
             module = importlib.import_module(module_name)
         except Exception as exc:  # pragma: no cover - exercised in tests through message text only
@@ -182,3 +183,10 @@ def _prepend_sys_path(path: Path) -> Iterator[None]:
             sys.path.pop(0)
         elif resolved in sys.path:
             sys.path.remove(resolved)
+
+
+def _clear_profile_local_modules(import_root: Path, module_name: str) -> None:
+    module_parts = module_name.split(".")
+    candidates = [".".join(module_parts[: index + 1]) for index in range(len(module_parts))]
+    for candidate in reversed(candidates):
+        sys.modules.pop(candidate, None)

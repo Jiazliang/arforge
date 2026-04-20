@@ -12,7 +12,9 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 
 - `arforge init` - project scaffold generation with working example
 - `arforge validate` - schema + semantic validation with verbose modes (`-v`, `-vv`)
+- `arforge validate --profile <profile.yaml>` - profile-aware validation with project-specific extension rules and rule filtering
 - `arforge export` - validated ARXML export, monolithic or split by SWC
+- `arforge report` - deterministic Markdown architecture summary for reviews, CI artifacts, and handoffs
 - `arforge generate diagram` - PlantUML architecture and behavior diagram generation
 - `arforge generate code` - template-driven C starter skeleton generation
 - VS Code integration - YAML schema autocomplete, inline diagnostics, and task runner
@@ -60,11 +62,13 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 - mode-switch usage analysis (`CORE-048`) - warns when connected mode-switch ports are never used by runnable `modeSwitchEvents`
 - unused mode declaration group detection (`CORE-014`)
 - SR timing mismatch analysis - warns when consumer runs faster or slower than producer
+- validation profiles and extension rules - profile YAML with `core+extensions` / `extensions-only`, dynamic rule loading, and rule enable/disable filtering
 - deterministic finding order - stable CI output across runs
 
 ### Rendering
 
 - Jinja2-based ARXML templates
+- Jinja2-based Markdown report templates
 - Jinja2-based diagram templates
 - Jinja2-based C code-generation templates
 - deterministic output ordering - repeated exports and generations produce identical output
@@ -74,9 +78,6 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 ---
 
 ## Near-term
-
-**Deeper connectivity and usage reporting**
-A structured `arforge report` command producing a human-readable summary of what is connected, what is dangling, and what is defined but unused across the full project. Useful for architecture reviews and integration handoffs.
 
 **Improved authoring experience**
 Enhanced JSON Schema metadata for better editor autocomplete and inline diagnostics. Clearer scaffold templates and improved error messages for common mistakes.
@@ -90,9 +91,6 @@ Versioned template and schema architecture (`--schema-version` flag) to support 
 
 **Nested composition support**
 Compositions within compositions - sub-compositions referenced as component prototypes in a parent composition. Required for real-world project scale beyond flat single-level designs.
-
-**OEM / project profile system**
-A profile mechanism allowing project-specific or OEM-specific constraints to be expressed as configuration rather than code changes - naming convention enforcement, mandatory port prefixes, required SWC categories, restricted compu method types. Profiles extend the validation ruleset and export templates without modifying ARForge core.
 
 **VS Code extension**
 A dedicated VS Code extension providing YAML schema autocomplete, inline validation diagnostics, and model preview for ARForge projects. The JSON schemas in `schemas/` are the foundation - the extension makes them accessible without manual schema configuration in any project.
