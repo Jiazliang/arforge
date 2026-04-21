@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ARForge Validation Profile",
+  "description": "Schema for optional validation profile YAML files that filter rules and load project-specific validation extensions.",
+  "type": "object",
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ruleCode": {
+      "type": "string",
+      "description": "Rule family code used by profile filtering, for example CORE-041 or MY-001.",
+      "minLength": 1,
+      "examples": [
+        "CORE-014",
+        "MY-001"
+      ]
+    },
+    "ruleFunctionName": {
+      "type": "string",
+      "description": "Python function name exported by the extension module and decorated as a validation rule.",
+      "minLength": 1,
+      "examples": [
+        "rule_check_swc_naming"
+      ]
+    },
+    "extension": {
+      "type": "object",
+      "description": "Extension module and the specific rule functions ARForge should load from it.",
+      "required": [
+        "module",
+        "rules"
+      ],
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/nonEmptyString",
+          "description": "Python module path resolved relative to the directory containing the profile YAML.",
+          "examples": [
+            "project_validation_rules"
+          ]
+        },
+        "rules": {
+          "type": "array",
+          "description": "Rule function names to import from the extension module.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ruleFunctionName"
+          },
+          "examples": [
+            [
+              "rule_check_swc_naming",
+              "rule_require_instance_suffix"
+            ]
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "module": "project_validation_rules",
+          "rules": [
+            "rule_check_swc_naming",
+            "rule_require_instance_suffix"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "profile"
+  ],
+  "properties": {
+    "profile": {
+      "type": "object",
+      "description": "Profile identity and active ruleset construction mode.",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString",
+          "description": "Human-readable profile name shown in the resolved ruleset label.",
+          "examples": [
+            "MyProjectRules"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "description": "Whether validation starts from core rules plus extensions, or from extensions only.",
+          "enum": [
+            "core+extensions",
+            "extensions-only"
+          ],
+          "examples": [
+            "core+extensions"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "name": "MyProjectRules",
+          "mode": "core+extensions"
+        }
+      ]
+    },
+    "rules": {
+      "type": "object",
+      "description": "Optional rule family filters applied after the active ruleset is assembled.",
+      "properties": {
+        "enable": {
+          "type": "array",
+          "description": "Rule family codes to keep active.",
+          "items": {
+            "$ref": "#/$defs/ruleCode"
+          },
+          "examples": [
+            [
+              "MY-001",
+              "MY-002"
+            ]
+          ]
+        },
+        "disable": {
+          "type": "array",
+          "description": "Rule family codes to remove from the active ruleset.",
+          "items": {
+            "$ref": "#/$defs/ruleCode"
+          },
+          "examples": [
+            [
+              "CORE-014"
+            ]
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "array",
+      "description": "Optional extension modules that contribute extra validation rules.",
+      "items": {
+        "$ref": "#/$defs/extension"
+      },
+      "examples": [
+        [
+          {
+            "module": "project_validation_rules",
+            "rules": [
+              "rule_check_swc_naming",
+              "rule_require_instance_suffix"
+            ]
+          }
+        ]
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "profile": {
+        "name": "MyProjectRules",
+        "mode": "core+extensions"
+      },
+      "rules": {
+        "enable": [
+          "MY-001",
+          "MY-002"
+        ],
+        "disable": [
+          "CORE-014"
+        ]
+      },
+      "extensions": [
+        {
+          "module": "project_validation_rules",
+          "rules": [
+            "rule_check_swc_naming",
+            "rule_require_instance_suffix"
+          ]
+        }
+      ]
+    }
+  ]
+}

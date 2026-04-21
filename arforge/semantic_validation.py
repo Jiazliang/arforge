@@ -439,8 +439,8 @@ def _connection_sort_key(connector: Connection) -> tuple[str, str, str, str, str
         connector.from_port,
         connector.to_instance,
         connector.to_port,
-        connector.dataElement or "",
-        connector.operation or "",
+        connector.description or "",
+        "",
     )
 
 

@@ -186,7 +186,8 @@
         },
         "length": {
           "type": "integer",
-          "description": "Fixed number of array elements. Semantic validation enforces a positive value.",
+          "description": "Fixed number of array elements.",
+          "minimum": 1,
           "examples": [
             4
           ]

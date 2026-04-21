@@ -29,8 +29,8 @@ def _connector_sort_key(connector: Connection) -> tuple[str, str, str, str, str,
         connector.from_port,
         connector.to_instance,
         connector.to_port,
-        connector.dataElement or "",
-        connector.operation or "",
+        connector.description or "",
+        "",
     )
 
 
@@ -76,12 +76,7 @@ def _component_ports_by_type(project: Project) -> dict[str, list[Port]]:
 
 
 def _normalize_connector_label(connector: Connection) -> str:
-    selector = ""
-    if connector.dataElement:
-        selector = f" [{connector.dataElement}]"
-    elif connector.operation:
-        selector = f" [{connector.operation}]"
-    return f"{connector.from_instance}.{connector.from_port} -> {connector.to_instance}.{connector.to_port}{selector}"
+    return f"{connector.from_instance}.{connector.from_port} -> {connector.to_instance}.{connector.to_port}"
 
 
 def _normalize_delegation_label(connector: DelegationConnector) -> str:

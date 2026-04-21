@@ -258,8 +258,6 @@ class Connection:
     to_instance: str
     to_port: str
     description: str | None = None
-    dataElement: str | None = None
-    operation: str | None = None
 
     @property
     def port_pair_key(self) -> tuple[str, str, str, str]:
@@ -268,13 +266,6 @@ class Connection:
             self.from_port,
             self.to_instance,
             self.to_port,
-        )
-
-    @property
-    def selector_key(self) -> tuple[str, str]:
-        return (
-            self.dataElement or "",
-            self.operation or "",
         )
 
     @property
@@ -413,8 +404,6 @@ def _parse_connectors(connectors: List[Dict[str, Any]]) -> List[Connection]:
                 to_instance=to_instance,
                 to_port=to_port,
                 description=connector.get("description"),
-                dataElement=connector.get("dataElement"),
-                operation=connector.get("operation"),
             )
         )
     return parsed

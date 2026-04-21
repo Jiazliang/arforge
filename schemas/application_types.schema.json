@@ -73,7 +73,7 @@
         },
         "unitRef": {
           "$ref": "#/$defs/name",
-          "description": "Referenced physical unit used when interpreting the value.",
+          "description": "Referenced physical unit used when interpreting the value. Typically set for physical quantities and omitted for enum-like text-table values.",
           "examples": [
             "km_h"
           ]
@@ -82,7 +82,8 @@
           "$ref": "#/$defs/name",
           "description": "Referenced compu method that converts internal values to physical values or labels.",
           "examples": [
-            "CM_Speed_Kmh_Linear"
+            "CM_Speed_Kmh_Linear",
+            "CM_BrakeStatus"
           ]
         }
       },

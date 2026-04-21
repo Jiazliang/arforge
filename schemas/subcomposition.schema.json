@@ -19,26 +19,41 @@
     },
     "componentPrototype": {
       "type": "object",
+      "description": "Atomic SWC instance declared inside the reusable subcomposition type.",
       "required": [
         "name",
         "typeRef"
       ],
       "properties": {
         "name": {
-          "$ref": "#/$defs/name"
+          "$ref": "#/$defs/name",
+          "description": "Inner component prototype name used by connectors and delegation endpoints.",
+          "examples": [
+            "SpeedSensor_1"
+          ]
         },
         "description": {
           "$ref": "#/$defs/descriptionProperty"
         },
         "typeRef": {
           "$ref": "#/$defs/name",
-          "description": "Atomic SWC type instantiated inside this subcomposition."
+          "description": "Atomic SWC type instantiated inside this subcomposition.",
+          "examples": [
+            "SpeedSensor"
+          ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "name": "SpeedSensor_1",
+          "typeRef": "SpeedSensor"
+        }
+      ]
     },
     "portPrototype": {
       "type": "object",
+      "description": "Boundary port exposed by the reusable subcomposition type.",
       "required": [
         "name",
         "direction",
@@ -46,7 +61,11 @@
       ],
       "properties": {
         "name": {
-          "$ref": "#/$defs/name"
+          "$ref": "#/$defs/name",
+          "description": "Outer composition port short name.",
+          "examples": [
+            "Rp_PowerStateIn"
+          ]
         },
         "description": {
           "$ref": "#/$defs/descriptionProperty"
@@ -61,51 +80,79 @@
         },
         "interfaceRef": {
           "$ref": "#/$defs/name",
-          "description": "Interface exposed on the reusable composition boundary."
+          "description": "Interface exposed on the reusable composition boundary.",
+          "examples": [
+            "If_PowerState"
+          ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "name": "Rp_PowerStateIn",
+          "direction": "requires",
+          "interfaceRef": "If_PowerState"
+        }
+      ]
     },
     "connector": {
       "type": "object",
+      "description": "Port-level assembly connector between inner component instance ports.",
       "required": [
         "from",
         "to"
       ],
       "properties": {
         "from": {
-          "$ref": "#/$defs/endpoint"
+          "$ref": "#/$defs/endpoint",
+          "description": "Providing inner instance port in the form InstanceName.PortName."
         },
         "description": {
           "$ref": "#/$defs/descriptionProperty"
         },
         "to": {
-          "$ref": "#/$defs/endpoint"
-        },
-        "dataElement": {
-          "$ref": "#/$defs/name"
-        },
-        "operation": {
-          "$ref": "#/$defs/name"
+          "$ref": "#/$defs/endpoint",
+          "description": "Requiring inner instance port in the form InstanceName.PortName."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "from": "SpeedSensor_1.Pp_VehicleSpeed",
+          "to": "SpeedDisplay_1.Rp_VehicleSpeed"
+        }
+      ]
     },
     "delegationConnector": {
       "type": "object",
+      "description": "Delegation connector mapping an outer composition port to an inner component instance port.",
       "required": [
         "inner",
         "outer"
       ],
       "properties": {
         "inner": {
-          "$ref": "#/$defs/endpoint"
+          "$ref": "#/$defs/endpoint",
+          "description": "Inner instance port that implements the exposed boundary port."
+        },
+        "description": {
+          "$ref": "#/$defs/descriptionProperty"
         },
         "outer": {
-          "$ref": "#/$defs/name"
+          "$ref": "#/$defs/name",
+          "description": "Declared outer boundary port name on the subcomposition type.",
+          "examples": [
+            "Rp_PowerStateIn"
+          ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "inner": "SpeedSensor_1.Rp_PowerStateIn",
+          "outer": "Rp_PowerStateIn"
+        }
+      ]
     }
   },
   "required": [
@@ -114,25 +161,32 @@
   "properties": {
     "subcomposition": {
       "type": "object",
+      "description": "Reusable composition type built from atomic SWC instances, inner connectors, optional boundary ports, and optional delegation connectors.",
       "required": [
         "name",
         "components"
       ],
       "properties": {
         "name": {
-          "$ref": "#/$defs/name"
+          "$ref": "#/$defs/name",
+          "description": "Reusable subcomposition type short name.",
+          "examples": [
+            "SubComposition_SpeedCluster"
+          ]
         },
         "description": {
           "$ref": "#/$defs/descriptionProperty"
         },
         "ports": {
           "type": "array",
+          "description": "Optional boundary ports exposed by this subcomposition type.",
           "items": {
             "$ref": "#/$defs/portPrototype"
           }
         },
         "components": {
           "type": "array",
+          "description": "Atomic SWC instances contained inside the subcomposition.",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/componentPrototype"
@@ -140,18 +194,44 @@
         },
         "connectors": {
           "type": "array",
+          "description": "Optional assembly connectors between inner component instance ports.",
           "items": {
             "$ref": "#/$defs/connector"
           }
         },
         "delegationConnectors": {
           "type": "array",
+          "description": "Optional mappings from outer boundary ports to inner component instance ports.",
           "items": {
             "$ref": "#/$defs/delegationConnector"
           }
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "name": "SubComposition_SpeedCluster",
+          "ports": [
+            {
+              "name": "Rp_PowerStateIn",
+              "direction": "requires",
+              "interfaceRef": "If_PowerState"
+            }
+          ],
+          "components": [
+            {
+              "name": "SpeedSensor_1",
+              "typeRef": "SpeedSensor"
+            }
+          ],
+          "delegationConnectors": [
+            {
+              "inner": "SpeedSensor_1.Rp_PowerStateIn",
+              "outer": "Rp_PowerStateIn"
+            }
+          ]
+        }
+      ]
     }
   },
   "additionalProperties": false

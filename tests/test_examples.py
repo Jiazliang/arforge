@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import hashlib
+import json
 from pathlib import Path
 import re
 import shutil
@@ -9,6 +10,7 @@ import subprocess
 import sys
 from xml.etree import ElementTree as ET
 
+from jsonschema import Draft202012Validator
 import pytest
 import yaml
 
@@ -57,6 +59,24 @@ SR_ONE_TO_MANY_PROJECT = INVALID_DIR / "project_sr_one_to_many_valid.yaml"
 SR_N_TO_1_PROJECT = INVALID_DIR / "project_sr_n_to_1_warning.yaml"
 
 
+def _schema_errors(schema_name: str, data: object) -> list[str]:
+    schema = json.loads((REPO_ROOT / "schemas" / schema_name).read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    errors: list[str] = []
+
+    def collect(error: object) -> None:
+        err = error
+        path = ".".join(str(part) for part in err.absolute_path) or "<root>"
+        errors.append(f"{path}: {err.message}")
+        for child in sorted(err.context, key=lambda item: (list(item.absolute_path), item.message)):
+            collect(child)
+
+    for root_error in sorted(validator.iter_errors(data), key=lambda err: (list(err.absolute_path), err.message)):
+        collect(root_error)
+
+    return errors
+
+
 def _is_project_fixture(path: Path) -> bool:
     with path.open("r", encoding="utf-8") as handle:
         data = yaml.safe_load(handle) or {}
@@ -92,6 +112,89 @@ def _invalid_project_fixtures() -> list[Path]:
 
 def test_validate_main_example_passes() -> None:
     load_and_validate_aggregator(VALID_PROJECT)
+
+
+def test_schema_accepts_supported_text_table_unit_ref() -> None:
+    errors = _schema_errors(
+        "compu_methods.schema.json",
+        {
+            "compuMethods": [
+                {
+                    "name": "CM_PowerState",
+                    "category": "textTable",
+                    "unitRef": "NoUnit",
+                    "entries": [
+                        {"value": 0, "label": "OFF"},
+                        {"value": 1, "label": "ON"},
+                    ],
+                }
+            ]
+        },
+    )
+
+    assert errors == []
+
+
+def test_implementation_type_schema_rejects_zero_length_array_earlier() -> None:
+    data = yaml.safe_load((INVALID_DIR / "types" / "implementation_types_array_zero_length.yaml").read_text(encoding="utf-8"))
+
+    errors = _schema_errors("implementation_types.schema.json", data)
+
+    assert any("length: 0 is less than the minimum of 1" in error for error in errors)
+
+
+def test_interface_schema_rejects_negative_possible_error_code_earlier() -> None:
+    data = yaml.safe_load((INVALID_DIR / "interfaces" / "If_Diagnostics_negative_error_code.yaml").read_text(encoding="utf-8"))
+
+    errors = _schema_errors("interface.schema.json", data)
+
+    assert any("code: -1 is less than the minimum of 0" in error for error in errors)
+
+
+def test_tightened_project_fixture_with_multiple_runnable_triggers_fails_earlier() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        load_aggregator(INVALID_DIR / "project_runnable_both_trigger_styles.yaml")
+
+    assert "is valid under each of" in "\n".join(excinfo.value.errors)
+
+
+def test_swc_schema_rejects_false_init_event_flag() -> None:
+    errors = _schema_errors(
+        "swc.schema.json",
+        {
+            "swc": {
+                "name": "SpeedSensor",
+                "runnables": [
+                    {
+                        "name": "Runnable_Init",
+                        "initEvent": False,
+                    }
+                ],
+                "ports": [
+                    {
+                        "name": "Pp_VehicleSpeed",
+                        "direction": "provides",
+                        "interfaceRef": "If_VehicleSpeed",
+                    }
+                ],
+            }
+        },
+    )
+
+    assert any("True was expected" in error for error in errors)
+
+
+def test_schema_validation_errors_are_deterministic_for_same_fixture() -> None:
+    fixture = INVALID_DIR / "project_impl_array_zero_length.yaml"
+
+    first_errors: list[str] = []
+    second_errors: list[str] = []
+    for target in (first_errors, second_errors):
+        with pytest.raises(ValidationError) as excinfo:
+            load_aggregator(fixture)
+        target.extend(excinfo.value.errors)
+
+    assert first_errors == second_errors
 
 
 def test_finding_defaults_to_error_severity() -> None:
@@ -245,6 +348,15 @@ def test_mode_group_schema_rejects_explicit_order_without_mode_value() -> None:
     assert "value" in "\n".join(excinfo.value.errors)
 
 
+def test_system_schema_rejects_connector_selectors() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        load_aggregator(INVALID_DIR / "project_bad_operation.yaml")
+
+    errors = "\n".join(excinfo.value.errors)
+    assert "operation" in errors
+    assert "additional properties" in errors.lower()
+
+
 def test_semantic_validation_flags_missing_on_transition_value_for_explicit_order_group() -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
     group = project.modeDeclarationGroups[0]
@@ -287,6 +399,34 @@ def test_semantic_validation_flags_duplicate_mode_values() -> None:
 
     error_codes = {finding.code for finding in report.error_findings()}
     assert "CORE-012-MDG-DUPLICATE-VALUE" in error_codes
+
+
+def test_system_connector_validation_covers_subcomposition_boundary_ports() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    bad_project = replace(
+        project,
+        system=replace(
+            project.system,
+            composition=replace(
+                project.system.composition,
+                connectors=[
+                    replace(
+                        project.system.composition.connectors[0],
+                        from_instance="DiagManager_0",
+                        from_port="Rp_VehicleSpeed",
+                        to_instance="SpeedCluster_0",
+                        to_port="Pp_VehicleSpeedOut",
+                    )
+                ],
+            ),
+        ),
+    )
+
+    report = build_semantic_report(bad_project, ruleset="core")
+    error_codes = {finding.code for finding in report.error_findings()}
+
+    assert "CORE-040-FROM-DIRECTION" in error_codes
+    assert "CORE-040-TO-DIRECTION" in error_codes
 
 
 def _extract_r_port_fragment(xml: str, port_name: str) -> str:
@@ -1575,7 +1715,6 @@ def test_monolithic_and_split_subcomposition_fragments_are_equivalent(tmp_path: 
         ("project_cs_wrong_directions.yaml", "CORE-040-FROM-DIRECTION"),
         ("project_impl_array_application_ref.yaml", "CORE-010-ARRAY-APPLICATION-TYPE"),
         ("project_impl_array_unknown_element_type.yaml", "CORE-010-ARRAY-UNKNOWN-ELEMENT-TYPE"),
-        ("project_impl_array_zero_length.yaml", "CORE-010-ARRAY-LENGTH"),
         ("project_struct_cycle.yaml", "CORE-010-STRUCT-CYCLE"),
         ("project_struct_duplicate_field_names.yaml", "CORE-010-STRUCT-DUPLICATE-FIELD"),
         ("project_struct_unknown_nested_type.yaml", "CORE-010-STRUCT-UNKNOWN-TYPE"),

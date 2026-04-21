@@ -13,6 +13,11 @@
       "**/*.project.yaml"
     ],
 
+    "./schemas/validation_profile.schema.json": [
+      "**/validation_profiles/*.yaml",
+      "**/profile.yaml"
+    ],
+
     "./schemas/interface.schema.json": [
       "**/interfaces/*.yaml"
     ],

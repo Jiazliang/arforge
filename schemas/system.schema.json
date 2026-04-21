@@ -40,7 +40,7 @@
         },
         "typeRef": {
           "$ref": "#/$defs/name",
-          "description": "Software component type instantiated by this component prototype.",
+          "description": "Atomic SWC type or reusable subcomposition type instantiated by this component prototype.",
           "examples": [
             "SpeedSensor"
           ]
@@ -56,7 +56,7 @@
     },
     "connector": {
       "type": "object",
-      "description": "Assembly connector between two component instance ports. Sender-receiver connectors may optionally name a data element, and client-server connectors may optionally name an operation.",
+      "description": "Port-level assembly connector between two component instance ports.",
       "required": [
         "from",
         "to"
@@ -72,14 +72,6 @@
         "to": {
           "$ref": "#/$defs/endpoint",
           "description": "Target endpoint in the form InstanceName.PortName."
-        },
-        "dataElement": {
-          "$ref": "#/$defs/name",
-          "description": "Optional sender-receiver selector. Current ARForge wiring is port-level; this is accepted for forward compatibility."
-        },
-        "operation": {
-          "$ref": "#/$defs/name",
-          "description": "Optional client-server selector. Current ARForge wiring is port-level; this is accepted for forward compatibility."
         }
       },
       "additionalProperties": false,
@@ -115,7 +107,7 @@
         },
         "composition": {
           "type": "object",
-          "description": "Top-level composition containing component instances and assembly connectors.",
+          "description": "Top-level composition containing component instances and assembly connectors. Component type references may target atomic SWCs or reusable subcomposition types.",
           "required": [
             "name",
             "components",

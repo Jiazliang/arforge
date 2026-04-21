@@ -15,6 +15,5 @@ system:
     connectors:
       - from: "SpeedSensor_1.Pp_VehicleSpeed"
         to: "SpeedConsumer_1.Rp_VehicleSpeed"
-        dataElement: "VehicleSpeed"
 
 
