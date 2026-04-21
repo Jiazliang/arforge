@@ -40,18 +40,18 @@ implementationDataTypes:
 
   # array
   - name: "Impl_SpeedBuffer"
-    array:
-      elementTypeRef: "Impl_VehicleSpeed_U16"
-      length: 8
+    kind: "array"
+    elementTypeRef: "Impl_VehicleSpeed_U16"
+    length: 8
 
   # struct
   - name: "Impl_SpeedPacket"
-    struct:
-      fields:
-        - name: "Speed"
-          typeRef: "Impl_VehicleSpeed_U16"
-        - name: "Timestamp"
-          typeRef: "Impl_Timestamp_U32"
+    kind: "struct"
+    fields:
+      - name: "Speed"
+        typeRef: "Impl_VehicleSpeed_U16"
+      - name: "Timestamp"
+        typeRef: "Impl_Timestamp_U32"
 ```
 
 Struct field references must resolve to other implementation types. Circular struct references are caught by `CORE-010-STRUCT-CYCLE`.
@@ -182,7 +182,7 @@ interface:
       returnType: "void"
 ```
 
-Argument directions are `in`, `out`, and `inout`. `returnType` is required; use `"void"` for operations with no return value. `possibleErrors` are optional and define the server-side errors a runnable can raise.
+Argument directions are `in`, `out`, and `inout`. `returnType` is optional and defaults to `"void"` when omitted. `possibleErrors` are optional and define the server-side errors a runnable can raise.
 
 ### Mode-switch interfaces
 

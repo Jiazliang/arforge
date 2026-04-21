@@ -20,8 +20,8 @@ def _connection_sort_key(connector: Connection) -> tuple[str, str, str, str, str
         connector.from_port,
         connector.to_instance,
         connector.to_port,
-        connector.dataElement or "",
-        connector.operation or "",
+        connector.description or "",
+        "",
     )
 
 
@@ -49,6 +49,18 @@ def _component_map(components: Iterable[ComponentPrototype]) -> Dict[str, Compon
 
 def _port_map(ports: Iterable[Port]) -> Dict[str, Port]:
     return {port.name: port for port in ports}
+
+
+def _resolve_component_ports(ctx: ValidationContext, component: ComponentPrototype) -> Dict[str, Port] | None:
+    swc = ctx.swc_by_name.get(component.typeRef)
+    if swc is not None:
+        return _port_map(swc.ports)
+
+    subcomposition = ctx.find_subcomposition(component.typeRef)
+    if subcomposition is not None:
+        return _port_map(subcomposition.ports)
+
+    return None
 
 
 def _validate_component_types(ctx: ValidationContext, spec: _CompositionValidationSpec, case: ValidationCase) -> List[Finding]:
@@ -140,18 +152,18 @@ def _validate_connectors(ctx: ValidationContext, spec: _CompositionValidationSpe
             )
             continue
 
-        from_swc = ctx.swc_by_name.get(from_component.typeRef)
-        to_swc = ctx.swc_by_name.get(to_component.typeRef)
-        if from_swc is None or to_swc is None:
+        from_ports = _resolve_component_ports(ctx, from_component)
+        to_ports = _resolve_component_ports(ctx, to_component)
+        if from_ports is None or to_ports is None:
             continue
 
-        from_port = ctx.find_swc_port(from_swc.name, conn.from_port)
-        to_port = ctx.find_swc_port(to_swc.name, conn.to_port)
+        from_port = from_ports.get(conn.from_port)
+        to_port = to_ports.get(conn.to_port)
 
         if from_port is None:
             findings.append(
                 case.finding(
-                    f"{spec.scope_name} connector from '{conn.from_instance}.{conn.from_port}' references unknown port on type '{from_swc.name}'.",
+                    f"{spec.scope_name} connector from '{conn.from_instance}.{conn.from_port}' references unknown port on type '{from_component.typeRef}'.",
                     code=f"{case.case_id}-UNKNOWN-FROM-PORT",
                 )
             )
@@ -159,7 +171,7 @@ def _validate_connectors(ctx: ValidationContext, spec: _CompositionValidationSpe
         if to_port is None:
             findings.append(
                 case.finding(
-                    f"{spec.scope_name} connector to '{conn.to_instance}.{conn.to_port}' references unknown port on type '{to_swc.name}'.",
+                    f"{spec.scope_name} connector to '{conn.to_instance}.{conn.to_port}' references unknown port on type '{to_component.typeRef}'.",
                     code=f"{case.case_id}-UNKNOWN-TO-PORT",
                 )
             )
@@ -194,25 +206,7 @@ def _validate_connectors(ctx: ValidationContext, spec: _CompositionValidationSpe
         if interface is None:
             continue
 
-        if conn.dataElement and conn.operation:
-            findings.append(
-                case.finding(
-                    f"{spec.scope_name} connector {conn.from_instance}.{conn.from_port} -> {conn.to_instance}.{conn.to_port} "
-                    "must not define both dataElement and operation.",
-                    code=f"{case.case_id}-MULTIPLE-SELECTORS",
-                )
-            )
-            continue
-
         if interface.type == "senderReceiver":
-            if conn.operation:
-                findings.append(
-                    case.finding(
-                        f"{spec.scope_name} senderReceiver connector {conn.from_instance}.{conn.from_port} -> "
-                        f"{conn.to_instance}.{conn.to_port} cannot set operation.",
-                        code=f"{case.case_id}-SR-INVALID-OPERATION",
-                    )
-                )
             if conn.port_pair_key in seen_sr_port_pairs:
                 findings.append(
                     case.finding(
@@ -232,14 +226,6 @@ def _validate_connectors(ctx: ValidationContext, spec: _CompositionValidationSpe
                         code=f"{case.case_id}-CS-INTERFACE-TYPE",
                     )
                 )
-            if conn.dataElement:
-                findings.append(
-                    case.finding(
-                        f"{spec.scope_name} clientServer connector {conn.from_instance}.{conn.from_port} -> "
-                        f"{conn.to_instance}.{conn.to_port} cannot set dataElement.",
-                        code=f"{case.case_id}-CS-INVALID-DATAELEMENT",
-                    )
-                )
             if conn.port_pair_key in seen_cs_port_pairs:
                 findings.append(
                     case.finding(
@@ -250,14 +236,6 @@ def _validate_connectors(ctx: ValidationContext, spec: _CompositionValidationSpe
                 )
             else:
                 seen_cs_port_pairs.add(conn.port_pair_key)
-            if conn.operation:
-                findings.append(
-                    case.finding(
-                        f"{spec.scope_name} clientServer connector {conn.from_instance}.{conn.from_port} -> "
-                        f"{conn.to_instance}.{conn.to_port} must not set operation; C/S connectors are port-level.",
-                        code=f"{case.case_id}-CS-INVALID-OPERATION",
-                    )
-                )
         elif interface.type == "modeSwitch":
             if from_port.interfaceType != "modeSwitch" or to_port.interfaceType != "modeSwitch":
                 findings.append(
@@ -265,14 +243,6 @@ def _validate_connectors(ctx: ValidationContext, spec: _CompositionValidationSpe
                         f"{spec.scope_name} modeSwitch connector {conn.from_instance}.{conn.from_port} -> "
                         f"{conn.to_instance}.{conn.to_port} must connect ports typed by modeSwitch interfaces.",
                         code=f"{case.case_id}-MS-INTERFACE-TYPE",
-                    )
-                )
-            if conn.dataElement:
-                findings.append(
-                    case.finding(
-                        f"{spec.scope_name} modeSwitch connector {conn.from_instance}.{conn.from_port} -> "
-                        f"{conn.to_instance}.{conn.to_port} cannot set dataElement.",
-                        code=f"{case.case_id}-MS-INVALID-DATAELEMENT",
                     )
                 )
             if conn.port_pair_key in seen_ms_port_pairs:
@@ -285,14 +255,6 @@ def _validate_connectors(ctx: ValidationContext, spec: _CompositionValidationSpe
                 )
             else:
                 seen_ms_port_pairs.add(conn.port_pair_key)
-            if conn.operation:
-                findings.append(
-                    case.finding(
-                        f"{spec.scope_name} modeSwitch connector {conn.from_instance}.{conn.from_port} -> "
-                        f"{conn.to_instance}.{conn.to_port} must not set operation.",
-                        code=f"{case.case_id}-MS-INVALID-OPERATION",
-                    )
-                )
         else:
             findings.append(
                 case.finding(

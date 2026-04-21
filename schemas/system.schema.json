@@ -56,7 +56,7 @@
     },
     "connector": {
       "type": "object",
-      "description": "Assembly connector between two component instance ports. Sender-receiver connectors may optionally name a data element, and client-server connectors may optionally name an operation.",
+      "description": "Port-level assembly connector between two component instance ports.",
       "required": [
         "from",
         "to"
@@ -72,14 +72,6 @@
         "to": {
           "$ref": "#/$defs/endpoint",
           "description": "Target endpoint in the form InstanceName.PortName."
-        },
-        "dataElement": {
-          "$ref": "#/$defs/name",
-          "description": "Optional sender-receiver selector. Current ARForge wiring is port-level; this is accepted for forward compatibility."
-        },
-        "operation": {
-          "$ref": "#/$defs/name",
-          "description": "Optional client-server selector. Current ARForge wiring is port-level; this is accepted for forward compatibility."
         }
       },
       "additionalProperties": false,

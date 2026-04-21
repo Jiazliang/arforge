@@ -245,6 +245,15 @@ def test_mode_group_schema_rejects_explicit_order_without_mode_value() -> None:
     assert "value" in "\n".join(excinfo.value.errors)
 
 
+def test_system_schema_rejects_connector_selectors() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        load_aggregator(INVALID_DIR / "project_bad_operation.yaml")
+
+    errors = "\n".join(excinfo.value.errors)
+    assert "operation" in errors
+    assert "additional properties" in errors.lower()
+
+
 def test_semantic_validation_flags_missing_on_transition_value_for_explicit_order_group() -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
     group = project.modeDeclarationGroups[0]
@@ -287,6 +296,34 @@ def test_semantic_validation_flags_duplicate_mode_values() -> None:
 
     error_codes = {finding.code for finding in report.error_findings()}
     assert "CORE-012-MDG-DUPLICATE-VALUE" in error_codes
+
+
+def test_system_connector_validation_covers_subcomposition_boundary_ports() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    bad_project = replace(
+        project,
+        system=replace(
+            project.system,
+            composition=replace(
+                project.system.composition,
+                connectors=[
+                    replace(
+                        project.system.composition.connectors[0],
+                        from_instance="DiagManager_0",
+                        from_port="Rp_VehicleSpeed",
+                        to_instance="SpeedCluster_0",
+                        to_port="Pp_VehicleSpeedOut",
+                    )
+                ],
+            ),
+        ),
+    )
+
+    report = build_semantic_report(bad_project, ruleset="core")
+    error_codes = {finding.code for finding in report.error_findings()}
+
+    assert "CORE-040-FROM-DIRECTION" in error_codes
+    assert "CORE-040-TO-DIRECTION" in error_codes
 
 
 def _extract_r_port_fragment(xml: str, port_name: str) -> str:

@@ -1,6 +1,6 @@
 ﻿# ARForge: Invalid example fixture
 # Domain: project-level validation.
-# Tests validation failure for bad operation.
+# Tests schema validation failure for unsupported connector selector.
 system:
   name: "BadSystem_CsConnectorOperation"
   composition:
