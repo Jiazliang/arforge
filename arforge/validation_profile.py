@@ -3,10 +3,12 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 import importlib
+import json
 from pathlib import Path
 import sys
 from typing import Any, Iterator, Literal
 
+from jsonschema import Draft202012Validator
 import yaml
 
 from .semantic_validation import ValidationCase, ValidationRuleFunc, function_validation_case
@@ -42,6 +44,7 @@ class ValidationProfile:
 
 def load_validation_profile(path: Path) -> ValidationProfile:
     data = _load_profile_yaml(path)
+    _validate_profile_schema(path, data)
 
     profile_data = data.get("profile")
     if not isinstance(profile_data, dict):
@@ -160,6 +163,18 @@ def _load_profile_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValidationProfileError([f"{path}: expected a YAML mapping (object) at root"])
     return data
+
+
+def _validate_profile_schema(path: Path, data: dict[str, Any]) -> None:
+    schema_path = Path(__file__).resolve().parent.parent / "schemas" / "validation_profile.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    validator = Draft202012Validator(schema)
+    errors = []
+    for error in sorted(validator.iter_errors(data), key=lambda item: (list(item.absolute_path), item.message)):
+        location = ".".join(str(part) for part in error.absolute_path) or "<root>"
+        errors.append(f"{path}:{location}: {error.message}")
+    if errors:
+        raise ValidationProfileError(errors)
 
 
 def _load_rule_code_list(path: Path, rules_data: dict[str, Any], key: str) -> list[str]:

@@ -48,6 +48,42 @@ def test_profile_loader_accepts_valid_profile(tmp_path: Path) -> None:
     assert profile.extensions[0].rules == ("rule_project_name",)
 
 
+def test_profile_loader_rejects_unsupported_extra_fields_via_schema(tmp_path: Path) -> None:
+    profile_path = _write_profile(
+        tmp_path,
+        """
+        profile:
+          name: "TestProfile"
+          mode: "core+extensions"
+          severity: "warning"
+        """,
+    )
+
+    with pytest.raises(ValidationProfileError) as excinfo:
+        load_validation_profile(profile_path)
+
+    assert "Additional properties are not allowed" in excinfo.value.errors[0]
+    assert "severity" in excinfo.value.errors[0]
+
+
+def test_profile_loader_rejects_empty_extension_rule_list_via_schema(tmp_path: Path) -> None:
+    profile_path = _write_profile(
+        tmp_path,
+        """
+        profile:
+          name: "TestProfile"
+        extensions:
+          - module: "tests.support_validation_rules"
+            rules: []
+        """,
+    )
+
+    with pytest.raises(ValidationProfileError) as excinfo:
+        load_validation_profile(profile_path)
+
+    assert "should be non-empty" in excinfo.value.errors[0] or "[] should be non-empty" in excinfo.value.errors[0]
+
+
 def test_profile_loader_rejects_invalid_structure(tmp_path: Path) -> None:
     profile_path = _write_profile(
         tmp_path,

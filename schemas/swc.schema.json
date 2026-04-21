@@ -206,7 +206,7 @@
           ]
         },
         "initEvent": {
-          "type": "boolean",
+          "const": true,
           "description": "Set to true to execute the runnable at initialization time.",
           "examples": [
             true
@@ -215,6 +215,7 @@
         "reads": {
           "type": "array",
           "description": "Sender-receiver data elements read by the runnable.",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/dataAccess"
           },
@@ -230,6 +231,7 @@
         "writes": {
           "type": "array",
           "description": "Sender-receiver data elements written by the runnable.",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/dataAccess"
           },
@@ -245,6 +247,7 @@
         "calls": {
           "type": "array",
           "description": "Client-server operations invoked by the runnable.",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/operationAccess"
           },
@@ -261,6 +264,7 @@
         "operationInvokedEvents": {
           "type": "array",
           "description": "Client-server operations that trigger this runnable when the SWC acts as server.",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/operationEvent"
           },
@@ -276,6 +280,7 @@
         "dataReceiveEvents": {
           "type": "array",
           "description": "Sender-receiver data receive events that trigger this runnable.",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/dataReceiveEvent"
           },
@@ -291,6 +296,7 @@
         "modeSwitchEvents": {
           "type": "array",
           "description": "Mode-switch events that trigger this runnable when a required mode-switch port enters a selected mode.",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/modeSwitchEvent"
           },
@@ -306,6 +312,7 @@
         "raisesErrors": {
           "type": "array",
           "description": "Possible client-server errors this runnable can raise while serving incoming operations.",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/raisesError"
           },
@@ -319,6 +326,33 @@
           ]
         }
       },
+      "oneOf": [
+        {
+          "required": [
+            "timingEventMs"
+          ]
+        },
+        {
+          "required": [
+            "initEvent"
+          ]
+        },
+        {
+          "required": [
+            "operationInvokedEvents"
+          ]
+        },
+        {
+          "required": [
+            "dataReceiveEvents"
+          ]
+        },
+        {
+          "required": [
+            "modeSwitchEvents"
+          ]
+        }
+      ],
       "additionalProperties": false,
       "examples": [
         {
@@ -343,6 +377,9 @@
     "srComSpec": {
       "type": "object",
       "description": "Sender-receiver communication specification for a port.",
+      "required": [
+        "mode"
+      ],
       "properties": {
         "mode": {
           "type": "string",

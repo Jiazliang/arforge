@@ -40,7 +40,7 @@
         },
         "typeRef": {
           "$ref": "#/$defs/name",
-          "description": "Software component type instantiated by this component prototype.",
+          "description": "Atomic SWC type or reusable subcomposition type instantiated by this component prototype.",
           "examples": [
             "SpeedSensor"
           ]
@@ -107,7 +107,7 @@
         },
         "composition": {
           "type": "object",
-          "description": "Top-level composition containing component instances and assembly connectors.",
+          "description": "Top-level composition containing component instances and assembly connectors. Component type references may target atomic SWCs or reusable subcomposition types.",
           "required": [
             "name",
             "components",

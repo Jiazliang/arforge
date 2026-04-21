@@ -126,7 +126,7 @@
     },
     "textTableMethod": {
       "type": "object",
-      "description": "Text table conversion method mapping discrete numeric values to labels.",
+      "description": "Text table conversion method mapping discrete numeric values to labels. These are commonly used for enum-like values and may omit unitRef.",
       "required": [
         "name",
         "category",
@@ -151,6 +151,13 @@
           ],
           "examples": [
             "textTable"
+          ]
+        },
+        "unitRef": {
+          "$ref": "#/$defs/name",
+          "description": "Optional physical unit reference for labeled values when the text table still carries an associated unit. Omit it for unitless state/enum mappings.",
+          "examples": [
+            "NoUnit"
           ]
         },
         "entries": {
@@ -226,6 +233,17 @@
               {
                 "value": 0,
                 "label": "OK"
+              }
+            ]
+          },
+          {
+            "name": "CM_State_WithUnit",
+            "category": "textTable",
+            "unitRef": "NoUnit",
+            "entries": [
+              {
+                "value": 0,
+                "label": "OFF"
               }
             ]
           }

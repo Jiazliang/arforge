@@ -108,6 +108,8 @@ compuMethods:
         label: "SLEEP"
 ```
 
+`unitRef` is optional on `textTable` methods. Use it when the labeled values still carry a meaningful unit; otherwise omit it.
+
 ---
 
 ## Mode declaration groups
@@ -301,6 +303,8 @@ runnables:
   - name: "Runnable_Init"
     initEvent: true
 ```
+
+`initEvent` is an enable flag, so the supported authored value is `true`.
 
 **Data receive event** — triggered when data arrives on a required SR port:
 

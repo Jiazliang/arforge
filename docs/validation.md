@@ -6,7 +6,7 @@ ARForge validates every project in two stages before allowing export. Both stage
 
 Schema validation checks the structure of each YAML file against a JSON Schema. It catches missing required fields, wrong value types, and unsupported keys. Schema errors are reported immediately during loading, before semantic validation runs.
 
-Schemas exist for every input category: aggregator manifests, base types, implementation types, application types, units, compu methods, mode declaration groups, interfaces, SWCs, subcompositions, and system files.
+Schemas exist for every input category: aggregator manifests, base types, implementation types, application types, units, compu methods, mode declaration groups, interfaces, SWCs, subcompositions, system files, and validation profiles.
 
 ## Stage 2 - Semantic validation
 

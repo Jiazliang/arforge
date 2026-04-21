@@ -114,7 +114,8 @@
         },
         "code": {
           "type": "integer",
-          "description": "Numeric application error code.",
+          "description": "Non-negative numeric application error code.",
+          "minimum": 0,
           "examples": [
             1
           ]
@@ -130,7 +131,7 @@
     },
     "operation": {
       "type": "object",
-      "description": "Client-server operation signature.",
+      "description": "Client-server operation signature. Arguments may be omitted for getter-style operations that only return a value.",
       "required": [
         "name"
       ],
@@ -210,6 +211,10 @@
               "code": 1
             }
           ]
+        },
+        {
+          "name": "GetCurrentMode",
+          "returnType": "App_EcuMode"
         }
       ]
     }
