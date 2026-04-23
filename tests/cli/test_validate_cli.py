@@ -1,3 +1,9 @@
+"""CLI tests for `arforge validate`.
+
+These tests focus on user-visible validation behavior: exit codes, summary
+output, verbose modes, warning/error presentation, and profile support.
+"""
+
 from __future__ import annotations
 
 import subprocess

@@ -1,3 +1,9 @@
+"""Tests for project report rendering.
+
+This file verifies expected report sections and counts, and checks that
+writing the report is deterministic for the same project input.
+"""
+
 from __future__ import annotations
 
 import hashlib

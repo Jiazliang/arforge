@@ -1,3 +1,9 @@
+"""Tests for built-in semantic validation rules.
+
+These tests cover core rule findings, warning/error behavior, invalid fixture
+expectations, and deterministic reporting across the built-in ruleset.
+"""
+
 from __future__ import annotations
 
 from dataclasses import replace

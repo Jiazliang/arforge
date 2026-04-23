@@ -1,3 +1,9 @@
+"""Tests for parsed model content loaded into the internal representation.
+
+These checks confirm that descriptions, normalized values, and selected
+defaults from the main example project are present in the model IR.
+"""
+
 from __future__ import annotations
 
 from arforge.validate import load_and_validate_aggregator

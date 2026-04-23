@@ -1,3 +1,9 @@
+"""Tests for monolithic ARXML export behavior.
+
+These checks compare monolithic output with split output for equivalent
+fragments and verify deterministic single-file export results.
+"""
+
 from __future__ import annotations
 
 import hashlib

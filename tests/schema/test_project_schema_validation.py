@@ -1,3 +1,9 @@
+"""Tests for schema-level validation behavior.
+
+This file focuses on failures that should be rejected by JSON Schema or
+early loading rules before semantic validation is reached.
+"""
+
 from __future__ import annotations
 
 import json

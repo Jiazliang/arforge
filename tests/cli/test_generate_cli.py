@@ -1,3 +1,9 @@
+"""CLI tests for `arforge generate`.
+
+These tests cover the command-line entry points for code generation and
+diagram generation, making sure both commands execute and emit artifacts.
+"""
+
 from __future__ import annotations
 
 import shutil

@@ -1,3 +1,9 @@
+"""Tests for shipped example projects and invalid example fixtures.
+
+This file ensures the main reference example stays valid and that the
+`examples/invalid/` project fixtures continue to fail as intended.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

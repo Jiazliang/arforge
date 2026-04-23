@@ -1,3 +1,9 @@
+"""CLI tests for `arforge export`.
+
+This file checks that the export command runs successfully against the
+reference project and produces output without raising CLI-level errors.
+"""
+
 from __future__ import annotations
 
 import shutil

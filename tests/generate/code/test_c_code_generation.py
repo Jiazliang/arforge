@@ -1,3 +1,9 @@
+"""Tests for generated C skeleton code.
+
+These tests validate the emitted file set, key runnable and RTE placeholders,
+and deterministic generation for the example project.
+"""
+
 from __future__ import annotations
 
 import hashlib

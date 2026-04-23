@@ -1,3 +1,9 @@
+"""Tests for split ARXML export behavior.
+
+This file verifies split artifact naming, shared and per-component content,
+mode declaration emission, receiver semantics, and deterministic ordering.
+"""
+
 from __future__ import annotations
 
 from dataclasses import replace

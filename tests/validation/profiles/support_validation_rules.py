@@ -1,3 +1,9 @@
+"""Support rules used by validation profile tests.
+
+These small deterministic rules are imported by profile fixtures to verify
+extension loading, rule execution, and profile isolation behavior.
+"""
+
 from __future__ import annotations
 
 from arforge.semantic_validation import Finding, validation_rule

@@ -1,3 +1,9 @@
+"""Tests for validation profile loading and execution.
+
+This file checks profile schema handling, extension rule loading, profile
+isolation, sample profiles, and profile-driven validation behavior.
+"""
+
 from __future__ import annotations
 
 import subprocess

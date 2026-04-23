@@ -1,3 +1,9 @@
+"""Tests for `arforge init` scaffold generation.
+
+These checks make sure the scaffold creates the expected starter layout,
+produces a valid project, and handles empty/non-empty target directories.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

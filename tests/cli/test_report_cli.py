@@ -1,3 +1,9 @@
+"""CLI tests for `arforge report`.
+
+This file verifies that report generation succeeds for both clean example
+projects and warning-only projects that should still produce a report.
+"""
+
 from __future__ import annotations
 
 import subprocess

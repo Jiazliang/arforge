@@ -1,3 +1,9 @@
+"""Tests for diagram view models and PlantUML generation.
+
+This file covers both the internal diagram views and the rendered PlantUML
+artifacts so layout and emitted content stay stable over time.
+"""
+
 from __future__ import annotations
 
 from dataclasses import replace
