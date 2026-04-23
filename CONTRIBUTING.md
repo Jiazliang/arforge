@@ -34,6 +34,7 @@ Early alignment helps avoid wasted work and keeps the project direction consiste
 - Keep PRs focused and reasonably small.
 - Follow the existing repository structure and coding style.
 - Include tests when behavior changes or new validation rules are added.
+- Add new tests in the domain folder that matches the feature area, and use the guidance in [`tests/README.md`](/d:/dev/arforge/tests/README.md).
 - Update relevant docs and examples when user-facing behavior changes.
 - Preserve deterministic behavior and stable outputs where applicable.
 

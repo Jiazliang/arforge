@@ -6,10 +6,7 @@ import sys
 
 from arforge.exporter import write_outputs
 from arforge.validate import load_and_validate_aggregator
-
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
-TEMPLATE_DIR = REPO_ROOT / "templates"
+from tests._shared import REPO_ROOT, TEMPLATE_DIR
 
 
 def _run_init(project_dir: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
