@@ -321,6 +321,58 @@ def test_profiles_with_same_module_name_are_isolated(tmp_path: Path) -> None:
     assert [finding.message for finding in second_report.findings] == ["second-profile"]
 
 
+def test_profile_loads_rule_module_from_profile_directory(tmp_path: Path) -> None:
+    profile_path = _write_profile(
+        tmp_path,
+        """
+        profile:
+          name: "LocalCustomRules"
+          mode: "extensions-only"
+        extensions:
+          - module: "custom_rules"
+            rules: ["rule_require_runnables"]
+        """,
+    )
+
+    (tmp_path / "custom_rules.py").write_text(
+        textwrap.dedent(
+            """
+            from arforge.semantic_validation import Finding, validation_rule
+
+            @validation_rule(
+                code="PRJ-210",
+                name="SwcMustDeclareProvidesPort",
+                description="Flags SWCs with no provides ports.",
+                default_severity="warning",
+            )
+            def rule_require_runnables(context):
+                findings = []
+                for swc in sorted(context.project.swcs, key=lambda item: item.name):
+                    if any(port.direction == "provides" for port in swc.ports):
+                        continue
+                    findings.append(
+                        Finding(
+                            code="PRJ-210-NO-PROVIDES-PORT",
+                            severity="warning",
+                            message=f"SWC '{swc.name}' declares no provides ports.",
+                            location=f"swc:{swc.name}",
+                        )
+                    )
+                return findings
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    project = load_aggregator(SAMPLE_PROFILE_FIXTURE)
+    report = build_semantic_report(project, profile=load_validation_profile(profile_path))
+
+    assert report.ruleset == "profile:LocalCustomRules"
+    assert [finding.code for finding in report.findings] == ["PRJ-210-NO-PROVIDES-PORT"]
+    assert [finding.location for finding in report.findings] == ["swc:SpeedMonitor"]
+
+
 def test_sample_profiles_load_successfully() -> None:
     naming_profile = load_validation_profile(SAMPLE_NAMING_PROFILE)
     strict_profile = load_validation_profile(SAMPLE_STRICT_HYGIENE_PROFILE)

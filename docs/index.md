@@ -10,8 +10,9 @@ If you are new to ARForge, read the docs in this order:
 2. [Project Structure](./project-structure.md) - how a project is laid out on disk
 3. [Modeling Concepts](./modeling-concepts.md) - the YAML modeling language explained
 4. [Validation](./validation.md) - how validation works and what the finding codes mean
-5. [Validation Profiles](./validation-profiles.md) - how to extend validation without changing core logic
-6. [CLI](./cli.md) - all commands and options
+5. [Validation Profiles](./validation-profiles.md) - how profile-based rulesets are assembled
+6. [Custom Validation Rules](./custom-validation-rules.md) - how to write and load project-specific rules
+7. [CLI](./cli.md) - all commands and options
 
 ## Reference
 

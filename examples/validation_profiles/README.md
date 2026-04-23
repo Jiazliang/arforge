@@ -2,6 +2,11 @@
 
 This directory contains small, copyable validation profile examples for ARForge.
 
+For the full authoring guide, see:
+
+- `docs/validation-profiles.md` for profile YAML structure and loading
+- `docs/custom-validation-rules.md` for rule function authoring, available context, and finding creation
+
 Profiles included:
 
 - `naming.yaml`

@@ -164,6 +164,7 @@ Start with [docs/index.md](docs/index.md).
 | [Modeling Concepts](docs/modeling-concepts.md) | Full YAML modeling reference with examples |
 | [Validation](docs/validation.md) | Validation rule families and severities |
 | [Validation Profiles](docs/validation-profiles.md) | Project-specific validation extensions and profile format |
+| [Custom Validation Rules](docs/custom-validation-rules.md) | How to write rule functions, inspect validation context, and emit findings |
 | [CLI](docs/cli.md) | All commands and options |
 | [Architecture](docs/architecture.md) | Internal pipeline, for contributors |
 | [Roadmap](docs/roadmap.md) | Current capabilities and planned features |
