@@ -1,3 +1,9 @@
+"""Starter-project scaffold generation for `arforge init`.
+
+This module creates the recommended on-disk project layout, including example
+inputs and README content for first-time users bootstrapping a new model.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -40,13 +46,14 @@ inputs:
 
 def readme_md(system_name: str, *, no_example: bool = False) -> str:
     example_note = (
-        "This scaffold includes a small runnable sender-receiver example:\n\n"
+        "This scaffold is the recommended small reference project for a new ARForge model.\n\n"
+        "It stays compact, but it already demonstrates the core modeling flow:\n\n"
         "- `types/` defines reusable data types.\n"
-        "- `modes/power_state.yaml` defines a simple mode declaration group.\n"
-        "- `interfaces/If_VehicleSpeed.yaml` and `interfaces/If_PowerState.yaml` define the example interfaces used by ports.\n"
-        "- `swcs/` defines atomic SWC types, including a standalone `DiagManager` and the reusable building blocks used inside a subcomposition.\n"
-        "- `subcompositions/subcomposition_speed_cluster.yaml` defines a reusable subcomposition that exposes composition boundary ports, instantiates atomic SWCs, wires its internal connectors, and maps outer ports through delegation connectors.\n"
-        "- `system.yaml` instantiates that subcomposition type plus one standalone atomic SWC at the top level.\n"
+        "- `modes/operation_mode.yaml` defines the mode declaration group used by the starter flow.\n"
+        "- `interfaces/If_VehicleSpeed.yaml` and `interfaces/If_OperationMode.yaml` define the sender-receiver and mode-switch interfaces used by ports.\n"
+        "- `swcs/` defines the atomic SWC types: a top-level `SystemSupervisor` and the reusable inner `SpeedSensor` and `SpeedReporter` building blocks.\n"
+        "- `subcompositions/subcomposition_speed_path.yaml` defines a reusable subcomposition with boundary ports, internal assembly connectors, and delegation connectors.\n"
+        f"- `system.yaml` instantiates the reusable subcomposition together with one standalone atomic SWC in `{system_name}`.\n"
     )
     if no_example:
         example_note = (
@@ -87,7 +94,7 @@ def base_types_yaml() -> str:
     return _with_header(
         "ARForge: Base type definitions",
         "Defines low-level platform types used by implementation data types.",
-body="""baseTypes:
+        body="""baseTypes:
   - name: "uint8"
     description: "Unsigned 8-bit platform integer."
     bitLength: 8
@@ -108,7 +115,7 @@ def implementation_types_yaml() -> str:
     return _with_header(
         "ARForge: Implementation data types",
         "Defines type-level implementation data types backed by platform base types.",
-body="""implementationDataTypes:
+        body="""implementationDataTypes:
   - name: "Impl_VehicleSpeed_U16"
     description: "Raw implementation type for a vehicle speed sample."
     baseTypeRef: "uint16"
@@ -120,9 +127,9 @@ def application_types_yaml() -> str:
     return _with_header(
         "ARForge: Application data types",
         "Defines project-level application types used by interfaces.",
-body="""applicationDataTypes:
+        body="""applicationDataTypes:
   - name: "App_VehicleSpeed"
-    description: "Vehicle speed value shared between the demo SWC types."
+    description: "Vehicle speed value shared between the scaffolded SWC types."
     implementationTypeRef: "Impl_VehicleSpeed_U16"
     constraint:
       min: 0
@@ -137,7 +144,7 @@ def units_yaml() -> str:
     return _with_header(
         "ARForge: Units",
         "Physical units referenced by application data types and compu methods.",
-body="""units:
+        body="""units:
   - name: "km_per_h"
     description: "Vehicle speed unit used by the scaffolded example."
     displayName: "km/h"
@@ -149,9 +156,9 @@ def compu_methods_yaml() -> str:
     return _with_header(
         "ARForge: Compu methods",
         "Simple physical scaling definitions for application data types.",
-body="""compuMethods:
+        body="""compuMethods:
   - name: "CM_VehicleSpeed_Kph"
-    description: "Identity scaling for the demo vehicle speed value."
+    description: "Identity scaling for the starter vehicle speed value."
     category: "linear"
     unitRef: "km_per_h"
     factor: 1.0
@@ -166,18 +173,18 @@ def mode_declaration_groups_yaml() -> str:
     return _with_header(
         "ARForge: Mode declaration groups",
         "Defines AUTOSAR mode declaration groups used by mode-switch interfaces.",
-body="""modeDeclarationGroups:
-  - name: "Mdg_PowerState"
-    description: "Power state modes used by the scaffolded mode-switch interface."
+        body="""modeDeclarationGroups:
+  - name: "Mdg_OperationMode"
+    description: "Operation modes used by the scaffolded starter project."
     category: "explicitOrder"
     initialMode: "OFF"
     onTransitionValue: 255
     modes:
       - name: "OFF"
         value: 0
-      - name: "ON"
+      - name: "ACTIVE"
         value: 1
-      - name: "SLEEP"
+      - name: "SERVICE"
         value: 2
 """,
     )
@@ -187,7 +194,7 @@ def interface_vehicle_speed_yaml() -> str:
     return _with_header(
         "ARForge: Interface definition",
         "Defines a Sender-Receiver, Client-Server, or Mode-Switch interface used by SWC ports.",
-body="""interface:
+        body="""interface:
   name: "If_VehicleSpeed"
   description: "Sender-receiver interface for the current vehicle speed."
   type: "senderReceiver"
@@ -199,15 +206,15 @@ body="""interface:
     )
 
 
-def interface_power_state_yaml() -> str:
+def interface_operation_mode_yaml() -> str:
     return _with_header(
         "ARForge: Interface definition",
         "Defines a Sender-Receiver, Client-Server, or Mode-Switch interface used by SWC ports.",
-body="""interface:
-  name: "If_PowerState"
-  description: "Mode switch interface for ECU power state."
+        body="""interface:
+  name: "If_OperationMode"
+  description: "Mode switch interface for the starter project operation mode."
   type: "modeSwitch"
-  modeGroupRef: "Mdg_PowerState"
+  modeGroupRef: "Mdg_OperationMode"
 """,
     )
 
@@ -216,9 +223,9 @@ def swc_speed_sensor_yaml() -> str:
     return _with_header(
         "ARForge: Software Component Type",
         "Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.",
-body="""swc:
+        body="""swc:
   name: "SpeedSensor"
-  description: "SWC type that reacts to the external power-state input and publishes the current vehicle speed."
+  description: "Publishes the current vehicle speed and reacts to the delegated operation mode."
   runnables:
     - name: "Runnable_PublishVehicleSpeed"
       description: "Writes the latest vehicle speed sample to the provided port."
@@ -226,38 +233,38 @@ body="""swc:
       writes:
         - port: "Pp_VehicleSpeed"
           dataElement: "VehicleSpeed"
-    - name: "Runnable_OnPowerOn"
-      description: "React to the delegated ECU power mode entering ON."
+    - name: "Runnable_OnOperationActive"
+      description: "React to the delegated operation mode entering ACTIVE."
       modeSwitchEvents:
-        - port: "Rp_PowerStateIn"
-          mode: "ON"
+        - port: "Rp_OperationModeIn"
+          mode: "ACTIVE"
   ports:
     - name: "Pp_VehicleSpeed"
       description: "Provided sender-receiver port for publishing speed."
       direction: "provides"
       interfaceRef: "If_VehicleSpeed"
-    - name: "Rp_PowerStateIn"
+    - name: "Rp_OperationModeIn"
       description: "Required mode switch port delegated from the subcomposition boundary."
       direction: "requires"
-      interfaceRef: "If_PowerState"
-    - name: "Pp_PowerState"
-      description: "Provided mode switch port forwarded to the internal display."
+      interfaceRef: "If_OperationMode"
+    - name: "Pp_OperationMode"
+      description: "Provided mode switch port forwarded to the internal reporter."
       direction: "provides"
-      interfaceRef: "If_PowerState"
+      interfaceRef: "If_OperationMode"
 """,
     )
 
 
-def swc_speed_display_yaml() -> str:
+def swc_speed_reporter_yaml() -> str:
     return _with_header(
         "ARForge: Software Component Type",
         "Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.",
-body="""swc:
-  name: "SpeedDisplay"
-  description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."
+        body="""swc:
+  name: "SpeedReporter"
+  description: "Consumes the internal speed sample and republishes it on the subcomposition boundary."
   runnables:
-    - name: "Runnable_ReadVehicleSpeed"
-      description: "Reads the latest vehicle speed sample from the explicit required port and forwards it outside the subcomposition."
+    - name: "Runnable_ReportVehicleSpeed"
+      description: "Reads the latest vehicle speed sample from the internal sender-receiver port and exposes it on the boundary-facing output."
       timingEventMs: 10
       reads:
         - port: "Rp_VehicleSpeed"
@@ -265,49 +272,23 @@ body="""swc:
       writes:
         - port: "Pp_VehicleSpeedOut"
           dataElement: "VehicleSpeed"
-    - name: "Runnable_ReadVehicleSpeedImplicit"
-      description: "Reads the latest vehicle speed sample from the implicit required port."
-      timingEventMs: 10
-      reads:
-        - port: "Rp_VehicleSpeedImplicit"
-          dataElement: "VehicleSpeed"
-    - name: "Runnable_ReadVehicleSpeedQueued"
-      description: "Reads the latest vehicle speed sample from the queued required port."
-      timingEventMs: 10
-      reads:
-        - port: "Rp_VehicleSpeedQueued"
-          dataElement: "VehicleSpeed"
-    - name: "Runnable_OnPowerOn"
-      description: "React to the ECU entering the ON power mode."
+    - name: "Runnable_OnOperationActive"
+      description: "React to the system entering the ACTIVE operation mode."
       modeSwitchEvents:
-        - port: "Rp_PowerState"
-          mode: "ON"
+        - port: "Rp_OperationMode"
+          mode: "ACTIVE"
   ports:
     - name: "Rp_VehicleSpeed"
-      description: "Required sender-receiver port for receiving speed."
+      description: "Required sender-receiver port for receiving speed with an explicit nonqueued receiver ComSpec."
       direction: "requires"
       interfaceRef: "If_VehicleSpeed"
       comSpec:
         mode: "explicit"
         initValue: 0
-    - name: "Rp_VehicleSpeedImplicit"
-      description: "Required sender-receiver port for receiving speed with implicit semantics."
+    - name: "Rp_OperationMode"
+      description: "Required mode switch port for the forwarded operation mode."
       direction: "requires"
-      interfaceRef: "If_VehicleSpeed"
-      comSpec:
-        mode: "implicit"
-        initValue: 0
-    - name: "Rp_VehicleSpeedQueued"
-      description: "Required sender-receiver port for receiving speed with queued semantics."
-      direction: "requires"
-      interfaceRef: "If_VehicleSpeed"
-      comSpec:
-        mode: "queued"
-        queueLength: 4
-    - name: "Rp_PowerState"
-      description: "Required mode switch port for ECU power state."
-      direction: "requires"
-      interfaceRef: "If_PowerState"
+      interfaceRef: "If_OperationMode"
     - name: "Pp_VehicleSpeedOut"
       description: "Provided sender-receiver port delegated to the subcomposition boundary."
       direction: "provides"
@@ -316,28 +297,28 @@ body="""swc:
     )
 
 
-def swc_diag_manager_yaml() -> str:
+def swc_system_supervisor_yaml() -> str:
     return _with_header(
         "ARForge: Software Component Type",
         "Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.",
-body="""swc:
-  name: "DiagManager"
-  description: "Standalone atomic SWC type used to show that one top-level SWC can connect to a reusable subcomposition through boundary ports."
+        body="""swc:
+  name: "SystemSupervisor"
+  description: "Top-level SWC that drives the example operation mode and reads the speed value returned by the reusable subcomposition."
   runnables:
-    - name: "Runnable_PublishPowerState"
-      description: "Acts as the top-level power-state source for the reusable subcomposition."
+    - name: "Runnable_InitOperationModeSource"
+      description: "Acts as the top-level source for the starter project operation mode."
       initEvent: true
-    - name: "Runnable_ReadClusterSpeed"
+    - name: "Runnable_ReadVehicleSpeed"
       description: "Reads the speed value exposed by the reusable subcomposition."
-      timingEventMs: 10
+      timingEventMs: 20
       reads:
         - port: "Rp_VehicleSpeed"
           dataElement: "VehicleSpeed"
   ports:
-    - name: "Pp_PowerState"
+    - name: "Pp_OperationMode"
       description: "Provided mode switch port connected to the subcomposition input boundary."
       direction: "provides"
-      interfaceRef: "If_PowerState"
+      interfaceRef: "If_OperationMode"
     - name: "Rp_VehicleSpeed"
       description: "Required sender-receiver port connected to the subcomposition output boundary."
       direction: "requires"
@@ -349,46 +330,41 @@ body="""swc:
     )
 
 
-def subcomposition_speed_cluster_yaml() -> str:
+def subcomposition_speed_path_yaml() -> str:
     return _with_header(
         "ARForge: Subcomposition type",
         "Defines reusable inner component prototypes and their internal assembly connectors.",
-body="""subcomposition:
-  name: "SubComposition_SpeedCluster"
-  description: "Reusable subcomposition that accepts a boundary power-state input, keeps the sensor-to-display wiring internal, and exposes a boundary speed output."
+        body="""subcomposition:
+  name: "SubComposition_SpeedPath"
+  description: "Reusable subcomposition that accepts an operation mode on its boundary, keeps the sensor-to-reporter wiring internal, and exposes a speed output."
   ports:
-    - name: "Rp_PowerStateIn"
-      description: "Required outer composition port delegated to the internal sensor power-state input."
+    # These boundary ports define the external API of the reusable subcomposition.
+    - name: "Rp_OperationModeIn"
+      description: "Required outer composition port delegated to the internal sensor operation-mode input."
       direction: "requires"
-      interfaceRef: "If_PowerState"
+      interfaceRef: "If_OperationMode"
     - name: "Pp_VehicleSpeedOut"
-      description: "Provided outer composition port delegated from the internal display speed output."
+      description: "Provided outer composition port delegated from the internal reporter speed output."
       direction: "provides"
       interfaceRef: "If_VehicleSpeed"
   components:
     - name: "SpeedSensor_1"
       description: "Internal speed publisher instance."
       typeRef: "SpeedSensor"
-    - name: "SpeedDisplay_1"
-      description: "Internal speed consumer instance."
-      typeRef: "SpeedDisplay"
+    - name: "SpeedReporter_1"
+      description: "Internal speed reporter instance."
+      typeRef: "SpeedReporter"
   connectors:
     - from: "SpeedSensor_1.Pp_VehicleSpeed"
-      description: "Connects the published speed sample to the explicit receiver port."
-      to: "SpeedDisplay_1.Rp_VehicleSpeed"
-    - from: "SpeedSensor_1.Pp_VehicleSpeed"
-      description: "Connects the published speed sample to the implicit receiver port."
-      to: "SpeedDisplay_1.Rp_VehicleSpeedImplicit"
-    - from: "SpeedSensor_1.Pp_VehicleSpeed"
-      description: "Connects the published speed sample to the queued receiver port."
-      to: "SpeedDisplay_1.Rp_VehicleSpeedQueued"
-    - from: "SpeedSensor_1.Pp_PowerState"
-      description: "Connects the ECU power-state mode to the display instance."
-      to: "SpeedDisplay_1.Rp_PowerState"
+      description: "Connects the published speed sample to the internal reporter."
+      to: "SpeedReporter_1.Rp_VehicleSpeed"
+    - from: "SpeedSensor_1.Pp_OperationMode"
+      description: "Connects the forwarded operation mode to the internal reporter."
+      to: "SpeedReporter_1.Rp_OperationMode"
   delegationConnectors:
-    - inner: "SpeedSensor_1.Rp_PowerStateIn"
-      outer: "Rp_PowerStateIn"
-    - inner: "SpeedDisplay_1.Pp_VehicleSpeedOut"
+    - inner: "SpeedSensor_1.Rp_OperationModeIn"
+      outer: "Rp_OperationModeIn"
+    - inner: "SpeedReporter_1.Pp_VehicleSpeedOut"
       outer: "Pp_VehicleSpeedOut"
 """,
     )
@@ -398,28 +374,28 @@ def system_yaml(system_name: str) -> str:
     return _with_header(
         "ARForge: System composition",
         "Defines component prototypes (instances) and connectors between their ports.",
-body=f"""system:
+        body=f"""system:
   name: "{system_name}"
-  description: "Demo AUTOSAR system showing one standalone atomic SWC connected to one reusable subcomposition through composition boundary ports."
+  description: "Starter AUTOSAR system showing one top-level atomic SWC connected to one reusable subcomposition through composition boundary ports."
   composition:
     name: "Composition_{system_name}"
-    description: "Top-level composition for the scaffolded hierarchical example."
+    description: "Top-level composition for the scaffolded starter project."
     # These are component prototypes (instances in the system).
     # typeRef may point to either an atomic SWC type or a reusable subcomposition type.
     components:
-      - name: "SpeedCluster_0"
-        description: "Instance of the reusable speed-cluster subcomposition."
-        typeRef: "SubComposition_SpeedCluster"
-      - name: "DiagManager_0"
-        description: "Standalone top-level atomic SWC instance connected to the reusable speed-cluster subcomposition."
-        typeRef: "DiagManager"
+      - name: "SpeedPath_0"
+        description: "Instance of the reusable speed-path subcomposition."
+        typeRef: "SubComposition_SpeedPath"
+      - name: "SystemSupervisor_0"
+        description: "Standalone top-level atomic SWC instance connected to the reusable speed-path subcomposition."
+        typeRef: "SystemSupervisor"
     connectors:
-      - from: "DiagManager_0.Pp_PowerState"
-        description: "Feeds the top-level power-state output into the subcomposition boundary."
-        to: "SpeedCluster_0.Rp_PowerStateIn"
-      - from: "SpeedCluster_0.Pp_VehicleSpeedOut"
+      - from: "SystemSupervisor_0.Pp_OperationMode"
+        description: "Feeds the top-level operation mode output into the subcomposition boundary."
+        to: "SpeedPath_0.Rp_OperationModeIn"
+      - from: "SpeedPath_0.Pp_VehicleSpeedOut"
         description: "Returns the speed value exposed by the subcomposition back to the standalone SWC."
-        to: "DiagManager_0.Rp_VehicleSpeed"
+        to: "SystemSupervisor_0.Rp_VehicleSpeed"
 """,
     )
 
@@ -454,7 +430,7 @@ def scaffold_files(system_name: str, *, no_example: bool = False) -> Dict[Path, 
         Path("types/application_types.yaml"): application_types_yaml(),
         Path("units/units.yaml"): units_yaml(),
         Path("compu_methods/compu_methods.yaml"): compu_methods_yaml(),
-        Path("modes/power_state.yaml"): mode_declaration_groups_yaml(),
+        Path("modes/operation_mode.yaml"): mode_declaration_groups_yaml(),
     }
 
     if no_example:
@@ -462,11 +438,11 @@ def scaffold_files(system_name: str, *, no_example: bool = False) -> Dict[Path, 
         return files
 
     files[Path("interfaces/If_VehicleSpeed.yaml")] = interface_vehicle_speed_yaml()
-    files[Path("interfaces/If_PowerState.yaml")] = interface_power_state_yaml()
+    files[Path("interfaces/If_OperationMode.yaml")] = interface_operation_mode_yaml()
     files[Path("swcs/SpeedSensor.yaml")] = swc_speed_sensor_yaml()
-    files[Path("swcs/SpeedDisplay.yaml")] = swc_speed_display_yaml()
-    files[Path("swcs/DiagManager.yaml")] = swc_diag_manager_yaml()
-    files[Path("subcompositions/subcomposition_speed_cluster.yaml")] = subcomposition_speed_cluster_yaml()
+    files[Path("swcs/SpeedReporter.yaml")] = swc_speed_reporter_yaml()
+    files[Path("swcs/SystemSupervisor.yaml")] = swc_system_supervisor_yaml()
+    files[Path("subcompositions/subcomposition_speed_path.yaml")] = subcomposition_speed_path_yaml()
     files[Path("system.yaml")] = system_yaml(system_name)
     return files
 

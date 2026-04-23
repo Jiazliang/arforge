@@ -18,20 +18,20 @@ my-project/
 |-- compu_methods/
 |   `-- compu_methods.yaml
 |-- modes/
-|   `-- power_state.yaml
+|   `-- operation_mode.yaml
 |-- interfaces/
-|   |-- If_VehicleSpeed.yaml
-|   `-- If_PowerState.yaml
+|   |-- If_OperationMode.yaml
+|   `-- If_VehicleSpeed.yaml
 |-- subcompositions/
-|   `-- subcomposition_speed_cluster.yaml
+|   `-- subcomposition_speed_path.yaml
 |-- swcs/
 |   |-- SpeedSensor.yaml
-|   |-- SpeedDisplay.yaml
-|   `-- DiagManager.yaml
+|   |-- SpeedReporter.yaml
+|   `-- SystemSupervisor.yaml
 `-- system.yaml
 ```
 
-This is a convention, not a constraint. The manifest can point to files in any layout. Glob patterns are supported for interfaces, SWCs, subcompositions, units, compu methods, and mode declaration groups.
+This is a convention, not a constraint. The scaffold is intentionally small enough to read in one sitting, but it already shows the recommended default modeling story: one top-level atomic SWC, one reusable subcomposition, sender-receiver data flow, a mode-switch interface, and delegation across the subcomposition boundary. The manifest can point to files in any layout. Glob patterns are supported for interfaces, SWCs, subcompositions, units, compu methods, and mode declaration groups.
 
 ## The aggregator manifest
 
@@ -86,17 +86,17 @@ All paths are resolved relative to the manifest file. This means the manifest an
 
 ```yaml
 subcomposition:
-  name: "SubComposition_SpeedCluster"
+  name: "SubComposition_SpeedPath"
   ports:
-    - name: "Rp_VehicleSpeedIn"
+    - name: "Rp_OperationModeIn"
       direction: "requires"
-      interfaceRef: "If_VehicleSpeed"
+      interfaceRef: "If_OperationMode"
   components:
-    - name: "SpeedDisplay_1"
-      typeRef: "SpeedDisplay"
+    - name: "SpeedSensor_1"
+      typeRef: "SpeedSensor"
   delegationConnectors:
-    - inner: "SpeedDisplay_1.Rp_VehicleSpeed"
-      outer: "Rp_VehicleSpeedIn"
+    - inner: "SpeedSensor_1.Rp_OperationModeIn"
+      outer: "Rp_OperationModeIn"
 ```
 
 **`system.yaml`** - the top-level system composition. Declares component prototypes whose `typeRef` may target either an atomic SWC type or a subcomposition type. There is one system file per project.
@@ -110,10 +110,10 @@ Split export (`--split-by-swc`) produces shared/common ARXML, one file per compo
 ```text
 build/
 |-- MY_PROJECT_SharedTypes.arxml
-|-- DiagManager.arxml
 |-- SpeedSensor.arxml
-|-- SpeedDisplay.arxml
-|-- SubComposition_SpeedCluster.arxml
+|-- SpeedReporter.arxml
+|-- SystemSupervisor.arxml
+|-- SubComposition_SpeedPath.arxml
 `-- DemoSystem.arxml
 ```
 
@@ -127,12 +127,12 @@ Code generation writes per-SWC starter artifacts under the path passed to `arfor
 
 ```text
 build/code/
-|-- DiagManager.h
-|-- DiagManager.c
 |-- SpeedSensor.h
 |-- SpeedSensor.c
-|-- SpeedDisplay.h
-`-- SpeedDisplay.c
+|-- SpeedReporter.h
+|-- SpeedReporter.c
+|-- SystemSupervisor.h
+`-- SystemSupervisor.c
 ```
 
 ## VS Code setup
@@ -151,8 +151,8 @@ Once both extensions are installed, YAML schema autocomplete and inline validati
 The VS Code tasks resolve the project manifest, optional validation profile, and shared output root from `.vscode/settings.json`:
 
 ```jsonc
-"arforge.projectFile": "examples/autosar.project.yaml"
-"arforge.validationProfile": "examples/validation_profiles/profile.yaml"
+"arforge.projectFile": "examples/minimal/autosar.project.yaml"
+"arforge.validationProfile": "examples/features/validation_profiles/naming.yaml"
 "arforge.outputDir": "build"
 ```
 
@@ -191,7 +191,9 @@ arforge/                    <- CLI, loader, model, validation, export, codegen, 
 arforge/validation/cases/   <- domain-organized semantic validation cases
 schemas/                    <- JSON Schema files for all input categories, including validation profiles
 templates/                  <- Jinja2 templates grouped by output kind (`arxml/`, `reports/`, `code/`, `diagrams/`)
-examples/                   <- valid example project
+examples/                   <- user-facing example projects and fixtures
+examples/minimal/           <- starter project that validates and exports successfully
+examples/features/          <- focused feature-oriented examples such as validation profiles
 examples/invalid/           <- invalid model fixtures used by the test suite
 tests/                      <- pytest coverage
 docs/                       <- this documentation

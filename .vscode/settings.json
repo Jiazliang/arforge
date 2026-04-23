@@ -3,8 +3,8 @@
   "yaml.hover": true,
   "yaml.completion": true,
 
-  "arforge.projectFile": "examples/autosar.project.yaml",
-  "arforge.validationProfile": "examples/validation_profiles/profile.yaml",
+  "arforge.projectFile": "examples/minimal/autosar.project.yaml",
+  "arforge.validationProfile": "examples/features/validation_profiles/naming.yaml",
   "arforge.outputDir": "build",
 
   "yaml.schemas": {

@@ -1,0 +1,16 @@
+# ARForge: Minimal publisher SWC
+swc:
+  name: "SpeedSensor"
+  description: "Minimal publisher SWC that writes vehicle speed on a timing event."
+  runnables:
+    - name: "Runnable_PublishVehicleSpeed"
+      description: "Writes the latest vehicle speed sample."
+      timingEventMs: 10
+      writes:
+        - port: "Pp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Pp_VehicleSpeed"
+      description: "Provided sender-receiver port for publishing speed."
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"

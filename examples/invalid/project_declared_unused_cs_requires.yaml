@@ -14,7 +14,7 @@ inputs:
   compuMethods:
     - "support/compu_methods.yaml"
   interfaces:
-    - "../interfaces/If_Diagnostics.yaml"
+    - "../features/subcomposition/interfaces/If_Diagnostics.yaml"
   swcs:
     - "swcs/DiagServerOnly.yaml"
     - "swcs/DiagRequiresOnly.yaml"

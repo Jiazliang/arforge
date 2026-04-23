@@ -1,0 +1,12 @@
+system:
+  name: "ProfileDemoSystem"
+  composition:
+    name: "ProfileDemoComposition"
+    components:
+      - name: "providerA"
+        typeRef: "speed_provider"
+      - name: "monitorMain"
+        typeRef: "SpeedMonitor"
+    connectors:
+      - from: "providerA.VehicleSpeedOut"
+        to: "monitorMain.VehicleSpeedIn"

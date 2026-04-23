@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for texttable duplicate values.
 autosar:
@@ -6,15 +6,15 @@ autosar:
   rootPackage: "DEMO"
 
 inputs:
-  baseTypes: "../types/base_types.yaml"
-  implementationDataTypes: "../types/implementation_types.yaml"
+  baseTypes: "../features/subcomposition/types/base_types.yaml"
+  implementationDataTypes: "../features/subcomposition/types/implementation_types.yaml"
   applicationDataTypes: "types/application_types_texttable.yaml"
   compuMethods:
     - "compu_methods/text_table_duplicate_values.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
-    - "../swcs/*.yaml"
-  system: "../system.yaml"
+    - "../features/subcomposition/swcs/*.yaml"
+  system: "../features/subcomposition/system.yaml"
 
 

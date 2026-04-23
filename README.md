@@ -101,22 +101,25 @@ swc:
 python -m arforge.cli init my-project
 
 # Validate - stable finding codes on any semantic issue
-python -m arforge.cli validate examples/autosar.project.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml
 
-# Validate with a project-specific profile
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/profile.yaml
+# Validate with a sample naming profile
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/naming.yaml
+
+# Validate with a stricter project-governance profile
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/strict_hygiene.yaml
 
 # Export - monolithic or split by component type
-python -m arforge.cli export examples/autosar.project.yaml --out build/out --split-by-swc
+python -m arforge.cli export examples/minimal/autosar.project.yaml --out build/out --split-by-swc
 
 # Generate a Markdown architecture report
-python -m arforge.cli report examples/autosar.project.yaml --out build/docs/Report.md
+python -m arforge.cli report examples/minimal/autosar.project.yaml --out build/docs/Report.md
 
 # Generate starter C skeletons for SWCs
-python -m arforge.cli generate code examples/autosar.project.yaml --lang c --out build/code
+python -m arforge.cli generate code examples/minimal/autosar.project.yaml --lang c --out build/code
 
 # Generate architecture diagrams
-python -m arforge.cli generate diagram examples/autosar.project.yaml --out build/diagrams
+python -m arforge.cli generate diagram examples/minimal/autosar.project.yaml --out build/diagrams
 ```
 
 `generate code` produces deterministic starter skeletons for each SWC, for example `<SwcName>.h` and `<SwcName>.c`. The output is intentionally scaffold-level code with `Rte_Read_*`, `Rte_Write_*`, and `Rte_Call_*` placeholders rather than full AUTOSAR RTE integration.
@@ -161,6 +164,7 @@ Start with [docs/index.md](docs/index.md).
 | [Modeling Concepts](docs/modeling-concepts.md) | Full YAML modeling reference with examples |
 | [Validation](docs/validation.md) | Validation rule families and severities |
 | [Validation Profiles](docs/validation-profiles.md) | Project-specific validation extensions and profile format |
+| [Custom Validation Rules](docs/custom-validation-rules.md) | How to write rule functions, inspect validation context, and emit findings |
 | [CLI](docs/cli.md) | All commands and options |
 | [Architecture](docs/architecture.md) | Internal pipeline, for contributors |
 | [Roadmap](docs/roadmap.md) | Current capabilities and planned features |

@@ -1,0 +1,18 @@
+profile:
+  name: "SampleNamingConventions"
+  mode: "extensions-only"
+
+rules:
+  # This keeps the sample practical: many teams standardize SWC, port, runnable,
+  # and interface names first, and leave instance naming for later.
+  disable:
+    - "PRJ-105"
+
+extensions:
+  - module: "rules.naming_rules"
+    rules:
+      - "rule_check_swc_names"
+      - "rule_check_port_prefixes"
+      - "rule_check_runnable_names"
+      - "rule_check_interface_names"
+      - "rule_check_instance_names"

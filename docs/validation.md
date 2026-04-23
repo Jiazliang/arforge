@@ -14,7 +14,7 @@ Semantic validation checks the meaning of the model - cross-file references, typ
 
 Each semantic rule is implemented as a named `ValidationCase` with a stable `CORE-XXX` identifier. Rules are organized by domain under `arforge/validation/cases/`. They run in deterministic order and findings are sorted deterministically by severity, code, and message - so CI output is stable across runs.
 
-Project-specific validation can be added through validation profiles without modifying core rule implementations. See [Validation Profiles](./validation-profiles.md).
+Project-specific validation can be added through validation profiles without modifying core rule implementations. See [Validation Profiles](./validation-profiles.md) for ruleset assembly and [Custom Validation Rules](./custom-validation-rules.md) for the actual rule authoring contract.
 
 ### Finding structure
 

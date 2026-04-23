@@ -1,0 +1,46 @@
+# ARForge: Software Component Type
+# Defines ports, runnables, and internal behavior for one AUTOSAR SWC type.
+swc:
+  name: "SpeedDisplay"
+  description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."
+  runnables:
+    - name: "Runnable_ReadVehicleSpeed"
+      description: "Reads the latest vehicle speed sample from the explicit required port."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+    - name: "Runnable_ReadVehicleSpeedImplicit"
+      description: "Reads the latest vehicle speed sample from the implicit required port."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeedImplicit"
+          dataElement: "VehicleSpeed"
+    - name: "Runnable_ReadVehicleSpeedQueued"
+      description: "Reads the latest vehicle speed sample from the queued required port."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeedQueued"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Rp_VehicleSpeed"
+      description: "Required sender-receiver port for receiving speed."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "explicit"
+        initValue: 0
+    - name: "Rp_VehicleSpeedImplicit"
+      description: "Required sender-receiver port for receiving speed with implicit semantics."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "implicit"
+        initValue: 0
+    - name: "Rp_VehicleSpeedQueued"
+      description: "Required sender-receiver port for receiving speed with queued semantics."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "queued"
+        queueLength: 4

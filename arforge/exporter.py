@@ -1,3 +1,9 @@
+"""ARXML export pipeline for monolithic and split outputs.
+
+This module transforms validated project models into deterministic AUTOSAR XML
+artifacts, including shared type files, per-component files, and system output.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace

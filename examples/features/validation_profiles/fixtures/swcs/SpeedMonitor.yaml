@@ -1,0 +1,13 @@
+swc:
+  name: "SpeedMonitor"
+  description: "Intentionally mixed-convention SWC for profile demos."
+  runnables:
+    - name: "Runnable_Report"
+      timingEventMs: 10
+  ports:
+    - name: "VehicleSpeedIn"
+      direction: "requires"
+      interfaceRef: "VehicleSpeed"
+    - name: "DiagIn"
+      direction: "requires"
+      interfaceRef: "VehicleSpeed"

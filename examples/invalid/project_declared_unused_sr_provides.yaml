@@ -14,10 +14,10 @@ inputs:
   compuMethods:
     - "support/compu_methods.yaml"
   modeDeclarationGroups:
-    - "../modes/*.yaml"
+    - "../features/subcomposition/modes/*.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
     - "swcs/SpeedSensor_NoSrWrite.yaml"
-    - "../swcs/SpeedConsumer.yaml"
+    - "../features/subcomposition/swcs/SpeedConsumer.yaml"
   system: "support/system_consumer_pair.yaml"

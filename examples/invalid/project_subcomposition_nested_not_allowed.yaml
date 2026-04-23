@@ -6,22 +6,22 @@ autosar:
   rootPackage: "DEMO"
 
 inputs:
-  baseTypes: "../types/base_types.yaml"
-  implementationDataTypes: "../types/implementation_types.yaml"
-  applicationDataTypes: "../types/application_types.yaml"
+  baseTypes: "../features/subcomposition/types/base_types.yaml"
+  implementationDataTypes: "../features/subcomposition/types/implementation_types.yaml"
+  applicationDataTypes: "../features/subcomposition/types/application_types.yaml"
   units:
-    - "../units/*.yaml"
+    - "../features/subcomposition/units/*.yaml"
   compuMethods:
-    - "../compu_methods/*.yaml"
+    - "../features/subcomposition/compu_methods/*.yaml"
   modeDeclarationGroups:
-    - "../modes/*.yaml"
+    - "../features/subcomposition/modes/*.yaml"
   interfaces:
-    - "../interfaces/If_VehicleSpeed.yaml"
-    - "../interfaces/If_PowerState.yaml"
+    - "../features/subcomposition/interfaces/If_VehicleSpeed.yaml"
+    - "../features/subcomposition/interfaces/If_PowerState.yaml"
   swcs:
-    - "../swcs/SpeedSensor.yaml"
-    - "../swcs/SpeedDisplay.yaml"
-    - "../swcs/DiagManager.yaml"
+    - "../features/subcomposition/swcs/SpeedSensor.yaml"
+    - "../features/subcomposition/swcs/SpeedDisplay.yaml"
+    - "../features/subcomposition/swcs/DiagManager.yaml"
   subcompositions:
     - "subcompositions/subcomposition_nested_base.yaml"
     - "subcompositions/subcomposition_nested_not_allowed.yaml"

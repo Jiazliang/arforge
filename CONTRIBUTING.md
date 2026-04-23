@@ -15,7 +15,7 @@ That keeps the project coherent while still making room for useful external cont
 - Submit focused pull requests for bug fixes, docs updates, tests, or incremental features.
 - Improve examples and invalid fixtures when validation behavior changes.
 
-When working with invalid validation fixtures, follow the guidance in [`examples/invalid/README.md`](/d:/VMs/git/arforge/examples/invalid/README.md).
+When working with invalid validation fixtures, follow the guidance in [`examples/invalid/README.md`](examples/invalid/README.md).
 
 ## Before Starting Larger Changes
 
@@ -34,6 +34,7 @@ Early alignment helps avoid wasted work and keeps the project direction consiste
 - Keep PRs focused and reasonably small.
 - Follow the existing repository structure and coding style.
 - Include tests when behavior changes or new validation rules are added.
+- Add new tests in the domain folder that matches the feature area, and use the guidance in [`tests/README.md`](tests/README.md).
 - Update relevant docs and examples when user-facing behavior changes.
 - Preserve deterministic behavior and stable outputs where applicable.
 

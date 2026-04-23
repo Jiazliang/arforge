@@ -1,3 +1,9 @@
+"""Project loading, schema validation, and semantic validation orchestration.
+
+This module reads YAML input manifests, expands input patterns, applies schema
+checks, builds the project model, and coordinates semantic validation reports.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

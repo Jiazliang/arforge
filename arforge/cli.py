@@ -1,3 +1,10 @@
+"""Command-line interface for validation, export, generation, and reporting.
+
+This module wires ARForge functionality into the Typer-based CLI so users can
+run validation, export ARXML, generate artifacts, scaffold starter projects,
+and render reports from modeled inputs.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,0 +1,32 @@
+﻿# ARForge: Interface definition
+# Defines a Sender-Receiver or Client-Server AUTOSAR interface.
+interface:
+  name: "If_Diagnostics"
+  type: "clientServer"
+  operations:
+    - name: "ReadDTC"
+      arguments:
+        - name: "DtcId"
+          direction: "in"
+          typeRef: "UInt16"
+        - name: "DtcState"
+          direction: "out"
+          typeRef: "UInt8"
+        - name: "OccurrenceCounter"
+          direction: "inout"
+          typeRef: "UInt16"
+      returnType: "UInt8"
+      possibleErrors:
+        - name: "DTC_NOT_FOUND"
+          code: 1
+        - name: "MEMORY_ERROR"
+          code: 2
+    - name: "ClearDTC"
+      returnType: "void"
+    - name: "LogEvent"
+      arguments:
+        - name: "EventId"
+          direction: "in"
+          typeRef: "UInt16"
+      returnType: "void"
+

@@ -1,0 +1,20 @@
+# ARForge: Client-server system composition
+system:
+  name: "ClientServerSystem"
+  description: "Atomic SWCs wired to demonstrate client-server calls."
+  composition:
+    name: "Composition_ClientServerSystem"
+    components:
+      - name: "SpeedPublisher_1"
+        typeRef: "SpeedPublisher"
+      - name: "DiagClient_1"
+        typeRef: "DiagClient"
+      - name: "DiagServer_1"
+        typeRef: "DiagServer"
+    connectors:
+      - from: "SpeedPublisher_1.Pp_VehicleSpeed"
+        to: "DiagClient_1.Rp_VehicleSpeed"
+      - from: "DiagServer_1.Pp_Diag"
+        to: "DiagClient_1.Rp_Diag"
+      - from: "DiagServer_1.Pp_Diag"
+        to: "DiagClient_1.Rp_DiagAsync"

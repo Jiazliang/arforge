@@ -1,3 +1,10 @@
+"""Core data model for ARForge's parsed AUTOSAR concepts.
+
+This module defines the immutable model objects used throughout loading,
+validation, export, reporting, and generation, together with normalization
+logic for building a project model from input dictionaries.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

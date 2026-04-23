@@ -1,0 +1,21 @@
+# ARForge: Modes feature example
+autosar:
+  version: "4.2"
+  rootPackage: "FEATURE_MODES"
+
+inputs:
+  baseTypes: "types/base_types.yaml"
+  implementationDataTypes: "types/implementation_types.yaml"
+  applicationDataTypes: "types/application_types.yaml"
+  units:
+    - "units/units.yaml"
+  compuMethods:
+    - "compu_methods/compu_methods.yaml"
+  modeDeclarationGroups:
+    - "modes/*.yaml"
+  interfaces:
+    - "interfaces/If_PowerState.yaml"
+  swcs:
+    - "swcs/PowerStateProvider.yaml"
+    - "swcs/PowerStateUser.yaml"
+  system: "system.yaml"

@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for sr write unconnected.
 autosar:
@@ -14,7 +14,7 @@ inputs:
   compuMethods:
     - "support/compu_methods.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
     - "support/SpeedSensor.yaml"
     - "swcs/DiagClientOnly.yaml"

@@ -1,0 +1,17 @@
+# ARForge: Software Component Type
+swc:
+  name: "PowerStateUser"
+  description: "Reacts to the ECU power state through mode switch events."
+  runnables:
+    - name: "Runnable_OnPowerOn"
+      modeSwitchEvents:
+        - port: "Rp_PowerState"
+          mode: "ON"
+    - name: "Runnable_OnSleep"
+      modeSwitchEvents:
+        - port: "Rp_PowerState"
+          mode: "SLEEP"
+  ports:
+    - name: "Rp_PowerState"
+      direction: "requires"
+      interfaceRef: "If_PowerState"

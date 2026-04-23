@@ -1,0 +1,11 @@
+# ARForge: Software Component Type
+swc:
+  name: "PowerStateProvider"
+  description: "Publishes the ECU power state."
+  runnables:
+    - name: "Runnable_PublishPowerState"
+      initEvent: true
+  ports:
+    - name: "Pp_PowerState"
+      direction: "provides"
+      interfaceRef: "If_PowerState"
