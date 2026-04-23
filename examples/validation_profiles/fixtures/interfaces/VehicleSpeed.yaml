@@ -1,0 +1,7 @@
+interface:
+  name: "VehicleSpeed"
+  description: "Intentionally non-conforming interface name for profile demos."
+  type: "senderReceiver"
+  dataElements:
+    - name: "VehicleSpeed"
+      typeRef: "App_VehicleSpeed"

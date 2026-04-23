@@ -1,0 +1,16 @@
+swc:
+  name: "speed_provider"
+  description: "Intentionally non-conforming SWC used by validation profile examples."
+  runnables:
+    - name: "publish_speed"
+      timingEventMs: 10
+      writes:
+        - port: "VehicleSpeedOut"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "VehicleSpeedOut"
+      direction: "provides"
+      interfaceRef: "VehicleSpeed"
+    - name: "StatusOut"
+      direction: "provides"
+      interfaceRef: "VehicleSpeed"

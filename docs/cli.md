@@ -69,8 +69,11 @@ python -m arforge.cli validate examples/autosar.project.yaml
 # With verbose output
 python -m arforge.cli validate examples/autosar.project.yaml -vv
 
-# With a validation profile
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/profile.yaml
+# With the sample naming profile
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/naming.yaml
+
+# With the sample strict hygiene profile
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/strict_hygiene.yaml
 
 # In CI - fail the pipeline on any error finding
 python -m arforge.cli validate examples/autosar.project.yaml || exit 1

@@ -14,7 +14,7 @@ Core validation remains intact. Profiles only change which rules are loaded and 
 ## CLI usage
 
 ```bash
-python -m arforge.cli validate autosar.project.yaml --profile validation_profiles/profile.yaml
+python -m arforge.cli validate autosar.project.yaml --profile validation_profiles/naming.yaml
 ```
 
 Behavior:
@@ -30,17 +30,14 @@ profile:
   mode: "core+extensions"
 
 rules:
-  enable:
-    - "MY-001"
-    - "MY-002"
   disable:
-    - "CORE-014"
+    - "CORE-047"
 
 extensions:
-  - module: "project_validation_rules"
+  - module: "rules.naming_rules"
     rules:
-      - "rule_check_swc_naming"
-      - "rule_forbid_sync_calls"
+      - "rule_check_swc_names"
+      - "rule_check_port_prefixes"
 ```
 
 Fields:
@@ -58,7 +55,7 @@ Mode behavior:
 
 Notes:
 
-- `enable` and `disable` act on rule family codes such as `CORE-041` or `MY-001`
+- `enable` and `disable` act on rule family codes such as `CORE-041` or `PRJ-101`
 - finding detail codes may still use suffixes such as `CORE-041-SR-READ-UNCONNECTED`
 - invalid config is not ignored; ARForge fails with a clear error
 
@@ -66,7 +63,7 @@ Notes:
 
 Each `extensions[].module` value is imported as a normal Python module path.
 
-ARForge temporarily adds the directory containing `profile.yaml` to `sys.path` before importing, so a module placed next to the profile can be loaded with a simple module name such as `project_validation_rules`.
+ARForge temporarily adds the directory containing `profile.yaml` to `sys.path` before importing, so a module placed next to the profile can be loaded with a simple module name such as `project_validation_rules` or a small package path such as `rules.naming_rules`.
 
 Import failures and missing rule functions are fatal:
 
@@ -83,21 +80,21 @@ from arforge.semantic_validation import Finding, validation_rule
 
 
 @validation_rule(
-    code="MY-001",
+    code="PRJ-101",
     name="SwcPascalCaseNames",
-    description="Checks that SWC type names start with an uppercase letter.",
+    description="Checks that SWC type names use PascalCase.",
     tags=("project", "naming", "swc"),
     default_severity="warning",
 )
-def rule_check_swc_naming(context):
+def rule_check_swc_names(context):
     findings = []
     for swc in sorted(context.project.swcs, key=lambda item: item.name):
-        if not swc.name or not swc.name[0].isupper():
+        if "_" in swc.name or not swc.name or not swc.name[0].isupper():
             findings.append(
                 Finding(
-                    code="MY-001-SWC-NAME",
+                    code="PRJ-101-SWC-NAME",
                     severity="warning",
-                    message=f"SWC '{swc.name}' must start with an uppercase letter.",
+                    message=f"SWC '{swc.name}' should use PascalCase.",
                     location=f"swc:{swc.name}",
                 )
             )
@@ -113,7 +110,7 @@ Rule contract:
 
 Decorator metadata:
 
-- `code`: stable rule family code such as `MY-001`
+- `code`: stable rule family code such as `PRJ-101`
 - `name`: short human-readable rule name
 - `description`: one-sentence rule description
 - `tags`: optional category/domain tags
@@ -162,17 +159,17 @@ Return normal `Finding` objects from `arforge.semantic_validation`.
 
 ```python
 Finding(
-    code="MY-002-INSTANCE-SUFFIX",
+    code="PRJ-202-CONNECTED-PORT-UNUSED",
     severity="warning",
-    message="System instance 'DiagManager' should end with a numeric suffix.",
-    location="system.component:DiagManager",
+    message="Connected port 'monitorMain.VehicleSpeedIn' is wired but no runnable reads or dataReceiveEvents use it.",
+    location="system.component:monitorMain.port:VehicleSpeedIn",
 )
 ```
 
 Recommended pattern:
 
-- use the rule family code for enable/disable, for example `MY-002`
-- use suffixed finding codes for specific conditions, for example `MY-002-INSTANCE-SUFFIX`
+- use the rule family code for enable/disable, for example `PRJ-202`
+- use suffixed finding codes for specific conditions, for example `PRJ-202-CONNECTED-PORT-UNUSED`
 
 ## Registration
 
@@ -183,16 +180,48 @@ Registration happens only through the profile:
 1. write a Python module with one or more decorated validation functions
 2. list the module path in `extensions`
 3. list the function names in `extensions[].rules`
-4. run `arforge validate ... --profile validation_profiles/profile.yaml`
+4. run `arforge validate ... --profile validation_profiles/naming.yaml`
 
 ## Working examples
 
-ARForge includes a complete example profile and extension module:
+ARForge includes a small sample set in [examples/validation_profiles/](../examples/validation_profiles/):
 
-- profile: [examples/validation_profiles/profile.yaml](../examples/validation_profiles/profile.yaml)
-- rules: [examples/validation_profiles/project_validation_rules.py](../examples/validation_profiles/project_validation_rules.py)
+- [naming.yaml](../examples/validation_profiles/naming.yaml)
+  Uses `extensions-only` mode to run just naming-policy rules.
+  Demonstrates extension loading plus disabling one extension rule family (`PRJ-105`) to relax instance naming.
+- [strict_hygiene.yaml](../examples/validation_profiles/strict_hygiene.yaml)
+  Uses `core+extensions` mode.
+  Demonstrates loading multiple rule modules, disabling selected core hygiene rules, and adding project-specific stricter checks.
+- [rules/naming_rules.py](../examples/validation_profiles/rules/naming_rules.py)
+  Shows the smallest useful rule authoring style for naming conventions.
+- [rules/hygiene_rules.py](../examples/validation_profiles/rules/hygiene_rules.py)
+  Shows custom project-policy checks for unconnected ports, unused ports, and composition hygiene.
+- [fixtures/profile_demo.project.yaml](../examples/validation_profiles/fixtures/profile_demo.project.yaml)
+  Intentionally non-conforming fixture that makes the sample profiles produce visible findings.
 
-Example rules included there:
+Quick-start commands:
 
-- naming rule: SWC names should start with an uppercase letter
-- structural rule: top-level instance names should end with `_<number>`
+```bash
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/naming.yaml
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/strict_hygiene.yaml
+python -m arforge.cli validate examples/validation_profiles/fixtures/profile_demo.project.yaml --profile examples/validation_profiles/naming.yaml
+```
+
+What the sample rules inspect:
+
+- naming rules inspect `context.project.swcs`, `context.project.interfaces`, and top-level system instances
+- hygiene rules inspect instantiated connectivity through `context.find_instance_port_connectivity(...)`
+- unused-port rules reuse `context.iter_declared_port_usage(...)` and related context indexes
+
+How findings are returned:
+
+- each rule returns a `list[Finding]`
+- each `Finding` carries a stable code, severity, message, and optional location
+- the normal validation runner sorts findings deterministically together with core findings
+
+How to adapt the samples:
+
+- copy one of the YAML profiles into your own repository
+- copy the matching `rules/*.py` module, or trim it down to the one or two rules you want
+- change the naming regexes, message text, or enabled rule list to match your project policy
+- keep the core validation modules untouched; the profile system is the intended extension point

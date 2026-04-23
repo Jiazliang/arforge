@@ -103,8 +103,11 @@ python -m arforge.cli init my-project
 # Validate - stable finding codes on any semantic issue
 python -m arforge.cli validate examples/autosar.project.yaml
 
-# Validate with a project-specific profile
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/profile.yaml
+# Validate with a sample naming profile
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/naming.yaml
+
+# Validate with a stricter project-governance profile
+python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/strict_hygiene.yaml
 
 # Export - monolithic or split by component type
 python -m arforge.cli export examples/autosar.project.yaml --out build/out --split-by-swc

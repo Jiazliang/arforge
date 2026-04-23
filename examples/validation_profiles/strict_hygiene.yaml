@@ -1,0 +1,29 @@
+profile:
+  name: "SampleStrictHygiene"
+  mode: "core+extensions"
+
+rules:
+  # Replace a few broad warning-style hygiene checks with project-specific rules
+  # that report stricter findings and more opinionated naming/composition policy.
+  disable:
+    - "CORE-041"
+    - "CORE-042"
+    - "CORE-043"
+    - "CORE-044"
+    - "CORE-046"
+    - "CORE-047"
+    - "CORE-048"
+
+extensions:
+  - module: "rules.naming_rules"
+    rules:
+      - "rule_check_swc_names"
+      - "rule_check_port_prefixes"
+      - "rule_check_runnable_names"
+      - "rule_check_interface_names"
+      - "rule_check_instance_names"
+  - module: "rules.hygiene_rules"
+    rules:
+      - "rule_error_on_unconnected_ports"
+      - "rule_error_on_unused_ports"
+      - "rule_require_composition_hygiene"

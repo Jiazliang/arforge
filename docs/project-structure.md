@@ -152,7 +152,7 @@ The VS Code tasks resolve the project manifest, optional validation profile, and
 
 ```jsonc
 "arforge.projectFile": "examples/autosar.project.yaml"
-"arforge.validationProfile": "examples/validation_profiles/profile.yaml"
+"arforge.validationProfile": "examples/validation_profiles/naming.yaml"
 "arforge.outputDir": "build"
 ```
 

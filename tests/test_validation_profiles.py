@@ -14,6 +14,9 @@ from arforge.validation_profile import ValidationProfileError, load_validation_p
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VALID_PROJECT = REPO_ROOT / "examples" / "autosar.project.yaml"
 WARNING_PROJECT = REPO_ROOT / "examples" / "invalid" / "project_sr_read_unconnected.yaml"
+SAMPLE_NAMING_PROFILE = REPO_ROOT / "examples" / "validation_profiles" / "naming.yaml"
+SAMPLE_STRICT_HYGIENE_PROFILE = REPO_ROOT / "examples" / "validation_profiles" / "strict_hygiene.yaml"
+SAMPLE_PROFILE_FIXTURE = REPO_ROOT / "examples" / "validation_profiles" / "fixtures" / "profile_demo.project.yaml"
 
 
 def _write_profile(tmp_path: Path, body: str) -> Path:
@@ -318,6 +321,79 @@ def test_profiles_with_same_module_name_are_isolated(tmp_path: Path) -> None:
     assert [finding.message for finding in second_report.findings] == ["second-profile"]
 
 
+def test_sample_profiles_load_successfully() -> None:
+    naming_profile = load_validation_profile(SAMPLE_NAMING_PROFILE)
+    strict_profile = load_validation_profile(SAMPLE_STRICT_HYGIENE_PROFILE)
+
+    assert naming_profile.mode == "extensions-only"
+    assert strict_profile.mode == "core+extensions"
+    assert naming_profile.extensions
+    assert strict_profile.extensions
+
+
+def test_sample_profile_modules_load_successfully() -> None:
+    naming_profile = load_validation_profile(SAMPLE_NAMING_PROFILE)
+    strict_profile = load_validation_profile(SAMPLE_STRICT_HYGIENE_PROFILE)
+
+    naming_report = build_semantic_report(load_aggregator(VALID_PROJECT), profile=naming_profile)
+    strict_report = build_semantic_report(load_aggregator(VALID_PROJECT), profile=strict_profile)
+
+    assert naming_report.ruleset == "profile:SampleNamingConventions"
+    assert strict_report.ruleset == "profile:SampleStrictHygiene"
+    assert all(case.case_id.startswith("PRJ-") for case in naming_report.case_results)
+    assert any(case.case_id == "PRJ-201" for case in strict_report.case_results)
+
+
+def test_sample_naming_profile_flags_non_conforming_fixture() -> None:
+    project = load_aggregator(SAMPLE_PROFILE_FIXTURE)
+    report = build_semantic_report(project, profile=load_validation_profile(SAMPLE_NAMING_PROFILE))
+
+    finding_codes = {finding.code for finding in report.findings}
+
+    assert "PRJ-101-SWC-NAME" in finding_codes
+    assert "PRJ-102-PORT-PREFIX" in finding_codes
+    assert "PRJ-103-RUNNABLE-NAME" in finding_codes
+    assert all(code.startswith("PRJ-") for code in finding_codes)
+    assert "PRJ-105-INSTANCE-NAME" not in finding_codes
+
+
+def test_sample_strict_hygiene_profile_changes_behavior_from_core() -> None:
+    project = load_aggregator(SAMPLE_PROFILE_FIXTURE)
+
+    baseline_report = build_semantic_report(project)
+    strict_report = build_semantic_report(project, profile=load_validation_profile(SAMPLE_STRICT_HYGIENE_PROFILE))
+
+    baseline_codes = {finding.code for finding in baseline_report.findings}
+    strict_codes = {finding.code for finding in strict_report.findings}
+
+    assert "CORE-041-SR-PROVIDES-NO-OUTGOING" in baseline_codes
+    assert "CORE-042-SR-CONNECTED-REQUIRES-UNUSED" in baseline_codes
+    assert "CORE-047-SR-PROVIDES-DECLARED-UNUSED" in baseline_codes
+
+    assert "CORE-041-SR-PROVIDES-NO-OUTGOING" not in strict_codes
+    assert "CORE-042-SR-CONNECTED-REQUIRES-UNUSED" not in strict_codes
+    assert "CORE-047-SR-PROVIDES-DECLARED-UNUSED" not in strict_codes
+    assert "PRJ-201-PORT-UNCONNECTED" in strict_codes
+    assert "PRJ-202-CONNECTED-PORT-UNUSED" in strict_codes
+    assert "PRJ-203-COMPOSITION-NAME" in strict_codes
+
+
+def test_sample_profiles_are_deterministic() -> None:
+    project = load_aggregator(SAMPLE_PROFILE_FIXTURE)
+    profile = load_validation_profile(SAMPLE_STRICT_HYGIENE_PROFILE)
+
+    report_one = build_semantic_report(project, profile=profile)
+    report_two = build_semantic_report(project, profile=profile)
+
+    findings_one = [(finding.code, finding.message, finding.location) for finding in report_one.findings]
+    findings_two = [(finding.code, finding.message, finding.location) for finding in report_two.findings]
+    cases_one = [case.case_id for case in report_one.case_results]
+    cases_two = [case.case_id for case in report_two.case_results]
+
+    assert findings_one == findings_two
+    assert cases_one == cases_two
+
+
 def test_cli_validate_supports_profile_option() -> None:
     result = subprocess.run(
         [
@@ -327,7 +403,7 @@ def test_cli_validate_supports_profile_option() -> None:
             "validate",
             str(VALID_PROJECT),
             "--profile",
-            str(REPO_ROOT / "examples" / "validation_profiles" / "profile.yaml"),
+            str(SAMPLE_NAMING_PROFILE),
         ],
         cwd=REPO_ROOT,
         check=False,
