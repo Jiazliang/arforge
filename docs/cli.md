@@ -31,7 +31,7 @@ python -m arforge.cli init my-ecu
 python -m arforge.cli init my-ecu --name MyEcu --no-example
 ```
 
-The scaffold creates a ready-to-validate project with a working example - a `SpeedSensor` and `SpeedDisplay` SWC wired together through a sender-receiver and a mode-switch flow. Use `--no-example` if you want only the directory structure.
+The scaffold creates a ready-to-validate starter project that doubles as the recommended small reference model. It includes a top-level `SystemSupervisor` SWC, a reusable `SubComposition_SpeedPath`, sender-receiver wiring for `If_VehicleSpeed`, and a mode-switch flow via `If_OperationMode`. Use `--no-example` if you want only the directory structure.
 
 ---
 

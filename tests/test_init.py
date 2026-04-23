@@ -45,13 +45,13 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
         "types/application_types.yaml",
         "units/units.yaml",
         "compu_methods/compu_methods.yaml",
-        "modes/power_state.yaml",
+        "modes/operation_mode.yaml",
         "interfaces/If_VehicleSpeed.yaml",
-        "interfaces/If_PowerState.yaml",
+        "interfaces/If_OperationMode.yaml",
         "swcs/SpeedSensor.yaml",
-        "swcs/SpeedDisplay.yaml",
-        "swcs/DiagManager.yaml",
-        "subcompositions/subcomposition_speed_cluster.yaml",
+        "swcs/SpeedReporter.yaml",
+        "swcs/SystemSupervisor.yaml",
+        "subcompositions/subcomposition_speed_path.yaml",
         "system.yaml",
     ]
     for rel in expected_files:
@@ -61,90 +61,125 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     readme = (project_dir / "README.md").read_text(encoding="utf-8")
     project_yaml = (project_dir / "autosar.project.yaml").read_text(encoding="utf-8")
     system_yaml = (project_dir / "system.yaml").read_text(encoding="utf-8")
-    modes_yaml = (project_dir / "modes" / "power_state.yaml").read_text(encoding="utf-8")
-    interface_yaml = (project_dir / "interfaces" / "If_VehicleSpeed.yaml").read_text(encoding="utf-8")
-    mode_interface_yaml = (project_dir / "interfaces" / "If_PowerState.yaml").read_text(encoding="utf-8")
-    producer_yaml = (project_dir / "swcs" / "SpeedSensor.yaml").read_text(encoding="utf-8")
-    consumer_yaml = (project_dir / "swcs" / "SpeedDisplay.yaml").read_text(encoding="utf-8")
-    diag_manager_yaml = (project_dir / "swcs" / "DiagManager.yaml").read_text(encoding="utf-8")
-    subcomposition_yaml = (project_dir / "subcompositions" / "subcomposition_speed_cluster.yaml").read_text(encoding="utf-8")
+    modes_yaml = (project_dir / "modes" / "operation_mode.yaml").read_text(encoding="utf-8")
+    vehicle_speed_interface_yaml = (project_dir / "interfaces" / "If_VehicleSpeed.yaml").read_text(encoding="utf-8")
+    operation_mode_interface_yaml = (project_dir / "interfaces" / "If_OperationMode.yaml").read_text(encoding="utf-8")
+    speed_sensor_yaml = (project_dir / "swcs" / "SpeedSensor.yaml").read_text(encoding="utf-8")
+    speed_reporter_yaml = (project_dir / "swcs" / "SpeedReporter.yaml").read_text(encoding="utf-8")
+    system_supervisor_yaml = (project_dir / "swcs" / "SystemSupervisor.yaml").read_text(encoding="utf-8")
+    subcomposition_yaml = (project_dir / "subcompositions" / "subcomposition_speed_path.yaml").read_text(encoding="utf-8")
     base_types_yaml = (project_dir / "types" / "base_types.yaml").read_text(encoding="utf-8")
     application_types_yaml = (project_dir / "types" / "application_types.yaml").read_text(encoding="utf-8")
     implementation_types_yaml = (project_dir / "types" / "implementation_types.yaml").read_text(encoding="utf-8")
+
     assert project_yaml.startswith("# ARForge: Project input manifest")
     assert system_yaml.startswith("# ARForge: System composition")
-    assert interface_yaml.startswith("# ARForge: Interface definition")
-    assert producer_yaml.startswith("# ARForge: Software Component Type")
-    assert consumer_yaml.startswith("# ARForge: Software Component Type")
-    assert diag_manager_yaml.startswith("# ARForge: Software Component Type")
+    assert vehicle_speed_interface_yaml.startswith("# ARForge: Interface definition")
+    assert speed_sensor_yaml.startswith("# ARForge: Software Component Type")
+    assert speed_reporter_yaml.startswith("# ARForge: Software Component Type")
+    assert system_supervisor_yaml.startswith("# ARForge: Software Component Type")
     assert subcomposition_yaml.startswith("# ARForge: Subcomposition type")
     assert modes_yaml.startswith("# ARForge: Mode declaration groups")
-    assert "instantiates that subcomposition type plus one standalone atomic SWC" in readme
-    assert "modes/power_state.yaml" in readme
-    assert "interfaces/If_PowerState.yaml" in readme
-    assert "subcompositions/subcomposition_speed_cluster.yaml" in readme
-    assert "delegation connectors" in readme
+
+    assert "recommended small reference project" in readme
+    assert "modes/operation_mode.yaml" in readme
+    assert "interfaces/If_OperationMode.yaml" in readme
+    assert "subcompositions/subcomposition_speed_path.yaml" in readme
+    assert "internal assembly connectors" in readme
     assert "python -m arforge.cli validate autosar.project.yaml" in readme
     assert "python -m arforge.cli export autosar.project.yaml --out build/out --split-by-swc" in readme
     assert "python -m arforge.cli generate code autosar.project.yaml --lang c --out build/code" in readme
+
     assert 'modeDeclarationGroups:' in project_yaml
     assert '- "modes/*.yaml"' in project_yaml
     assert 'subcompositions:' in project_yaml
-    assert 'description: "Power state modes used by the scaffolded mode-switch interface."' in modes_yaml
+    assert 'description: "Operation modes used by the scaffolded starter project."' in modes_yaml
+    assert 'name: "Mdg_OperationMode"' in modes_yaml
+    assert 'name: "ACTIVE"' in modes_yaml
+    assert 'name: "SERVICE"' in modes_yaml
+
     assert 'typeRef may point to either an atomic SWC type or a reusable subcomposition type.' in system_yaml
-    assert 'name: "SpeedCluster_0"' in system_yaml
-    assert 'typeRef: "SubComposition_SpeedCluster"' in system_yaml
-    assert 'name: "DiagManager_0"' in system_yaml
-    assert 'from: "DiagManager_0.Pp_PowerState"' in system_yaml
-    assert 'to: "SpeedCluster_0.Rp_PowerStateIn"' in system_yaml
-    assert 'from: "SpeedCluster_0.Pp_VehicleSpeedOut"' in system_yaml
-    assert 'to: "DiagManager_0.Rp_VehicleSpeed"' in system_yaml
-    assert 'description: "Sender-receiver interface for the current vehicle speed."' in interface_yaml
-    assert 'description: "Mode switch interface for ECU power state."' in mode_interface_yaml
-    assert 'modeGroupRef: "Mdg_PowerState"' in mode_interface_yaml
-    assert 'description: "SWC type that reacts to the external power-state input and publishes the current vehicle speed."' in producer_yaml
-    assert 'description: "Required mode switch port delegated from the subcomposition boundary."' in producer_yaml
-    assert 'description: "SWC type that reads vehicle speed through explicit, implicit, and queued receiver semantics."' in consumer_yaml
-    assert 'description: "Required mode switch port for ECU power state."' in consumer_yaml
-    assert 'description: "Standalone atomic SWC type used to show that one top-level SWC can connect to a reusable subcomposition through boundary ports."' in diag_manager_yaml
-    assert 'name: "SubComposition_SpeedCluster"' in subcomposition_yaml
-    assert 'name: "Rp_PowerStateIn"' in subcomposition_yaml
-    assert 'name: "Pp_VehicleSpeedOut"' in subcomposition_yaml
-    assert 'category: "fixedLength"' in base_types_yaml
+    assert 'name: "SpeedPath_0"' in system_yaml
+    assert 'typeRef: "SubComposition_SpeedPath"' in system_yaml
+    assert 'name: "SystemSupervisor_0"' in system_yaml
+    assert 'from: "SystemSupervisor_0.Pp_OperationMode"' in system_yaml
+    assert 'to: "SpeedPath_0.Rp_OperationModeIn"' in system_yaml
+    assert 'from: "SpeedPath_0.Pp_VehicleSpeedOut"' in system_yaml
+    assert 'to: "SystemSupervisor_0.Rp_VehicleSpeed"' in system_yaml
+
+    assert 'description: "Sender-receiver interface for the current vehicle speed."' in vehicle_speed_interface_yaml
+    assert 'description: "Mode switch interface for the starter project operation mode."' in operation_mode_interface_yaml
+    assert 'modeGroupRef: "Mdg_OperationMode"' in operation_mode_interface_yaml
+
+    assert 'description: "Publishes the current vehicle speed and reacts to the delegated operation mode."' in speed_sensor_yaml
+    assert 'name: "Runnable_OnOperationActive"' in speed_sensor_yaml
+    assert 'port: "Rp_OperationModeIn"' in speed_sensor_yaml
+    assert 'name: "Pp_OperationMode"' in speed_sensor_yaml
+
+    assert 'description: "Consumes the internal speed sample and republishes it on the subcomposition boundary."' in speed_reporter_yaml
+    assert 'name: "Runnable_ReportVehicleSpeed"' in speed_reporter_yaml
+    assert 'mode: "explicit"' in speed_reporter_yaml
+    assert 'name: "Rp_OperationMode"' in speed_reporter_yaml
+    assert 'modeSwitchEvents:' in speed_reporter_yaml
+    assert 'mode: "ACTIVE"' in speed_reporter_yaml
+
+    assert 'description: "Top-level SWC that drives the example operation mode and reads the speed value returned by the reusable subcomposition."' in system_supervisor_yaml
+    assert 'name: "Runnable_InitOperationModeSource"' in system_supervisor_yaml
+    assert 'name: "Runnable_ReadVehicleSpeed"' in system_supervisor_yaml
+    assert 'timingEventMs: 20' in system_supervisor_yaml
+
+    assert 'name: "SubComposition_SpeedPath"' in subcomposition_yaml
+    assert 'name: "Rp_OperationModeIn"' in subcomposition_yaml
+    assert 'name: "SpeedReporter_1"' in subcomposition_yaml
     assert 'typeRef: "SpeedSensor"' in subcomposition_yaml
-    assert 'typeRef: "SpeedDisplay"' in subcomposition_yaml
-    assert 'name: "Runnable_ReadClusterSpeed"' in diag_manager_yaml
+    assert 'typeRef: "SpeedReporter"' in subcomposition_yaml
     assert 'delegationConnectors:' in subcomposition_yaml
-    assert 'modeSwitchEvents:' in consumer_yaml
-    assert 'mode: "ON"' in consumer_yaml
-    assert 'description: "Vehicle speed value shared between the demo SWC types."' in application_types_yaml
+    assert 'from: "SpeedSensor_1.Pp_VehicleSpeed"' in subcomposition_yaml
+    assert 'to: "SpeedReporter_1.Rp_VehicleSpeed"' in subcomposition_yaml
+    assert 'from: "SpeedSensor_1.Pp_OperationMode"' in subcomposition_yaml
+    assert 'to: "SpeedReporter_1.Rp_OperationMode"' in subcomposition_yaml
+    assert 'inner: "SpeedSensor_1.Rp_OperationModeIn"' in subcomposition_yaml
+    assert 'inner: "SpeedReporter_1.Pp_VehicleSpeedOut"' in subcomposition_yaml
+
+    assert 'category: "fixedLength"' in base_types_yaml
+    assert 'description: "Vehicle speed value shared between the scaffolded SWC types."' in application_types_yaml
     assert 'description: "Raw implementation type for a vehicle speed sample."' in implementation_types_yaml
 
     validate_result = _run_cli("validate", str(project_dir / "autosar.project.yaml"))
     assert validate_result.returncode == 0, validate_result.stdout + validate_result.stderr
 
+    cli_out_dir = tmp_path / "out_cli"
     export_result = _run_cli(
         "export",
         str(project_dir / "autosar.project.yaml"),
         "--out",
-        str(tmp_path / "out_cli"),
+        str(cli_out_dir),
         "--split-by-swc",
     )
     assert export_result.returncode == 0, export_result.stdout + export_result.stderr
+    for rel in [
+        "DEMOSYSTEM_SharedTypes.arxml",
+        "SpeedReporter.arxml",
+        "SpeedSensor.arxml",
+        "SystemSupervisor.arxml",
+        "SubComposition_SpeedPath.arxml",
+        "DemoSystem.arxml",
+    ]:
+        assert (cli_out_dir / rel).is_file(), f"Missing CLI export artifact: {rel}"
 
     out_dir = tmp_path / "out"
     written = write_outputs(project, template_dir=TEMPLATE_DIR, out=out_dir, split_by_swc=True)
     assert [path.name for path in written] == [
         "DEMOSYSTEM_SharedTypes.arxml",
-        "DiagManager.arxml",
-        "SpeedDisplay.arxml",
+        "SpeedReporter.arxml",
         "SpeedSensor.arxml",
-        "SubComposition_SpeedCluster.arxml",
+        "SystemSupervisor.arxml",
+        "SubComposition_SpeedPath.arxml",
         "DemoSystem.arxml",
     ]
-    speed_display_xml = (out_dir / "SpeedDisplay.arxml").read_text(encoding="utf-8")
-    assert "<SWC-MODE-SWITCH-EVENT>" in speed_display_xml
-    assert "<SHORT-NAME>MSE_Runnable_OnPowerOn_Rp_PowerState_ON</SHORT-NAME>" in speed_display_xml
+    speed_reporter_xml = (out_dir / "SpeedReporter.arxml").read_text(encoding="utf-8")
+    assert "<SWC-MODE-SWITCH-EVENT>" in speed_reporter_xml
+    assert "<SHORT-NAME>MSE_Runnable_OnOperationActive_Rp_OperationMode_ACTIVE</SHORT-NAME>" in speed_reporter_xml
 
 
 def test_init_no_example_creates_structure_only_project(tmp_path: Path) -> None:
@@ -160,7 +195,7 @@ def test_init_no_example_creates_structure_only_project(tmp_path: Path) -> None:
         "types/application_types.yaml",
         "units/units.yaml",
         "compu_methods/compu_methods.yaml",
-        "modes/power_state.yaml",
+        "modes/operation_mode.yaml",
         "system.yaml",
     ]
     for rel in expected_files:
@@ -172,10 +207,12 @@ def test_init_no_example_creates_structure_only_project(tmp_path: Path) -> None:
     assert list((project_dir / "interfaces").glob("*.yaml")) == []
     assert list((project_dir / "swcs").glob("*.yaml")) == []
     assert list((project_dir / "subcompositions").glob("*.yaml")) == []
+
     readme = (project_dir / "README.md").read_text(encoding="utf-8")
     system_yaml = (project_dir / "system.yaml").read_text(encoding="utf-8")
     project_yaml = (project_dir / "autosar.project.yaml").read_text(encoding="utf-8")
-    modes_yaml = (project_dir / "modes" / "power_state.yaml").read_text(encoding="utf-8")
+    modes_yaml = (project_dir / "modes" / "operation_mode.yaml").read_text(encoding="utf-8")
+
     assert "without example interfaces or SWCs" in readme
     assert "mode declaration groups under `modes/`" in readme
     assert "subcomposition types under `subcompositions/`" in readme
