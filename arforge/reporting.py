@@ -1,3 +1,9 @@
+"""Project-report rendering and report file output helpers.
+
+This module summarizes a validated project into contributor-friendly report
+content, including counts, topology overviews, and other review-oriented views.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

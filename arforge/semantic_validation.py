@@ -1,3 +1,9 @@
+"""Semantic validation framework and finding/report data structures.
+
+This module defines findings, validation cases, execution context, and runner
+behavior used to evaluate ARForge semantic rules in a deterministic way.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

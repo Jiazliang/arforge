@@ -1,3 +1,9 @@
+"""Validation profile loading and extension-rule configuration.
+
+This module parses validation profile files, validates their structure, and
+describes how core rules and custom extension rules should be combined.
+"""
+
 from __future__ import annotations
 
 from contextlib import contextmanager

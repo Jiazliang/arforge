@@ -1,3 +1,9 @@
+"""Diagram view construction and diagram artifact generation.
+
+This module derives presentation-oriented views from the project model and
+renders diagram outputs such as PlantUML files for architecture exploration.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

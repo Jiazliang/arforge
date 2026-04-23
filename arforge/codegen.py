@@ -1,3 +1,9 @@
+"""Code-generation helpers for AUTOSAR SWC skeleton outputs.
+
+This module prepares model data for templates and writes generated source files,
+currently focused on lightweight C skeletons rather than full RTE generation.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

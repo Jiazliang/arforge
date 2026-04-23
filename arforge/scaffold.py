@@ -1,3 +1,9 @@
+"""Starter-project scaffold generation for `arforge init`.
+
+This module creates the recommended on-disk project layout, including example
+inputs and README content for first-time users bootstrapping a new model.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
