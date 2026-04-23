@@ -14,13 +14,13 @@ inputs:
   compuMethods:
     - "support/compu_methods.yaml"
   modeDeclarationGroups:
-    - "../modes/*.yaml"
+    - "../features/subcomposition/modes/*.yaml"
   interfaces:
-    - "../interfaces/If_VehicleSpeed.yaml"
-    - "../interfaces/If_PowerState.yaml"
-    - "../interfaces/If_Diagnostics.yaml"
+    - "../features/subcomposition/interfaces/If_VehicleSpeed.yaml"
+    - "../features/subcomposition/interfaces/If_PowerState.yaml"
+    - "../features/subcomposition/interfaces/If_Diagnostics.yaml"
   swcs:
-    - "../swcs/SpeedSensor.yaml"
-    - "../swcs/SpeedDisplay.yaml"
+    - "../features/subcomposition/swcs/SpeedSensor.yaml"
+    - "../features/subcomposition/swcs/SpeedDisplay.yaml"
     - "swcs/DiagServerOnly.yaml"
   system: "system_single_diag_server_only_unconnected.yaml"

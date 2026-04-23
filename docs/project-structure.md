@@ -151,8 +151,8 @@ Once both extensions are installed, YAML schema autocomplete and inline validati
 The VS Code tasks resolve the project manifest, optional validation profile, and shared output root from `.vscode/settings.json`:
 
 ```jsonc
-"arforge.projectFile": "examples/autosar.project.yaml"
-"arforge.validationProfile": "examples/validation_profiles/naming.yaml"
+"arforge.projectFile": "examples/minimal/autosar.project.yaml"
+"arforge.validationProfile": "examples/features/validation_profiles/naming.yaml"
 "arforge.outputDir": "build"
 ```
 
@@ -191,7 +191,9 @@ arforge/                    <- CLI, loader, model, validation, export, codegen, 
 arforge/validation/cases/   <- domain-organized semantic validation cases
 schemas/                    <- JSON Schema files for all input categories, including validation profiles
 templates/                  <- Jinja2 templates grouped by output kind (`arxml/`, `reports/`, `code/`, `diagrams/`)
-examples/                   <- valid example project
+examples/                   <- user-facing example projects and fixtures
+examples/minimal/           <- starter project that validates and exports successfully
+examples/features/          <- focused feature-oriented examples such as validation profiles
 examples/invalid/           <- invalid model fixtures used by the test suite
 tests/                      <- pytest coverage
 docs/                       <- this documentation

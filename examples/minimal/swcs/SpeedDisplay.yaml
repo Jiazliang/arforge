@@ -1,0 +1,19 @@
+# ARForge: Minimal consumer SWC
+swc:
+  name: "SpeedDisplay"
+  description: "Minimal consumer SWC that reads vehicle speed from one explicit receiver port."
+  runnables:
+    - name: "Runnable_ReadVehicleSpeed"
+      description: "Reads the latest vehicle speed sample from the explicit required port."
+      timingEventMs: 10
+      reads:
+        - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Rp_VehicleSpeed"
+      description: "Required sender-receiver port for receiving speed."
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+      comSpec:
+        mode: "explicit"
+        initValue: 0

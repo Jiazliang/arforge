@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for phystype bad range.
 autosar:
@@ -14,9 +14,9 @@ inputs:
   compuMethods:
     - "compu_methods/speed_linear_bad_range.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
-    - "../swcs/*.yaml"
-  system: "../system.yaml"
+    - "../features/subcomposition/swcs/*.yaml"
+  system: "../features/subcomposition/system.yaml"
 
 

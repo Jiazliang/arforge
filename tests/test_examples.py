@@ -35,7 +35,7 @@ from arforge.validate import ValidationError, build_semantic_report, load_aggreg
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-VALID_PROJECT = REPO_ROOT / "examples" / "autosar.project.yaml"
+VALID_PROJECT = REPO_ROOT / "examples" / "features" / "subcomposition" / "autosar.project.yaml"
 INVALID_DIR = REPO_ROOT / "examples" / "invalid"
 SHARED_EXAMPLE_OUTPUT = "DEMO_SharedTypes.arxml"
 SUBCOMPOSITION_EXAMPLE_OUTPUT = "SubComposition_SpeedCluster.arxml"

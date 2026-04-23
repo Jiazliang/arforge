@@ -1,0 +1,19 @@
+# ARForge: Sender-receiver feature example
+autosar:
+  version: "4.2"
+  rootPackage: "FEATURE_SR"
+
+inputs:
+  baseTypes: "types/base_types.yaml"
+  implementationDataTypes: "types/implementation_types.yaml"
+  applicationDataTypes: "types/application_types.yaml"
+  units:
+    - "units/units.yaml"
+  compuMethods:
+    - "compu_methods/compu_methods.yaml"
+  interfaces:
+    - "interfaces/If_VehicleSpeed.yaml"
+  swcs:
+    - "swcs/SpeedSensor.yaml"
+    - "swcs/SpeedDisplay.yaml"
+  system: "system.yaml"

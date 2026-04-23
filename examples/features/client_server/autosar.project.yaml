@@ -1,0 +1,21 @@
+# ARForge: Client-server feature example
+autosar:
+  version: "4.2"
+  rootPackage: "FEATURE_CS"
+
+inputs:
+  baseTypes: "types/base_types.yaml"
+  implementationDataTypes: "types/implementation_types.yaml"
+  applicationDataTypes: "types/application_types.yaml"
+  units:
+    - "units/units.yaml"
+  compuMethods:
+    - "compu_methods/compu_methods.yaml"
+  interfaces:
+    - "interfaces/If_VehicleSpeed.yaml"
+    - "interfaces/If_Diagnostics.yaml"
+  swcs:
+    - "swcs/SpeedPublisher.yaml"
+    - "swcs/DiagClient.yaml"
+    - "swcs/DiagServer.yaml"
+  system: "system.yaml"

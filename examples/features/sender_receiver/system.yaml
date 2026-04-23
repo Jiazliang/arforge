@@ -1,0 +1,18 @@
+# ARForge: Sender-receiver system composition
+system:
+  name: "SenderReceiverSystem"
+  description: "Two atomic SWCs wired with sender-receiver connectors."
+  composition:
+    name: "Composition_SenderReceiverSystem"
+    components:
+      - name: "SpeedSensor_1"
+        typeRef: "SpeedSensor"
+      - name: "SpeedDisplay_1"
+        typeRef: "SpeedDisplay"
+    connectors:
+      - from: "SpeedSensor_1.Pp_VehicleSpeed"
+        to: "SpeedDisplay_1.Rp_VehicleSpeed"
+      - from: "SpeedSensor_1.Pp_VehicleSpeed"
+        to: "SpeedDisplay_1.Rp_VehicleSpeedImplicit"
+      - from: "SpeedSensor_1.Pp_VehicleSpeed"
+        to: "SpeedDisplay_1.Rp_VehicleSpeedQueued"

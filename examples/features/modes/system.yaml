@@ -1,0 +1,14 @@
+# ARForge: Mode-switch system composition
+system:
+  name: "ModeSwitchSystem"
+  description: "Atomic SWCs wired to demonstrate mode-switch behavior."
+  composition:
+    name: "Composition_ModeSwitchSystem"
+    components:
+      - name: "PowerStateProvider_1"
+        typeRef: "PowerStateProvider"
+      - name: "PowerStateUser_1"
+        typeRef: "PowerStateUser"
+    connectors:
+      - from: "PowerStateProvider_1.Pp_PowerState"
+        to: "PowerStateUser_1.Rp_PowerState"

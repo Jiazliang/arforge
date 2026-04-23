@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for sr read unconnected.
 autosar:
@@ -14,12 +14,12 @@ inputs:
   compuMethods:
     - "support/compu_methods.yaml"
   modeDeclarationGroups:
-    - "../modes/*.yaml"
+    - "../features/subcomposition/modes/*.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
     - "support/SpeedSensor.yaml"
-    - "../swcs/SpeedConsumer.yaml"
+    - "../features/subcomposition/swcs/SpeedConsumer.yaml"
   system: "system_sr_read_unconnected.yaml"
 
 

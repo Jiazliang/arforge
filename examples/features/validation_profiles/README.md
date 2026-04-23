@@ -30,7 +30,7 @@ This fixture is intentionally non-conforming so the sample profiles produce visi
 Example commands:
 
 ```bash
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/naming.yaml
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/strict_hygiene.yaml
-python -m arforge.cli validate examples/validation_profiles/fixtures/profile_demo.project.yaml --profile examples/validation_profiles/naming.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/naming.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/strict_hygiene.yaml
+python -m arforge.cli validate examples/features/validation_profiles/fixtures/profile_demo.project.yaml --profile examples/features/validation_profiles/naming.yaml
 ```

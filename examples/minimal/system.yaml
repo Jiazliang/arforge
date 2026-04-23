@@ -1,0 +1,18 @@
+# ARForge: Minimal system composition
+system:
+  name: "MinimalSystem"
+  description: "Minimal starter system showing one sender and one receiver connected by a sender-receiver interface."
+  composition:
+    name: "Composition_MinimalSystem"
+    description: "Smallest recommended starter composition for first-time users."
+    components:
+      - name: "SpeedSensor_1"
+        description: "Atomic SWC instance that publishes the speed value."
+        typeRef: "SpeedSensor"
+      - name: "SpeedDisplay_1"
+        description: "Atomic SWC instance that consumes the speed value."
+        typeRef: "SpeedDisplay"
+    connectors:
+      - from: "SpeedSensor_1.Pp_VehicleSpeed"
+        description: "Connects the published speed signal to the receiver port."
+        to: "SpeedDisplay_1.Rp_VehicleSpeed"

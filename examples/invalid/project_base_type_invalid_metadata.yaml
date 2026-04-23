@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for base type invalid metadata.
 autosar:
@@ -7,16 +7,16 @@ autosar:
 
 inputs:
   baseTypes: "platform/base_types_invalid_metadata.yaml"
-  implementationDataTypes: "../types/implementation_types.yaml"
-  applicationDataTypes: "../types/application_types.yaml"
+  implementationDataTypes: "../features/subcomposition/types/implementation_types.yaml"
+  applicationDataTypes: "../features/subcomposition/types/application_types.yaml"
   units:
-    - "../units/*.yaml"
+    - "../features/subcomposition/units/*.yaml"
   compuMethods:
-    - "../compu_methods/*.yaml"
+    - "../features/subcomposition/compu_methods/*.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
-    - "../swcs/*.yaml"
-  system: "../system.yaml"
+    - "../features/subcomposition/swcs/*.yaml"
+  system: "../features/subcomposition/system.yaml"
 
 

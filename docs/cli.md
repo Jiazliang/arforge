@@ -64,19 +64,19 @@ Warnings and infos are always reported but never cause a non-zero exit.
 
 ```bash
 # Basic validation
-python -m arforge.cli validate examples/autosar.project.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml
 
 # With verbose output
-python -m arforge.cli validate examples/autosar.project.yaml -vv
+python -m arforge.cli validate examples/minimal/autosar.project.yaml -vv
 
 # With the sample naming profile
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/naming.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/naming.yaml
 
 # With the sample strict hygiene profile
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/strict_hygiene.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/strict_hygiene.yaml
 
 # In CI - fail the pipeline on any error finding
-python -m arforge.cli validate examples/autosar.project.yaml || exit 1
+python -m arforge.cli validate examples/minimal/autosar.project.yaml || exit 1
 ```
 
 See [Validation Profiles](./validation-profiles.md) for the profile format and extension authoring API.
@@ -117,7 +117,7 @@ python -m arforge.cli export <project.yaml> --out <path> [options]
 **Split export:**
 
 ```bash
-python -m arforge.cli export examples/autosar.project.yaml --out build/out --split-by-swc
+python -m arforge.cli export examples/minimal/autosar.project.yaml --out build/out --split-by-swc
 ```
 
 Produces:
@@ -135,13 +135,13 @@ build/out/
 **Monolithic export:**
 
 ```bash
-python -m arforge.cli export examples/autosar.project.yaml --out build/all.arxml
+python -m arforge.cli export examples/minimal/autosar.project.yaml --out build/all.arxml
 ```
 
 **Custom templates** - for OEM-specific ARXML profiles:
 
 ```bash
-python -m arforge.cli export examples/autosar.project.yaml --out build/all.arxml --templates my-templates/
+python -m arforge.cli export examples/minimal/autosar.project.yaml --out build/all.arxml --templates my-templates/
 ```
 
 The custom template directory must contain the same relative template paths as the built-in `templates/` directory, including the `arxml/` subfolder. This is the designed extension point for OEM-specific ARXML conventions without modifying ARForge core.
@@ -173,10 +173,10 @@ python -m arforge.cli report <project.yaml> [--out <file>] [options]
 **Examples:**
 
 ```bash
-python -m arforge.cli report examples/autosar.project.yaml --out build/report.md
+python -m arforge.cli report examples/minimal/autosar.project.yaml --out build/report.md
 
 # stdout
-python -m arforge.cli report examples/autosar.project.yaml
+python -m arforge.cli report examples/minimal/autosar.project.yaml
 ```
 
 **Typical sections:**
@@ -220,7 +220,7 @@ python -m arforge.cli generate diagram <project.yaml> --out <dir>
 **Examples:**
 
 ```bash
-python -m arforge.cli generate diagram examples/autosar.project.yaml --out build/diagrams_plantuml
+python -m arforge.cli generate diagram examples/minimal/autosar.project.yaml --out build/diagrams_plantuml
 ```
 
 The command generates the standard view set as PlantUML source files.
@@ -255,7 +255,7 @@ For each SWC type, ARForge writes:
 **Examples:**
 
 ```bash
-python -m arforge.cli generate code examples/autosar.project.yaml --lang c --out build/code
+python -m arforge.cli generate code examples/minimal/autosar.project.yaml --lang c --out build/code
 ```
 
 The generated output is a deterministic starter skeleton, not a complete AUTOSAR RTE integration or application implementation.

@@ -1,8 +1,7 @@
-# ARForge: Project input manifest
-# Lists the YAML files that make up this AUTOSAR project.
+# ARForge: Modes feature example
 autosar:
   version: "4.2"
-  rootPackage: "DEMO"
+  rootPackage: "FEATURE_MODES"
 
 inputs:
   baseTypes: "types/base_types.yaml"
@@ -15,12 +14,8 @@ inputs:
   modeDeclarationGroups:
     - "modes/*.yaml"
   interfaces:
-    - "interfaces/If_VehicleSpeed.yaml"
     - "interfaces/If_PowerState.yaml"
   swcs:
-    - "swcs/SpeedSensor.yaml"
-    - "swcs/SpeedDisplay.yaml"
-    - "swcs/DiagManager.yaml"
-  subcompositions:
-    - "subcompositions/*.yaml"
+    - "swcs/PowerStateProvider.yaml"
+    - "swcs/PowerStateUser.yaml"
   system: "system.yaml"

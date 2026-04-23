@@ -1,0 +1,14 @@
+# ARForge: Software Component Type
+swc:
+  name: "SpeedPublisher"
+  description: "Publishes vehicle speed so the client example can show mixed SR and CS access."
+  runnables:
+    - name: "Runnable_PublishVehicleSpeed"
+      timingEventMs: 5
+      writes:
+        - port: "Pp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Pp_VehicleSpeed"
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"

@@ -1,13 +1,9 @@
-# ARForge: System composition
-# Defines component prototypes (instances) and connectors between their ports.
+# ARForge: Subcomposition system composition
 system:
   name: "DemoSystem"
   description: "Demo AUTOSAR system showing one standalone atomic SWC connected to one reusable subcomposition through composition boundary ports."
   composition:
     name: "Composition_DemoSystem"
-    description: "Top-level composition for the scaffolded hierarchical example."
-    # These are component prototypes (instances in the system).
-    # typeRef may point to either an atomic SWC type or a reusable subcomposition type.
     components:
       - name: "SpeedCluster_0"
         description: "Instance of the reusable speed-cluster subcomposition."

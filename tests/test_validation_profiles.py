@@ -12,11 +12,11 @@ from arforge.validation_profile import ValidationProfileError, load_validation_p
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-VALID_PROJECT = REPO_ROOT / "examples" / "autosar.project.yaml"
+VALID_PROJECT = REPO_ROOT / "examples" / "features" / "subcomposition" / "autosar.project.yaml"
 WARNING_PROJECT = REPO_ROOT / "examples" / "invalid" / "project_sr_read_unconnected.yaml"
-SAMPLE_NAMING_PROFILE = REPO_ROOT / "examples" / "validation_profiles" / "naming.yaml"
-SAMPLE_STRICT_HYGIENE_PROFILE = REPO_ROOT / "examples" / "validation_profiles" / "strict_hygiene.yaml"
-SAMPLE_PROFILE_FIXTURE = REPO_ROOT / "examples" / "validation_profiles" / "fixtures" / "profile_demo.project.yaml"
+SAMPLE_NAMING_PROFILE = REPO_ROOT / "examples" / "features" / "validation_profiles" / "naming.yaml"
+SAMPLE_STRICT_HYGIENE_PROFILE = REPO_ROOT / "examples" / "features" / "validation_profiles" / "strict_hygiene.yaml"
+SAMPLE_PROFILE_FIXTURE = REPO_ROOT / "examples" / "features" / "validation_profiles" / "fixtures" / "profile_demo.project.yaml"
 
 
 def _write_profile(tmp_path: Path, body: str) -> Path:

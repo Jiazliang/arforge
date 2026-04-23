@@ -86,23 +86,23 @@ Import failures and missing rule functions are fatal:
 
 ## Sample profiles in this repository
 
-ARForge includes working sample profiles in [examples/validation_profiles/](../examples/validation_profiles/):
+ARForge includes working sample profiles in [examples/features/validation_profiles/](../examples/features/validation_profiles/):
 
-- [naming.yaml](../examples/validation_profiles/naming.yaml)
+- [naming.yaml](../examples/features/validation_profiles/naming.yaml)
   Uses `extensions-only` mode to run just naming-policy rules.
-- [strict_hygiene.yaml](../examples/validation_profiles/strict_hygiene.yaml)
+- [strict_hygiene.yaml](../examples/features/validation_profiles/strict_hygiene.yaml)
   Uses `core+extensions` mode and replaces a few generic core hygiene warnings with project-specific stricter checks.
-- [rules/naming_rules.py](../examples/validation_profiles/rules/naming_rules.py)
+- [rules/naming_rules.py](../examples/features/validation_profiles/rules/naming_rules.py)
   Shows naming-convention rule functions.
-- [rules/hygiene_rules.py](../examples/validation_profiles/rules/hygiene_rules.py)
+- [rules/hygiene_rules.py](../examples/features/validation_profiles/rules/hygiene_rules.py)
   Shows structural and connectivity policy rules.
 
 Quick-start commands:
 
 ```bash
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/naming.yaml
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/strict_hygiene.yaml
-python -m arforge.cli validate examples/validation_profiles/fixtures/profile_demo.project.yaml --profile examples/validation_profiles/naming.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/naming.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/strict_hygiene.yaml
+python -m arforge.cli validate examples/features/validation_profiles/fixtures/profile_demo.project.yaml --profile examples/features/validation_profiles/naming.yaml
 ```
 
 ## Writing the rule functions

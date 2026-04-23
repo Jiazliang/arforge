@@ -1,0 +1,17 @@
+# ARForge: Software Component Type
+swc:
+  name: "DiagServer"
+  description: "Provides diagnostic services through a client-server port."
+  runnables:
+    - name: "Runnable_DiagServer"
+      operationInvokedEvents:
+        - port: "Pp_Diag"
+          operation: "ReadDTC"
+        - port: "Pp_Diag"
+          operation: "ClearDTC"
+        - port: "Pp_Diag"
+          operation: "LogEvent"
+  ports:
+    - name: "Pp_Diag"
+      direction: "provides"
+      interfaceRef: "If_Diagnostics"

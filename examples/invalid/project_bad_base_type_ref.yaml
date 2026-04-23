@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for bad base type ref.
 autosar:
@@ -10,9 +10,9 @@ inputs:
   implementationDataTypes: "types/implementation_types_bad_base_ref.yaml"
   applicationDataTypes: "types/application_types_split.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
-    - "../swcs/*.yaml"
-  system: "../system.yaml"
+    - "../features/subcomposition/swcs/*.yaml"
+  system: "../features/subcomposition/system.yaml"
 
 

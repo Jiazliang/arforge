@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for unknown instance.
 autosar:
@@ -6,13 +6,13 @@ autosar:
   rootPackage: "DEMO"
 
 inputs:
-  baseTypes: "../types/base_types.yaml"
-  implementationDataTypes: "../types/implementation_types.yaml"
-  applicationDataTypes: "../types/application_types.yaml"
+  baseTypes: "../features/subcomposition/types/base_types.yaml"
+  implementationDataTypes: "../features/subcomposition/types/implementation_types.yaml"
+  applicationDataTypes: "../features/subcomposition/types/application_types.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
-    - "../swcs/*.yaml"
+    - "../features/subcomposition/swcs/*.yaml"
   system: "system_unknown_instance.yaml"
 
 

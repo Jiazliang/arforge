@@ -1,0 +1,8 @@
+# ARForge: Interface definition
+interface:
+  name: "If_VehicleSpeed"
+  description: "Sender-receiver interface used as supporting input for the client example."
+  type: "senderReceiver"
+  dataElements:
+    - name: "VehicleSpeed"
+      typeRef: "App_VehicleSpeed"

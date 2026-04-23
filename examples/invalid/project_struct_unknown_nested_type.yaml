@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for struct unknown nested type.
 autosar:
@@ -6,17 +6,17 @@ autosar:
   rootPackage: "DEMO"
 
 inputs:
-  baseTypes: "../types/base_types.yaml"
+  baseTypes: "../features/subcomposition/types/base_types.yaml"
   implementationDataTypes: "types/implementation_types_struct_unknown_nested_type.yaml"
-  applicationDataTypes: "../types/application_types.yaml"
+  applicationDataTypes: "../features/subcomposition/types/application_types.yaml"
   units:
-    - "../units/*.yaml"
+    - "../features/subcomposition/units/*.yaml"
   compuMethods:
-    - "../compu_methods/*.yaml"
+    - "../features/subcomposition/compu_methods/*.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
-    - "../swcs/*.yaml"
-  system: "../system.yaml"
+    - "../features/subcomposition/swcs/*.yaml"
+  system: "../features/subcomposition/system.yaml"
 
 

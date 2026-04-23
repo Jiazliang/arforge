@@ -61,7 +61,7 @@ def rule_check_port_prefixes(context):
     return findings
 ```
 
-This matches the same extension mechanism used by the sample modules in [examples/validation_profiles/rules/](../examples/validation_profiles/rules/).
+This matches the same extension mechanism used by the sample modules in [examples/features/validation_profiles/rules/](../examples/features/validation_profiles/rules/).
 
 ## Metadata declared by `@validation_rule`
 
@@ -220,7 +220,7 @@ Determinism matters:
 
 ## Example A: naming convention rule
 
-This example is directly aligned with the sample profile in [examples/validation_profiles/naming.yaml](../examples/validation_profiles/naming.yaml).
+This example is directly aligned with the sample profile in [examples/features/validation_profiles/naming.yaml](../examples/features/validation_profiles/naming.yaml).
 
 ```python
 from __future__ import annotations
@@ -311,7 +311,7 @@ Variation using the richer context helpers:
 - use `context.find_instance_port_connectivity(instance.name, port.name)` to check whether top-level ports are wired
 - use `context.sr_timing_communications` if your project policy depends on cyclic SR timing
 
-The sample file [examples/validation_profiles/rules/hygiene_rules.py](../examples/validation_profiles/rules/hygiene_rules.py) shows this style with real working rules.
+The sample file [examples/features/validation_profiles/rules/hygiene_rules.py](../examples/features/validation_profiles/rules/hygiene_rules.py) shows this style with real working rules.
 
 ## Wiring rules through a profile
 
@@ -380,7 +380,7 @@ That means these all work, as long as they are importable relative to the profil
 CLI example:
 
 ```bash
-python -m arforge.cli validate examples/autosar.project.yaml --profile examples/validation_profiles/strict_hygiene.yaml
+python -m arforge.cli validate examples/minimal/autosar.project.yaml --profile examples/features/validation_profiles/strict_hygiene.yaml
 ```
 
 This command uses the same extension mechanism your own project profile would use.
@@ -400,10 +400,10 @@ This command uses the same extension mechanism your own project profile would us
 If you want copyable starting points, use these files:
 
 - [docs/validation-profiles.md](./validation-profiles.md)
-- [examples/validation_profiles/naming.yaml](../examples/validation_profiles/naming.yaml)
-- [examples/validation_profiles/strict_hygiene.yaml](../examples/validation_profiles/strict_hygiene.yaml)
-- [examples/validation_profiles/rules/naming_rules.py](../examples/validation_profiles/rules/naming_rules.py)
-- [examples/validation_profiles/rules/hygiene_rules.py](../examples/validation_profiles/rules/hygiene_rules.py)
+- [examples/features/validation_profiles/naming.yaml](../examples/features/validation_profiles/naming.yaml)
+- [examples/features/validation_profiles/strict_hygiene.yaml](../examples/features/validation_profiles/strict_hygiene.yaml)
+- [examples/features/validation_profiles/rules/naming_rules.py](../examples/features/validation_profiles/rules/naming_rules.py)
+- [examples/features/validation_profiles/rules/hygiene_rules.py](../examples/features/validation_profiles/rules/hygiene_rules.py)
 
 Together, they show:
 

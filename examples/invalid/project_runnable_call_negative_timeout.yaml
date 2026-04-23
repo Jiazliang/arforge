@@ -1,4 +1,4 @@
-﻿# ARForge: Invalid example fixture
+# ARForge: Invalid example fixture
 # Domain: project-level validation.
 # Tests validation failure for runnable call negative timeout.
 autosar:
@@ -6,18 +6,18 @@ autosar:
   rootPackage: "DEMO"
 
 inputs:
-  baseTypes: "../types/base_types.yaml"
-  implementationDataTypes: "../types/implementation_types.yaml"
-  applicationDataTypes: "../types/application_types.yaml"
+  baseTypes: "../features/subcomposition/types/base_types.yaml"
+  implementationDataTypes: "../features/subcomposition/types/implementation_types.yaml"
+  applicationDataTypes: "../features/subcomposition/types/application_types.yaml"
   units:
-    - "../units/*.yaml"
+    - "../features/subcomposition/units/*.yaml"
   compuMethods:
-    - "../compu_methods/*.yaml"
+    - "../features/subcomposition/compu_methods/*.yaml"
   interfaces:
-    - "../interfaces/*.yaml"
+    - "../features/subcomposition/interfaces/*.yaml"
   swcs:
-    - "../swcs/SpeedSensor.yaml"
+    - "../features/subcomposition/swcs/SpeedSensor.yaml"
     - "swcs/SpeedConsumer_call_negative_timeout.yaml"
-  system: "../system.yaml"
+  system: "../features/subcomposition/system.yaml"
 
 
