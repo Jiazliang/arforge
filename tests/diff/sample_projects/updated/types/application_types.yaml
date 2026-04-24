@@ -1,0 +1,3 @@
+applicationDataTypes:
+  - name: "App_VehicleSpeed"
+    implementationTypeRef: "Impl_VehicleSpeed"

@@ -1,0 +1,6 @@
+swc:
+  name: "LegacyUnit"
+  runnables:
+    - name: "Runnable_Legacy"
+      timingEventMs: 100
+  ports: []

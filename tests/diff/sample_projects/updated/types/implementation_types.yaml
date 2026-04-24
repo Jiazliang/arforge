@@ -1,0 +1,3 @@
+implementationDataTypes:
+  - name: "Impl_VehicleSpeed"
+    baseTypeRef: "uint16"

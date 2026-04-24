@@ -1,0 +1,13 @@
+subcomposition:
+  name: "SubCluster"
+  ports:
+    - name: "Rp_SubSpeed"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"
+  components:
+    - name: "InnerDisplay"
+      typeRef: "Display"
+  connectors: []
+  delegationConnectors:
+    - inner: "InnerDisplay.Rp_VehicleSpeed"
+      outer: "Rp_SubSpeed"

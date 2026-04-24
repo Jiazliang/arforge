@@ -1,0 +1,12 @@
+swc:
+  name: "Display"
+  runnables:
+    - name: "Runnable_Consume"
+      timingEventMs: 20
+      reads:
+        - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Rp_VehicleSpeed"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed"

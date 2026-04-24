@@ -115,6 +115,9 @@ python -m arforge.cli export examples/minimal/autosar.project.yaml --out build/o
 # Generate a Markdown architecture report
 python -m arforge.cli report examples/minimal/autosar.project.yaml --out build/docs/Report.md
 
+# Generate a structural Markdown diff between two model versions
+python -m arforge.cli diff examples/minimal/autosar.project.yaml examples/minimal/autosar.project.yaml --out build/docs/diff.md
+
 # Generate starter C skeletons for SWCs
 python -m arforge.cli generate code examples/minimal/autosar.project.yaml --lang c --out build/code
 
@@ -122,7 +125,7 @@ python -m arforge.cli generate code examples/minimal/autosar.project.yaml --lang
 python -m arforge.cli generate diagram examples/minimal/autosar.project.yaml --out build/diagrams
 ```
 
-`generate code` produces deterministic starter skeletons for each SWC, for example `<SwcName>.h` and `<SwcName>.c`. The output is intentionally scaffold-level code with `Rte_Read_*`, `Rte_Write_*`, and `Rte_Call_*` placeholders rather than full AUTOSAR RTE integration.
+`report` summarizes what a model contains, while `diff` summarizes what changed between two model versions for pull requests, architecture reviews, and CI artifacts. `generate code` produces deterministic starter skeletons for each SWC, for example `<SwcName>.h` and `<SwcName>.c`. The output is intentionally scaffold-level code with `Rte_Read_*`, `Rte_Write_*`, and `Rte_Call_*` placeholders rather than full AUTOSAR RTE integration.
 
 The diagram generator writes:
 - `composition_<System>.puml`

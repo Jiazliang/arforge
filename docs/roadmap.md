@@ -15,6 +15,7 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 - `arforge validate --profile <profile.yaml>` - profile-aware validation with project-specific extension rules and rule filtering
 - `arforge export` - validated ARXML export, monolithic or split by SWC
 - `arforge report` - deterministic Markdown architecture summary for reviews, CI artifacts, and handoffs
+- `arforge diff` - deterministic Markdown structural diff between two model versions for PR reviews and architecture change discussions
 - `arforge generate diagram` - PlantUML architecture and behavior diagram generation
 - `arforge generate code` - template-driven C starter skeleton generation
 - VS Code integration - YAML schema autocomplete, inline diagnostics, and task runner
@@ -46,8 +47,9 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 
 ### System composition
 
-- component prototypes with SWC type references
+- component prototypes with SWC and reusable subcomposition type references
 - port-level assembly connectors for SR, CS, and mode-switch flows
+- reusable subcomposition types with boundary ports and delegation connectors
 - deterministic connector export ordering
 
 ### Validation
@@ -69,6 +71,7 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 
 - Jinja2-based ARXML templates
 - Jinja2-based Markdown report templates
+- Jinja2-based Markdown diff templates
 - Jinja2-based diagram templates
 - Jinja2-based C code-generation templates
 - deterministic output ordering - repeated exports and generations produce identical output
@@ -79,8 +82,8 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 
 ## Near-term
 
-**Improved authoring experience**
-Enhanced JSON Schema metadata for better editor autocomplete and inline diagnostics. Clearer scaffold templates and improved error messages for common mistakes.
+**Authoring experience polish**
+The baseline authoring experience is already in place: JSON Schema metadata drives editor autocomplete and inline diagnostics, the scaffold includes a readable working example, and common loading/validation failures already surface explicit messages. Near-term work here is incremental polish rather than first-time delivery - refining schema hints further, improving wording for common failure modes, and continuing to simplify the starter project materials.
 
 ---
 
@@ -90,7 +93,7 @@ Enhanced JSON Schema metadata for better editor autocomplete and inline diagnost
 Versioned template and schema architecture (`--schema-version` flag) to support multiple AUTOSAR Classic schema targets. The internal model and validation layer are designed to be version-agnostic; the version-specific work is in the templates and schema files.
 
 **Nested composition support**
-Compositions within compositions - sub-compositions referenced as component prototypes in a parent composition. Required for real-world project scale beyond flat single-level designs.
+Reusable subcomposition types are already supported at one level. The remaining planned work is deeper nesting: compositions within compositions within compositions, beyond the current single reusable-subcomposition layer.
 
 **VS Code extension**
 A dedicated VS Code extension providing YAML schema autocomplete, inline validation diagnostics, and model preview for ARForge projects. The JSON schemas in `schemas/` are the foundation - the extension makes them accessible without manual schema configuration in any project.
