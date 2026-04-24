@@ -193,6 +193,60 @@ python -m arforge.cli report examples/minimal/autosar.project.yaml
 
 ---
 
+## `diff`
+
+Generate a deterministic Markdown summary of structural differences between two project versions.
+
+`diff` complements the rest of the CLI:
+
+- `validate` answers what is wrong with a model
+- `report` answers what a model contains
+- `diff` answers what changed between two models
+
+The command uses the shared project loading pipeline and renders a Markdown report through Jinja2. Differences never cause a non-zero exit code by themselves. The command fails only when project loading, argument handling, rendering, or file output fails.
+
+```bash
+python -m arforge.cli diff <old_project.yaml> <new_project.yaml> --out <file>
+```
+
+**Options:**
+
+| Option | Description |
+|---|---|
+| `--out FILE` | Output Markdown file path. If omitted, the diff is written to stdout. |
+| `--templates DIR` | Use an alternate Jinja2 template directory instead of the built-in templates. |
+
+**Examples:**
+
+```bash
+python -m arforge.cli diff examples/minimal/autosar.project.yaml examples/features/subcomposition/autosar.project.yaml --out build/model-diff.md
+
+# stdout
+python -m arforge.cli diff examples/minimal/autosar.project.yaml examples/minimal/autosar.project.yaml
+```
+
+**Compared in the first version:**
+
+- SWC additions and removals
+- Interface additions, removals, and kind changes
+- Port additions, removals, and selected field changes
+- Component prototype additions, removals, and `typeRef` changes
+- Connector additions and removals
+- Subcomposition additions, removals, and high-level contained-structure changes
+
+**Typical sections:**
+
+- Summary
+- SWCs
+- Interfaces
+- Ports
+- Component Prototypes
+- Connectors
+- Compositions and Subcompositions
+- Notes
+
+---
+
 ## `generate diagram`
 
 Validate the project and generate the standard architecture diagram set.

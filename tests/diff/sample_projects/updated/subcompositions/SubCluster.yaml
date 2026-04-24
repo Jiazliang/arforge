@@ -1,0 +1,16 @@
+subcomposition:
+  name: "SubCluster"
+  ports:
+    - name: "Rp_SubSpeed"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed_Backup"
+    - name: "Pp_Status"
+      direction: "provides"
+      interfaceRef: "If_Status"
+  components:
+    - name: "InnerMonitor"
+      typeRef: "NewMonitor"
+  connectors: []
+  delegationConnectors:
+    - inner: "InnerMonitor.Rp_VehicleSpeed"
+      outer: "Rp_SubSpeed"

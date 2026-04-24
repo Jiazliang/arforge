@@ -1,0 +1,15 @@
+swc:
+  name: "Sensor"
+  runnables:
+    - name: "Runnable_Publish"
+      timingEventMs: 10
+      writes:
+        - port: "Pp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Pp_VehicleSpeed"
+      direction: "provides"
+      interfaceRef: "If_VehicleSpeed"
+    - name: "Rp_Command"
+      direction: "requires"
+      interfaceRef: "If_Command"

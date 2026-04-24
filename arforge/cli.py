@@ -16,6 +16,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from .codegen import supported_languages, write_code_outputs
+from .diffing import render_model_diff, write_model_diff
 from .diagrams import BACKENDS, write_diagram_outputs
 from .exporter import ExportInputSummary, InputPatternExpansion, write_outputs, write_outputs_with_report
 from .reporting import render_project_report, write_project_report
@@ -207,6 +208,53 @@ def report(
         raise typer.Exit(code=2)
 
     console.print(Panel.fit("[green]Report generation complete[/green]", title="report"))
+    console.print(f" - {written}")
+
+
+@app.command()
+def diff(
+    old_project: Path,
+    new_project: Path,
+    out: Path | None = typer.Option(None, "--out", help="Output Markdown diff path. Prints to stdout when omitted."),
+    templates: Path = typer.Option(None, help="Template directory"),
+):
+    """Generate a structural Markdown diff between two project models."""
+    template_dir = templates or _default_template_dir()
+
+    try:
+        old_model = load_aggregator(old_project)
+        new_model = load_aggregator(new_project)
+        if out is None:
+            typer.echo(
+                render_model_diff(
+                    old_model,
+                    new_model,
+                    template_dir=template_dir,
+                    old_project_path=old_project,
+                    new_project_path=new_project,
+                ),
+                nl=False,
+            )
+            return
+        written = write_model_diff(
+            old_model,
+            new_model,
+            template_dir=template_dir,
+            out=out,
+            old_project_path=old_project,
+            new_project_path=new_project,
+        )
+    except ValidationError as e:
+        console.print(Panel.fit("[red]FAILED[/red] diff", title="diff"))
+        for msg in e.errors:
+            console.print(f" - {msg}")
+        raise typer.Exit(code=2)
+    except OSError as e:
+        console.print(Panel.fit("[red]FAILED[/red] diff", title="diff"))
+        console.print(f" - {e}")
+        raise typer.Exit(code=2)
+
+    console.print(Panel.fit("[green]Diff generation complete[/green]", title="diff"))
     console.print(f" - {written}")
 
 

@@ -1,0 +1,6 @@
+interface:
+  name: "If_Status"
+  type: "senderReceiver"
+  dataElements:
+    - name: "StatusValue"
+      typeRef: "App_VehicleSpeed"

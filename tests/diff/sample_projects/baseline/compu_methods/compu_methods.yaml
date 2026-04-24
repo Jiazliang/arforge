@@ -1,0 +1,7 @@
+compuMethods:
+  - name: "Cm_VehicleSpeed"
+    category: "linear"
+    factor: 1
+    offset: 0
+    physMin: 0
+    physMax: 250

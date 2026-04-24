@@ -1,0 +1,174 @@
+# ARForge Model Diff
+
+{% if report.old_project_path or report.new_project_path -%}
+Compared:
+{% if report.old_project_path %}- Old: `{{ report.old_project_path }}`{% endif %}
+{% if report.new_project_path %}- New: `{{ report.new_project_path }}`{% endif %}
+{% endif %}
+
+## Summary
+
+{% if summary.has_changes -%}
+Detected {{ summary.total_changes }} structural change{% if summary.total_changes != 1 %}s{% endif %} across the compared models.
+{% else -%}
+No structural differences were detected in the compared scope.
+{% endif %}
+
+| Category | Added | Removed | Changed |
+|---|---:|---:|---:|
+| SWCs | {{ summary.counts.swcs_added }} | {{ summary.counts.swcs_removed }} | 0 |
+| Interfaces | {{ summary.counts.interfaces_added }} | {{ summary.counts.interfaces_removed }} | {{ summary.counts.interfaces_changed }} |
+| Ports | {{ summary.counts.ports_added }} | {{ summary.counts.ports_removed }} | {{ summary.counts.ports_changed }} |
+| Component prototypes | {{ summary.counts.prototypes_added }} | {{ summary.counts.prototypes_removed }} | {{ summary.counts.prototypes_changed }} |
+| Connectors | {{ summary.counts.connectors_added }} | {{ summary.counts.connectors_removed }} | 0 |
+| Compositions and subcompositions | {{ summary.counts.subcompositions_added }} | {{ summary.counts.subcompositions_removed }} | {{ summary.counts.subcompositions_changed }} |
+
+## SWCs
+
+{% if swcs.added -%}
+### Added
+{% for item in swcs.added -%}
+- `{{ item.name }}`
+{% endfor %}
+{% endif -%}
+{% if swcs.removed -%}
+### Removed
+{% for item in swcs.removed -%}
+- `{{ item.name }}`
+{% endfor %}
+{% endif -%}
+{% if not swcs.added and not swcs.removed -%}
+No SWC changes.
+{% endif %}
+
+## Interfaces
+
+{% if interfaces.added -%}
+### Added
+{% for item in interfaces.added -%}
+- `{{ item.name }}` (`{{ item.kind }}`)
+{% endfor %}
+{% endif -%}
+{% if interfaces.removed -%}
+### Removed
+{% for item in interfaces.removed -%}
+- `{{ item.name }}` (`{{ item.kind }}`)
+{% endfor %}
+{% endif -%}
+{% if interfaces.changed -%}
+### Changed
+{% for item in interfaces.changed -%}
+- `{{ item.name }}`
+{% for change in item.changes -%}
+  - `{{ change.field }}`: `{{ change.before }}` -> `{{ change.after }}`
+{% endfor %}
+{% endfor %}
+{% endif -%}
+{% if not interfaces.added and not interfaces.removed and not interfaces.changed -%}
+No interface changes.
+{% endif %}
+
+## Ports
+
+{% if ports.added -%}
+### Added
+{% for item in ports.added -%}
+- `{{ item.label }}` (`{{ item.direction }}`, `{{ item.kind }}`, `{{ item.interface_ref }}`)
+{% endfor %}
+{% endif -%}
+{% if ports.removed -%}
+### Removed
+{% for item in ports.removed -%}
+- `{{ item.label }}` (`{{ item.direction }}`, `{{ item.kind }}`, `{{ item.interface_ref }}`)
+{% endfor %}
+{% endif -%}
+{% if ports.changed -%}
+### Changed
+{% for item in ports.changed -%}
+- `{{ item.label }}`
+{% for change in item.changes -%}
+  - `{{ change.field }}`: `{{ change.before }}` -> `{{ change.after }}`
+{% endfor %}
+{% endfor %}
+{% endif -%}
+{% if not ports.added and not ports.removed and not ports.changed -%}
+No port changes.
+{% endif %}
+
+## Component Prototypes
+
+{% if component_prototypes.added -%}
+### Added
+{% for item in component_prototypes.added -%}
+- `{{ item.label }}` (`{{ item.type_ref }}`)
+{% endfor %}
+{% endif -%}
+{% if component_prototypes.removed -%}
+### Removed
+{% for item in component_prototypes.removed -%}
+- `{{ item.label }}` (`{{ item.type_ref }}`)
+{% endfor %}
+{% endif -%}
+{% if component_prototypes.changed -%}
+### Changed
+{% for item in component_prototypes.changed -%}
+- `{{ item.label }}`
+{% for change in item.changes -%}
+  - `{{ change.field }}`: `{{ change.before }}` -> `{{ change.after }}`
+{% endfor %}
+{% endfor %}
+{% endif -%}
+{% if not component_prototypes.added and not component_prototypes.removed and not component_prototypes.changed -%}
+No component prototype changes.
+{% endif %}
+
+## Connectors
+
+{% if connectors.added -%}
+### Added
+{% for item in connectors.added -%}
+- `{{ item.label }}`
+{% endfor %}
+{% endif -%}
+{% if connectors.removed -%}
+### Removed
+{% for item in connectors.removed -%}
+- `{{ item.label }}`
+{% endfor %}
+{% endif -%}
+{% if not connectors.added and not connectors.removed -%}
+No connector changes.
+{% endif %}
+
+## Compositions and Subcompositions
+
+{% if subcompositions.added -%}
+### Added
+{% for item in subcompositions.added -%}
+- `{{ item.name }}`
+{% endfor %}
+{% endif -%}
+{% if subcompositions.removed -%}
+### Removed
+{% for item in subcompositions.removed -%}
+- `{{ item.name }}`
+{% endfor %}
+{% endif -%}
+{% if subcompositions.changed -%}
+### Changed
+{% for item in subcompositions.changed -%}
+- `{{ item.name }}`
+{% for change in item.changes -%}
+  - `{{ change.field }}`: `{{ change.before }}` -> `{{ change.after }}`
+{% endfor %}
+{% endfor %}
+{% endif -%}
+{% if not subcompositions.added and not subcompositions.removed and not subcompositions.changed -%}
+No composition or subcomposition changes.
+{% endif %}
+
+## Notes
+
+{% for note in notes -%}
+- {{ note }}
+{% endfor %}

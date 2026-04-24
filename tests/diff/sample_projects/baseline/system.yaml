@@ -1,0 +1,16 @@
+system:
+  name: "DiffSystem"
+  composition:
+    name: "Composition_DiffSystem"
+    components:
+      - name: "Sensor_1"
+        typeRef: "Sensor"
+      - name: "Display_1"
+        typeRef: "Display"
+      - name: "Legacy_1"
+        typeRef: "LegacyUnit"
+      - name: "Cluster_1"
+        typeRef: "SubCluster"
+    connectors:
+      - from: "Sensor_1.Pp_VehicleSpeed"
+        to: "Display_1.Rp_VehicleSpeed"

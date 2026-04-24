@@ -1,0 +1,6 @@
+interface:
+  name: "If_Command"
+  type: "senderReceiver"
+  dataElements:
+    - name: "CommandValue"
+      typeRef: "App_VehicleSpeed"

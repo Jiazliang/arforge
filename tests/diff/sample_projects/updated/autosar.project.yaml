@@ -1,0 +1,15 @@
+autosar:
+  version: "4.2"
+  rootPackage: "DIFF"
+
+inputs:
+  baseTypes: "types/base_types.yaml"
+  implementationDataTypes: "types/implementation_types.yaml"
+  applicationDataTypes: "types/application_types.yaml"
+  interfaces:
+    - "interfaces/*.yaml"
+  swcs:
+    - "swcs/*.yaml"
+  subcompositions:
+    - "subcompositions/*.yaml"
+  system: "system.yaml"

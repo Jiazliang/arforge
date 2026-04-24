@@ -1,0 +1,12 @@
+swc:
+  name: "NewMonitor"
+  runnables:
+    - name: "Runnable_Observe"
+      timingEventMs: 20
+      reads:
+        - port: "Rp_VehicleSpeed"
+          dataElement: "VehicleSpeed"
+  ports:
+    - name: "Rp_VehicleSpeed"
+      direction: "requires"
+      interfaceRef: "If_VehicleSpeed_Backup"
