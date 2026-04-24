@@ -7,6 +7,9 @@ and render reports from modeled inputs.
 
 from __future__ import annotations
 
+import subprocess
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from time import perf_counter
 from typing import Annotated
@@ -51,6 +54,81 @@ def _fmt_size(size_bytes: int) -> str:
     if size_bytes < 1024:
         return f"{size_bytes} B"
     return f"{size_bytes / 1024.0:.1f} KB"
+
+
+def _diff_usage_errors() -> list[str]:
+    return [
+        "Invalid diff arguments. Use one of:",
+        " - arforge diff <old_project> <new_project> [--out diff.md]",
+        " - arforge diff <project> --base-git-ref <ref> [--out diff.md]",
+    ]
+
+
+def _run_git_command(args: list[str]) -> bytes:
+    try:
+        completed = subprocess.run(
+            args,
+            check=True,
+            capture_output=True,
+        )
+    except FileNotFoundError as exc:
+        raise ValidationError(["Git is required for --base-git-ref but was not found on PATH."]) from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.decode("utf-8", errors="replace").strip()
+        stdout = exc.stdout.decode("utf-8", errors="replace").strip()
+        detail = stderr or stdout or "git command failed"
+        raise RuntimeError(detail) from exc
+    return completed.stdout
+
+
+def _git_show_project_file(base_git_ref: str, project_arg: str) -> str:
+    try:
+        output = _run_git_command(["git", "show", f"{base_git_ref}:{project_arg}"])
+    except RuntimeError as exc:
+        detail = str(exc)
+        if "exists on disk, but not in" in detail or "does not exist in" in detail:
+            raise ValidationError([f"Project file '{project_arg}' is not present at git ref '{base_git_ref}': {detail}"]) from exc
+        if "invalid object name" in detail or "bad revision" in detail or "unknown revision" in detail:
+            raise ValidationError([f"Git ref '{base_git_ref}' could not be resolved: {detail}"]) from exc
+        raise ValidationError([f"Failed to read '{project_arg}' from git ref '{base_git_ref}': {detail}"]) from exc
+    return output.decode("utf-8")
+
+
+@contextmanager
+def _resolve_diff_inputs(
+    project_args: list[str],
+    base_git_ref: str | None,
+) -> tuple[Path, Path, str, str]:
+    if base_git_ref is None:
+        if len(project_args) != 2:
+            raise ValidationError(_diff_usage_errors())
+        yield Path(project_args[0]), Path(project_args[1]), project_args[0], project_args[1]
+        return
+
+    if len(project_args) != 1:
+        raise ValidationError(_diff_usage_errors())
+
+    project_arg = project_args[0]
+    new_project = Path(project_arg)
+    old_contents = _git_show_project_file(base_git_ref, project_arg)
+    temp_path: Path | None = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            suffix=new_project.suffix or ".yaml",
+            prefix=".arforge-git-base-",
+            dir=new_project.parent if str(new_project.parent) else None,
+            delete=False,
+        ) as handle:
+            handle.write(old_contents)
+            temp_path = Path(handle.name)
+
+        yield temp_path, new_project, f"{base_git_ref}:{project_arg}", project_arg
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 def _print_pattern_summary(label: str, patterns: list[InputPatternExpansion], preview_limit: int = 3) -> None:
@@ -213,8 +291,17 @@ def report(
 
 @app.command()
 def diff(
-    old_project: Path,
-    new_project: Path,
+    projects: Annotated[
+        list[str],
+        typer.Argument(
+            help="Either <old_project> <new_project> or a single <project> when --base-git-ref is used.",
+        ),
+    ],
+    base_git_ref: str | None = typer.Option(
+        None,
+        "--base-git-ref",
+        help="Compare the working tree project against the version stored at the given git ref.",
+    ),
     out: Path | None = typer.Option(None, "--out", help="Output Markdown diff path. Prints to stdout when omitted."),
     templates: Path = typer.Option(None, help="Template directory"),
 ):
@@ -222,28 +309,34 @@ def diff(
     template_dir = templates or _default_template_dir()
 
     try:
-        old_model = load_aggregator(old_project)
-        new_model = load_aggregator(new_project)
-        if out is None:
-            typer.echo(
-                render_model_diff(
-                    old_model,
-                    new_model,
-                    template_dir=template_dir,
-                    old_project_path=old_project,
-                    new_project_path=new_project,
-                ),
-                nl=False,
+        with _resolve_diff_inputs(projects, base_git_ref) as (
+            old_project,
+            new_project,
+            old_project_label,
+            new_project_label,
+        ):
+            old_model = load_aggregator(old_project)
+            new_model = load_aggregator(new_project)
+            if out is None:
+                typer.echo(
+                    render_model_diff(
+                        old_model,
+                        new_model,
+                        template_dir=template_dir,
+                        old_project_path=old_project_label,
+                        new_project_path=new_project_label,
+                    ),
+                    nl=False,
+                )
+                return
+            written = write_model_diff(
+                old_model,
+                new_model,
+                template_dir=template_dir,
+                out=out,
+                old_project_path=old_project_label,
+                new_project_path=new_project_label,
             )
-            return
-        written = write_model_diff(
-            old_model,
-            new_model,
-            template_dir=template_dir,
-            out=out,
-            old_project_path=old_project,
-            new_project_path=new_project,
-        )
     except ValidationError as e:
         console.print(Panel.fit("[red]FAILED[/red] diff", title="diff"))
         for msg in e.errors:

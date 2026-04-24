@@ -217,8 +217,8 @@ def build_model_diff_context(
     old_project: Project,
     new_project: Project,
     *,
-    old_project_path: Path | None = None,
-    new_project_path: Path | None = None,
+    old_project_path: str | Path | None = None,
+    new_project_path: str | Path | None = None,
 ) -> dict[str, Any]:
     old_project = _sort_project_for_export(old_project)
     new_project = _sort_project_for_export(new_project)
@@ -411,8 +411,8 @@ def render_model_diff(
     new_project: Project,
     *,
     template_dir: Path,
-    old_project_path: Path | None = None,
-    new_project_path: Path | None = None,
+    old_project_path: str | Path | None = None,
+    new_project_path: str | Path | None = None,
     template_name: str = MODEL_DIFF_TEMPLATE,
 ) -> str:
     context = build_model_diff_context(
@@ -434,8 +434,8 @@ def write_model_diff(
     *,
     template_dir: Path,
     out: Path,
-    old_project_path: Path | None = None,
-    new_project_path: Path | None = None,
+    old_project_path: str | Path | None = None,
+    new_project_path: str | Path | None = None,
     template_name: str = MODEL_DIFF_TEMPLATE,
 ) -> Path:
     rendered = render_model_diff(
