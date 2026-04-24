@@ -118,6 +118,9 @@ python -m arforge.cli report examples/minimal/autosar.project.yaml --out build/d
 # Generate a structural Markdown diff between two model versions
 python -m arforge.cli diff examples/minimal/autosar.project.yaml examples/minimal/autosar.project.yaml --out build/docs/diff.md
 
+# Compare the working tree project against a version stored in Git
+python -m arforge.cli diff examples/minimal/autosar.project.yaml --base-git-ref HEAD --out build/docs/diff.md
+
 # Generate starter C skeletons for SWCs
 python -m arforge.cli generate code examples/minimal/autosar.project.yaml --lang c --out build/code
 

@@ -207,12 +207,14 @@ The command uses the shared project loading pipeline and renders a Markdown repo
 
 ```bash
 python -m arforge.cli diff <old_project.yaml> <new_project.yaml> --out <file>
+python -m arforge.cli diff <project.yaml> --base-git-ref <ref> --out <file>
 ```
 
 **Options:**
 
 | Option | Description |
 |---|---|
+| `--base-git-ref REF` | Compare the working tree project against the project manifest stored at the given Git ref. |
 | `--out FILE` | Output Markdown file path. If omitted, the diff is written to stdout. |
 | `--templates DIR` | Use an alternate Jinja2 template directory instead of the built-in templates. |
 
@@ -221,9 +223,22 @@ python -m arforge.cli diff <old_project.yaml> <new_project.yaml> --out <file>
 ```bash
 python -m arforge.cli diff examples/minimal/autosar.project.yaml examples/features/subcomposition/autosar.project.yaml --out build/model-diff.md
 
+# compare the working tree project with the version committed on origin/main
+python -m arforge.cli diff examples/minimal/autosar.project.yaml --base-git-ref origin/main --out build/model-diff.md
+
 # stdout
 python -m arforge.cli diff examples/minimal/autosar.project.yaml examples/minimal/autosar.project.yaml
 ```
+
+**Git-integrated diff**
+
+Use Git mode when you want to compare the current working tree model against a branch, tag, or commit without checking out a second copy:
+
+- useful for pull request reviews
+- useful in CI pipelines that publish a Markdown diff artifact
+- complements `validate` and `report` by answering what changed against a known baseline
+
+In v1, only the project manifest file itself is fetched from Git. Referenced YAML files are still resolved from the working tree, so any files included by the manifest must exist locally.
 
 **Compared in the first version:**
 
