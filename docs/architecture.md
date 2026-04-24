@@ -24,7 +24,7 @@ rendered output generation  (only if no error findings)
 output files
 ```
 
-The `report` command is intentionally different: it loads the project, builds the typed model, and then renders a descriptive architecture summary without requiring semantic validation success. This keeps `report` complementary to `validate` rather than making it another validation surface.
+The `report` and `diff` commands are intentionally different: they load the project model through the shared pipeline and then render descriptive Markdown outputs without requiring semantic validation success. This keeps them complementary to `validate` rather than making them additional validation surfaces.
 
 Each stage has a clear responsibility and a hard boundary. The loader does not reason about semantics. The semantic validator does not render output. The rendering backends do not re-validate.
 
@@ -71,6 +71,9 @@ Export orchestration. Builds the rendering context from the validated model, dri
 **`arforge/reporting.py`**
 Architecture report orchestration. Builds a normalized report context from the loaded model, summarizes counts and architecture facts, and renders Markdown through Jinja2 templates. Reuses stable model and validation-context analysis helpers where appropriate, but does not act as a validation command.
 
+**`arforge/diffing.py`**
+Model diff orchestration. Builds a normalized structural diff context from two loaded project models, computes deterministic added/removed/changed sets for the supported high-level entities, and renders Markdown through Jinja2 templates without mixing heavy comparison logic into the template layer.
+
 **`arforge/codegen.py`**
 Code generation orchestration. Builds a normalized per-SWC code-generation model from the validated project, resolves straightforward type mappings, renders language-specific Jinja2 templates, and writes deterministic per-SWC code artifacts.
 
@@ -108,7 +111,7 @@ The rendering backends receive the project model and build rendering contexts - 
 
 Output ordering is enforced explicitly in the rendering context, not left to dict iteration order. This guarantees that repeated generation runs on the same model produce byte-identical artifacts for a given backend.
 
-Validation-gated backends such as ARXML export and code generation operate on semantically validated models. The architecture report backend operates on a successfully loaded model and intentionally keeps validation findings out of the primary report output.
+Validation-gated backends such as ARXML export and code generation operate on semantically validated models. The Markdown review backends (`report` and `diff`) operate on successfully loaded models and intentionally keep validation findings out of their primary outputs.
 
 The `--templates` CLI option allows substituting the built-in template directory with a custom one. This is the designed extension point for OEM-specific output profiles - custom templates can add vendor extensions, change package structure, or enforce naming conventions without modifying ARForge itself.
 
@@ -118,7 +121,7 @@ The `--templates` CLI option allows substituting the built-in template directory
 2. Add a new `ValidationCase` subclass with a stable `CORE-XXX` code that does not collide with existing codes.
 3. Register it in the `core` ruleset via `arforge/validation/cases/__init__.py`.
 4. Add an invalid fixture under `examples/invalid/` that triggers the new finding. Follow the naming convention in `examples/invalid/README.md`.
-5. Add a test case in `tests/test_examples.py` that asserts the expected finding code.
+5. Add a test case in `tests/examples/test_example_projects.py` or the relevant domain-specific test module that asserts the expected finding code.
 
 The invalid fixture corpus serves as both documentation and regression protection. Every rule must have at least one fixture that proves it fires.
 

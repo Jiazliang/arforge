@@ -318,7 +318,7 @@ The generated output is a deterministic starter skeleton, not a complete AUTOSAR
 
 ## Running via VS Code tasks
 
-If you are working in VS Code, all commands above are available as pre-configured tasks under `Terminal -> Run Task`. The active project manifest is resolved from the `arforge.projectFile` setting in `.vscode/settings.json`.
+If you are working in VS Code, the common day-to-day commands are available as pre-configured tasks under `Terminal -> Run Task`. The active project manifest is resolved from the `arforge.projectFile` setting in `.vscode/settings.json`.
 
 See [Project Structure - VS Code setup](./project-structure.md#vs-code-setup) for details.
 

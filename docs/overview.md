@@ -31,7 +31,7 @@ arforge validate   <- catches design errors early, in CI or locally
        ->
 arforge export     <- produces ARXML for the integrator
 or
-arforge generate   <- produces derived artifacts for developers and reviewers
+arforge report / arforge diff / arforge generate ...   <- produces review artifacts and derived developer outputs
        ->
 RTE generator / DaVinci Integrator consumes ARXML
 ```
@@ -44,7 +44,7 @@ ARForge runs on Linux and Windows. Both platforms are supported for CLI usage, V
 
 ## VS Code integration
 
-ARForge ships with a `.vscode/` configuration that activates YAML schema autocomplete and inline diagnostics automatically when you open the project in VS Code. Tasks for validate, export, diagram generation, code generation, init, and pytest are available without manual setup. See [Project Structure](./project-structure.md#vs-code-setup) for the canonical setup guide.
+ARForge ships with a `.vscode/` configuration that activates YAML schema autocomplete and inline diagnostics automatically when you open the project in VS Code. Tasks for init, validate, export, report, diagram generation, code generation, and pytest are available without manual setup. See [Project Structure](./project-structure.md#vs-code-setup) for the canonical setup guide.
 
 ## What is currently supported
 
@@ -62,6 +62,8 @@ ARForge targets a practical AUTOSAR Classic 4.2 subset:
 - Jinja2-based ARXML export, monolithic or split by SWC, with deterministic ordering and shared rendering logic across both modes
 - template-driven C code skeleton generation for SWC runnables
 - PlantUML diagram generation for architecture and behavior views
+- deterministic Markdown architecture reporting
+- deterministic Markdown structural diffing between model versions
 
 ## Design principles
 
