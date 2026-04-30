@@ -364,7 +364,8 @@ Semantics:
 Current export scope:
 
 - `modeSwitchEvents` are exported as ARXML events
-- runnable `modeConditions` are currently kept as ARForge modeling and validation metadata and are not emitted as AUTOSAR mode-dependency XML
+- runnable `modeConditions` are exported as event-level `DISABLED-MODE-IREFS` on the runnable trigger event
+- because AUTOSAR models this as disabled modes, ARForge exports the complement of the allowed set for each referenced mode-switch port
 
 ### Runnable access definitions
 

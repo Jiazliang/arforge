@@ -77,4 +77,4 @@ Explicit scope. ARForge covers the SWC design layer. It deliberately does not mo
 
 Current AUTOSAR support is intentionally scoped. ARForge aims for clean, checker-friendly export for the supported subset, but some completeness details outside that subset may still remain open and are tracked in the roadmap rather than hidden behind stronger compliance claims.
 
-One current example of that scoped behavior is runnable `modeConditions`: they are supported for YAML authoring and semantic validation, but ARForge does not yet emit speculative AUTOSAR mode-dependency XML for them.
+Runnable `modeConditions` are exported conservatively as AUTOSAR event-level mode-disabling dependencies, rather than as a guessed runnable-level XML structure.

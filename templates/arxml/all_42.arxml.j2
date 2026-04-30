@@ -156,7 +156,7 @@
           <SHORT-NAME>Components</SHORT-NAME>
           <ELEMENTS>
             {% for swc in swcs %}
-            {{ arxml.render_swc_component(swc, root_pkg, swc_sr_port_metadata[swc.name], swc_cs_port_metadata[swc.name]) }}
+            {{ arxml.render_swc_component(swc, root_pkg, swc_sr_port_metadata[swc.name], swc_cs_port_metadata[swc.name], swc_runnable_disabled_mode_irefs[swc.name]) }}
             {% endfor %}
             {% for subcomposition in subcompositions %}
             <COMPOSITION-SW-COMPONENT-TYPE>

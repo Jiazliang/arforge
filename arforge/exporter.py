@@ -128,6 +128,13 @@ class CsOperationComSpecMetadata:
     operation_ref: str
 
 
+@dataclass(frozen=True)
+class ArxmlDisabledModeIref:
+    context_port_ref: str
+    context_mode_declaration_group_prototype_ref: str
+    target_mode_declaration_ref: str
+
+
 CompositionOwnerKind = Literal["component_type", "root_system"]
 
 
@@ -338,6 +345,52 @@ def _build_cs_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, lis
             for operation in interface.operations
         ]
     return metadata
+
+
+def _build_runnable_disabled_mode_irefs(project: Project, swc: Swc) -> dict[str, list[ArxmlDisabledModeIref]]:
+    ports_by_name = {port.name: port for port in swc.ports}
+    mode_groups_by_name = {group.name: group for group in project.modeDeclarationGroups}
+    runnable_disabled_mode_irefs: dict[str, list[ArxmlDisabledModeIref]] = {}
+
+    for runnable in swc.runnables:
+        allowed_modes_by_port: dict[str, set[str]] = {}
+        for condition in runnable.modeConditions:
+            allowed_modes_by_port.setdefault(condition.port, set()).add(condition.mode)
+
+        disabled_mode_irefs: list[ArxmlDisabledModeIref] = []
+        for port_name in sorted(allowed_modes_by_port):
+            port = ports_by_name.get(port_name)
+            if port is None or not port.modeGroupRef:
+                continue
+
+            mode_group = mode_groups_by_name.get(port.modeGroupRef)
+            if mode_group is None:
+                continue
+
+            allowed_modes = allowed_modes_by_port[port_name]
+            for mode in mode_group.modes:
+                if mode.name in allowed_modes:
+                    continue
+                disabled_mode_irefs.append(
+                    ArxmlDisabledModeIref(
+                        context_port_ref=f"/{project.rootPackage}/Components/{swc.name}/{port.name}",
+                        context_mode_declaration_group_prototype_ref=(
+                            f"/{project.rootPackage}/Interfaces/{port.interfaceRef}/{port.interfaceRef}_ModeGroup"
+                        ),
+                        target_mode_declaration_ref=f"/{project.rootPackage}/Modes/{mode_group.name}/{mode.name}",
+                    )
+                )
+
+        runnable_disabled_mode_irefs[runnable.name] = sorted(
+            disabled_mode_irefs,
+            key=lambda item: (
+                item.context_port_ref,
+                item.context_mode_declaration_group_prototype_ref,
+                item.target_mode_declaration_ref,
+            ),
+        )
+
+    return runnable_disabled_mode_irefs
 
 
 def _component_type_path(root_package: str, component_type_name: str) -> str:
@@ -642,6 +695,7 @@ def render_swc(project: Project, swc: Swc, template_dir: Path, template_name: st
         swc=swc,
         sr_port_metadata=_build_sr_port_comspec_metadata(project, swc),
         cs_port_metadata=_build_cs_port_comspec_metadata(project, swc),
+        runnable_disabled_mode_irefs=_build_runnable_disabled_mode_irefs(project, swc),
     )
 
 
@@ -776,6 +830,9 @@ def write_outputs_with_report(
                 swcs=swcs,
                 swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc) for swc in swcs},
                 swc_cs_port_metadata={swc.name: _build_cs_port_comspec_metadata(project, swc) for swc in swcs},
+                swc_runnable_disabled_mode_irefs={
+                    swc.name: _build_runnable_disabled_mode_irefs(project, swc) for swc in swcs
+                },
                 subcompositions=subcompositions,
                 system_name=project.system.name,
                 composition_name=project.system.composition.name,

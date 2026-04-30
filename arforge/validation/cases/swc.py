@@ -915,6 +915,14 @@ class ModeConditionCase(ValidationCase):
                         )
                     )
 
+                if runnable.initEvent:
+                    findings.append(
+                        self.finding(
+                            f"{location_base} modeConditions are not supported on initEvent runnables because InitEvent has no AUTOSAR mode-disabling dependency mapping.",
+                            code="CORE-029-MODE-CONDITION-INIT-EVENT-UNSUPPORTED",
+                        )
+                    )
+
                 for condition in sorted(runnable.modeConditions, key=lambda c: (c.port, c.mode)):
                     group, resolution_findings = _resolve_mode_switch_group(
                         ctx,

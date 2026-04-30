@@ -165,5 +165,6 @@ def test_monolithic_modes_example_keeps_mode_conditions_out_of_arxml(tmp_path: P
     xml = out.read_text(encoding="utf-8")
     assert "<SWC-MODE-SWITCH-EVENT>" in xml
     assert "Runnable_ProcessWhenActive" in xml
-    assert "MODE-DEPENDENC" not in xml
-    assert "DISABLED-MODE-IREF" not in xml
+    assert "<DISABLED-MODE-IREFS>" in xml
+    assert "/FEATURE_MODES/Modes/Mdg_PowerState/OFF</TARGET-MODE-DECLARATION-REF>" in xml
+    assert "TE_Runnable_ProcessWhenActive" in xml

@@ -21,6 +21,6 @@ Semantics used in this example:
 Current export behavior:
 
 - `modeSwitchEvents` are exported to ARXML.
-- runnable `modeConditions` are currently modeled and validated by ARForge, but are not emitted as AUTOSAR mode-dependency XML yet.
+- runnable `modeConditions` are exported as AUTOSAR event-level `DISABLED-MODE-IREFS`.
 
 Entry point: `examples/features/modes/autosar.project.yaml`

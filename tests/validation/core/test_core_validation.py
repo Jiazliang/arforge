@@ -331,6 +331,23 @@ def test_mode_conditions_on_unconnected_mode_switch_port_emit_warning() -> None:
 
     assert "CORE-048-MS-MODE-CONDITION-UNCONNECTED" in warning_codes
 
+def test_mode_conditions_on_init_event_emit_error() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = _replace_runnable(
+        project,
+        "PowerStateUser",
+        "Runnable_OnSleep",
+        initEvent=True,
+        modeSwitchEvents=[],
+        modeConditions=[ModeCondition(port="Rp_PowerState", mode="SLEEP")],
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+
+    assert "CORE-029-MODE-CONDITION-INIT-EVENT-UNSUPPORTED" in {
+        finding.code for finding in report.error_findings()
+    }
+
 @pytest.mark.parametrize(
     ("fixture_name", "expected_code"),
     [

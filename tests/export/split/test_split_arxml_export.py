@@ -266,8 +266,13 @@ def test_split_modes_example_keeps_mode_conditions_out_of_arxml(tmp_path: Path) 
 
     assert "<SWC-MODE-SWITCH-EVENT>" in power_state_user_xml
     assert "Runnable_ProcessWhenActive" in power_state_user_xml
-    assert "MODE-DEPENDENC" not in power_state_user_xml
-    assert "DISABLED-MODE-IREF" not in power_state_user_xml
+    assert "<DISABLED-MODE-IREFS>" in power_state_user_xml
+    assert "<SHORT-NAME>TE_Runnable_ProcessWhenActive</SHORT-NAME>" in power_state_user_xml
+    assert "/FEATURE_MODES/Modes/Mdg_PowerState/OFF</TARGET-MODE-DECLARATION-REF>" in power_state_user_xml
+    assert "/FEATURE_MODES/Modes/Mdg_PowerState/ON</TARGET-MODE-DECLARATION-REF>" not in (
+        power_state_user_xml.split("<SHORT-NAME>TE_Runnable_ProcessWhenActive</SHORT-NAME>", 1)[1]
+        .split("</TIMING-EVENT>", 1)[0]
+    )
 
 def test_split_export_preserves_explicit_sr_receiver_semantics(tmp_path: Path) -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
