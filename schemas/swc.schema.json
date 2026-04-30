@@ -370,6 +370,22 @@
           ]
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "initEvent"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "modeConditions"
+              ]
+            }
+          }
+        }
+      ],
       "oneOf": [
         {
           "required": [

@@ -160,6 +160,37 @@ def test_swc_schema_rejects_invalid_mode_condition_shape() -> None:
     assert any("runnables.0.modeConditions.0" in error and "additional properties" in error.lower() for error in errors)
     assert any("runnables.0.modeConditions.0" in error and "'mode' is a required property" in error for error in errors)
 
+def test_swc_schema_rejects_mode_conditions_on_init_event_runnable() -> None:
+    errors = _schema_errors(
+        "swc.schema.json",
+        {
+            "swc": {
+                "name": "BrakeController",
+                "runnables": [
+                    {
+                        "name": "Runnable_InitBrake",
+                        "initEvent": True,
+                        "modeConditions": [
+                            {
+                                "port": "Rp_BrakeEcuMode",
+                                "mode": "NORMAL",
+                            }
+                        ],
+                    }
+                ],
+                "ports": [
+                    {
+                        "name": "Rp_BrakeEcuMode",
+                        "direction": "requires",
+                        "interfaceRef": "If_BrakeEcuMode",
+                    }
+                ],
+            }
+        },
+    )
+
+    assert any("runnables.0" in error and "should not be valid" in error.lower() for error in errors)
+
 def test_schema_validation_errors_are_deterministic_for_same_fixture() -> None:
     fixture = INVALID_DIR / "project_impl_array_zero_length.yaml"
 
