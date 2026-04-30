@@ -11,7 +11,7 @@ from pathlib import Path
 
 from arforge.codegen import write_code_outputs
 from arforge.validate import load_and_validate_aggregator
-from tests._shared import TEMPLATE_DIR, VALID_PROJECT
+from tests._shared import MODES_FEATURE_PROJECT, TEMPLATE_DIR, VALID_PROJECT
 
 def test_generate_code_writes_expected_files_for_example_project(tmp_path: Path) -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
@@ -81,3 +81,17 @@ def test_generate_code_is_deterministic(tmp_path: Path) -> None:
         data2 = (out2 / rel).read_bytes()
         assert data1 == data2
         assert hashlib.sha256(data1).hexdigest() == hashlib.sha256(data2).hexdigest()
+
+def test_generate_code_surfaces_mode_conditions_in_comments(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    out_dir = tmp_path / "code"
+
+    _ = write_code_outputs(project, template_dir=TEMPLATE_DIR, out=out_dir, lang="c")
+
+    power_state_user_header = (out_dir / "PowerStateUser.h").read_text(encoding="utf-8")
+    power_state_user_source = (out_dir / "PowerStateUser.c").read_text(encoding="utf-8")
+
+    assert "ModeCondition: Rp_PowerState in [ON]" in power_state_user_header
+    assert "ModeCondition: Rp_PowerState in [ON | SLEEP]" in power_state_user_header
+    assert "ModeCondition: Rp_PowerState in [ON | SLEEP]" in power_state_user_source
+    assert "TODO: honor modeled mode condition(s) when integrating with the target RTE scheduling/mode APIs." in power_state_user_source

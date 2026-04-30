@@ -26,6 +26,9 @@ void {{ runnable.name }}(void)
 {% if runnable.has_mode_switch_events %}
     /* TODO: handle modeled mode-switch trigger(s) for this runnable. */
 {% endif %}
+{% if runnable.has_mode_conditions %}
+    /* TODO: honor modeled mode condition(s) when integrating with the target RTE scheduling/mode APIs. */
+{% endif %}
 {% if runnable.reads %}
     /* Sender-receiver reads */
 {% for read in runnable.reads %}
