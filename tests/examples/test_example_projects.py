@@ -11,10 +11,13 @@ from pathlib import Path
 import pytest
 
 from arforge.validate import ValidationError, load_and_validate_aggregator
-from tests._shared import VALID_PROJECT, invalid_project_fixtures
+from tests._shared import MODES_FEATURE_PROJECT, VALID_PROJECT, invalid_project_fixtures
 
 def test_validate_main_example_passes() -> None:
     load_and_validate_aggregator(VALID_PROJECT)
+
+def test_validate_modes_feature_example_passes() -> None:
+    load_and_validate_aggregator(MODES_FEATURE_PROJECT)
 
 @pytest.mark.parametrize(
     "fixture_path",

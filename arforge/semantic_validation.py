@@ -126,6 +126,7 @@ class SwcPortUsage:
     calls: Tuple[Tuple[str, str], ...] = ()
     data_receive_events: Tuple[Tuple[str, str], ...] = ()
     mode_switch_events: Tuple[Tuple[str, str], ...] = ()
+    mode_conditions: Tuple[Tuple[str, str], ...] = ()
     operation_invoked_events: Tuple[Tuple[str, str], ...] = ()
     raises_errors: Tuple[Tuple[str, str, str], ...] = ()
 
@@ -266,6 +267,10 @@ class ValidationContext:
                     swc_port_usage.setdefault((swc.name, event.port), {}).setdefault("mode_switch_events", []).append(
                         (runnable.name, event.mode)
                     )
+                for condition in sorted(runnable.modeConditions, key=lambda c: (c.port, c.mode)):
+                    swc_port_usage.setdefault((swc.name, condition.port), {}).setdefault("mode_conditions", []).append(
+                        (runnable.name, condition.mode)
+                    )
                 for event in sorted(runnable.operationInvokedEvents, key=lambda e: (e.port, e.operation)):
                     swc_port_usage.setdefault((swc.name, event.port), {}).setdefault("operation_invoked_events", []).append(
                         (runnable.name, event.operation)
@@ -291,6 +296,7 @@ class ValidationContext:
                 calls=tuple(usage.get("calls", [])),
                 data_receive_events=tuple(usage.get("data_receive_events", [])),
                 mode_switch_events=tuple(usage.get("mode_switch_events", [])),
+                mode_conditions=tuple(usage.get("mode_conditions", [])),
                 operation_invoked_events=tuple(usage.get("operation_invoked_events", [])),
                 raises_errors=tuple(usage.get("raises_errors", [])),
             )

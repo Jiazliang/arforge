@@ -87,6 +87,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert "recommended small reference project" in readme
     assert "modes/operation_mode.yaml" in readme
     assert "interfaces/If_OperationMode.yaml" in readme
+    assert "modeConditions" in readme
     assert "subcompositions/subcomposition_speed_path.yaml" in readme
     assert "internal assembly connectors" in readme
     assert "python -m arforge.cli validate autosar.project.yaml" in readme
@@ -115,6 +116,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert 'modeGroupRef: "Mdg_OperationMode"' in operation_mode_interface_yaml
 
     assert 'description: "Publishes the current vehicle speed and reacts to the delegated operation mode."' in speed_sensor_yaml
+    assert 'modeConditions:' in speed_sensor_yaml
     assert 'name: "Runnable_OnOperationActive"' in speed_sensor_yaml
     assert 'port: "Rp_OperationModeIn"' in speed_sensor_yaml
     assert 'name: "Pp_OperationMode"' in speed_sensor_yaml
@@ -124,6 +126,7 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert 'mode: "explicit"' in speed_reporter_yaml
     assert 'name: "Rp_OperationMode"' in speed_reporter_yaml
     assert 'modeSwitchEvents:' in speed_reporter_yaml
+    assert 'modeConditions:' in speed_reporter_yaml
     assert 'mode: "ACTIVE"' in speed_reporter_yaml
 
     assert 'description: "Top-level SWC that drives the example operation mode and reads the speed value returned by the reusable subcomposition."' in system_supervisor_yaml

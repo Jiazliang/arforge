@@ -14,6 +14,7 @@ from arforge.exporter import write_outputs, write_outputs_with_report
 from arforge.model import Composition
 from arforge.validate import load_and_validate_aggregator
 from tests._shared import (
+    MODES_FEATURE_PROJECT,
     REPO_ROOT,
     SHARED_EXAMPLE_OUTPUT,
     SUBCOMPOSITION_EXAMPLE_OUTPUT,
@@ -254,6 +255,19 @@ def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Pa
     assert "<TARGET-MODE-DECLARATION-REF DEST=\"MODE-DECLARATION\">/DEMO/Modes/Mdg_PowerState/ON</TARGET-MODE-DECLARATION-REF>" in speed_display_xml
     assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in speed_display_xml
     assert "<INIT-VALUE>" in speed_display_xml
+
+def test_split_modes_example_keeps_mode_conditions_out_of_arxml(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    out_dir = tmp_path / "out"
+    written = write_outputs(project, template_dir=REPO_ROOT / "templates", out=out_dir, split_by_swc=True)
+
+    power_state_user_path = next(path for path in written if path.name == "PowerStateUser.arxml")
+    power_state_user_xml = power_state_user_path.read_text(encoding="utf-8")
+
+    assert "<SWC-MODE-SWITCH-EVENT>" in power_state_user_xml
+    assert "Runnable_ProcessWhenActive" in power_state_user_xml
+    assert "MODE-DEPENDENC" not in power_state_user_xml
+    assert "DISABLED-MODE-IREF" not in power_state_user_xml
 
 def test_split_export_preserves_explicit_sr_receiver_semantics(tmp_path: Path) -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)

@@ -51,7 +51,7 @@ def readme_md(system_name: str, *, no_example: bool = False) -> str:
         "- `types/` defines reusable data types.\n"
         "- `modes/operation_mode.yaml` defines the mode declaration group used by the starter flow.\n"
         "- `interfaces/If_VehicleSpeed.yaml` and `interfaces/If_OperationMode.yaml` define the sender-receiver and mode-switch interfaces used by ports.\n"
-        "- `swcs/` defines the atomic SWC types: a top-level `SystemSupervisor` and the reusable inner `SpeedSensor` and `SpeedReporter` building blocks.\n"
+        "- `swcs/` defines the atomic SWC types: a top-level `SystemSupervisor` and the reusable inner `SpeedSensor` and `SpeedReporter` building blocks, including both `modeSwitchEvents` and runnable `modeConditions`.\n"
         "- `subcompositions/subcomposition_speed_path.yaml` defines a reusable subcomposition with boundary ports, internal assembly connectors, and delegation connectors.\n"
         f"- `system.yaml` instantiates the reusable subcomposition together with one standalone atomic SWC in `{system_name}`.\n"
     )
@@ -228,8 +228,11 @@ def swc_speed_sensor_yaml() -> str:
   description: "Publishes the current vehicle speed and reacts to the delegated operation mode."
   runnables:
     - name: "Runnable_PublishVehicleSpeed"
-      description: "Writes the latest vehicle speed sample to the provided port."
+      description: "Writes the latest vehicle speed sample to the provided port while the delegated operation mode is ACTIVE."
       timingEventMs: 10
+      modeConditions:
+        - port: "Rp_OperationModeIn"
+          mode: "ACTIVE"
       writes:
         - port: "Pp_VehicleSpeed"
           dataElement: "VehicleSpeed"
@@ -264,8 +267,11 @@ def swc_speed_reporter_yaml() -> str:
   description: "Consumes the internal speed sample and republishes it on the subcomposition boundary."
   runnables:
     - name: "Runnable_ReportVehicleSpeed"
-      description: "Reads the latest vehicle speed sample from the internal sender-receiver port and exposes it on the boundary-facing output."
+      description: "Reads the latest vehicle speed sample from the internal sender-receiver port and exposes it on the boundary-facing output while the forwarded operation mode is ACTIVE."
       timingEventMs: 10
+      modeConditions:
+        - port: "Rp_OperationMode"
+          mode: "ACTIVE"
       reads:
         - port: "Rp_VehicleSpeed"
           dataElement: "VehicleSpeed"

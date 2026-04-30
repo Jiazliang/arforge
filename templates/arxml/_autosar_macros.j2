@@ -351,6 +351,8 @@
 
 {% macro render_swc_runnables(swc, root_pkg) -%}
 <RUNNABLES>
+  {# Runnable modeConditions are currently modeled for validation/reporting only.
+     Do not emit speculative AUTOSAR mode-dependency XML until a supported mapping is implemented. #}
   {% for r in swc.runnables %}
   <RUNNABLE-ENTITY>
     <SHORT-NAME>{{ r.name }}</SHORT-NAME>

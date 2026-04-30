@@ -97,6 +97,69 @@ def test_swc_schema_rejects_false_init_event_flag() -> None:
 
     assert any("True was expected" in error for error in errors)
 
+def test_swc_schema_accepts_runnable_mode_conditions() -> None:
+    errors = _schema_errors(
+        "swc.schema.json",
+        {
+            "swc": {
+                "name": "BrakeController",
+                "runnables": [
+                    {
+                        "name": "Runnable_ControlBrakeTorque",
+                        "timingEventMs": 10,
+                        "modeConditions": [
+                            {
+                                "port": "Rp_BrakeEcuMode",
+                                "mode": "NORMAL",
+                            }
+                        ],
+                    }
+                ],
+                "ports": [
+                    {
+                        "name": "Rp_BrakeEcuMode",
+                        "direction": "requires",
+                        "interfaceRef": "If_BrakeEcuMode",
+                    }
+                ],
+            }
+        },
+    )
+
+    assert errors == []
+
+def test_swc_schema_rejects_invalid_mode_condition_shape() -> None:
+    errors = _schema_errors(
+        "swc.schema.json",
+        {
+            "swc": {
+                "name": "BrakeController",
+                "runnables": [
+                    {
+                        "name": "Runnable_ControlBrakeTorque",
+                        "timingEventMs": 10,
+                        "modeConditions": [
+                            {
+                                "port": "Rp_BrakeEcuMode",
+                                "extra": "nope",
+                            }
+                        ],
+                    }
+                ],
+                "ports": [
+                    {
+                        "name": "Rp_BrakeEcuMode",
+                        "direction": "requires",
+                        "interfaceRef": "If_BrakeEcuMode",
+                    }
+                ],
+            }
+        },
+    )
+
+    assert any("runnables.0.modeConditions.0" in error and "additional properties" in error.lower() for error in errors)
+    assert any("runnables.0.modeConditions.0" in error and "'mode' is a required property" in error for error in errors)
+
 def test_schema_validation_errors_are_deterministic_for_same_fixture() -> None:
     fixture = INVALID_DIR / "project_impl_array_zero_length.yaml"
 

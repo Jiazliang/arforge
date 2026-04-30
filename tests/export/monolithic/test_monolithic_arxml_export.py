@@ -13,6 +13,7 @@ import re
 from arforge.exporter import write_outputs
 from arforge.validate import load_and_validate_aggregator
 from tests._shared import (
+    MODES_FEATURE_PROJECT,
     SHARED_EXAMPLE_OUTPUT,
     SUBCOMPOSITION_EXAMPLE_OUTPUT,
     TEMPLATE_DIR,
@@ -154,3 +155,15 @@ def test_monolithic_export_is_deterministic(tmp_path: Path) -> None:
     data2 = out2.read_bytes()
     assert data1 == data2
     assert hashlib.sha256(data1).hexdigest() == hashlib.sha256(data2).hexdigest()
+
+def test_monolithic_modes_example_keeps_mode_conditions_out_of_arxml(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    out = tmp_path / "FeatureModes.arxml"
+
+    _ = write_outputs(project, template_dir=TEMPLATE_DIR, out=out, split_by_swc=False)
+
+    xml = out.read_text(encoding="utf-8")
+    assert "<SWC-MODE-SWITCH-EVENT>" in xml
+    assert "Runnable_ProcessWhenActive" in xml
+    assert "MODE-DEPENDENC" not in xml
+    assert "DISABLED-MODE-IREF" not in xml

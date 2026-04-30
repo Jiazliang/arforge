@@ -247,6 +247,10 @@ def _sort_runnable(runnable: Runnable) -> Runnable:
             runnable.modeSwitchEvents,
             key=lambda event: (event.port, event.mode),
         ),
+        modeConditions=sorted(
+            runnable.modeConditions,
+            key=lambda condition: (condition.port, condition.mode),
+        ),
         raisesErrors=sorted(
             runnable.raisesErrors,
             key=lambda raised_error: (raised_error.operation, raised_error.error),
