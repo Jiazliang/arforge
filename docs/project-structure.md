@@ -42,6 +42,7 @@ The manifest is the single entry point for all ARForge commands. It declares the
 autosar:
   version: "4.2"
   rootPackage: "MY_PROJECT"
+  packageLayoutRef: "packages/company_layout.yaml"
 
 inputs:
   baseTypes: "types/base_types.yaml"
@@ -63,6 +64,104 @@ inputs:
 ```
 
 All paths are resolved relative to the manifest file. This means the manifest and its inputs can live anywhere in a repository as long as the relative paths are correct.
+
+`rootPackage` is always the top-level AUTOSAR package emitted by the exporter. `packageLayoutRef` is optional and points to an external package-layout file that controls the subpackage structure below that root package.
+
+## External package layouts
+
+ARForge treats AUTOSAR packages as export-time containers and namespaces for packageable elements. They affect ARXML reference paths and tool compatibility, but they do not define runtime behavior, instance wiring, or architecture semantics.
+
+Use an external package layout file when you need company-specific ARXML package paths:
+
+```yaml
+packageLayout:
+  name: "CompanyLayout"
+  defaults:
+    swc: "Components/Common"
+    interface: "Interfaces/Common"
+    applicationDataType: "DataTypes/Application"
+    implementationDataType: "DataTypes/Implementation"
+    baseType: "DataTypes/Base"
+    compuMethod: "DataTypes/CompuMethods"
+    unit: "DataTypes/Units"
+    modeDeclarationGroup: "Modes"
+    composition: "Components/Compositions"
+    system: "System"
+  allowedPackages:
+    - "Components"
+    - "Components/Common"
+    - "Components/Brake"
+    - "Interfaces"
+    - "Interfaces/Common"
+    - "Interfaces/Brake"
+    - "DataTypes/Application"
+    - "DataTypes/Implementation"
+    - "DataTypes/Base"
+    - "DataTypes/CompuMethods"
+    - "DataTypes/Units"
+    - "Modes"
+    - "System"
+```
+
+Packageable top-level elements may then opt into an explicit package:
+
+```yaml
+swc:
+  name: "BrakeController"
+  package: "Components/Brake"
+```
+
+Unassigned elements fall back to the category default from the external layout.
+
+Supported explicit `package` targets:
+
+- SWCs
+- reusable subcomposition types
+- interfaces
+- base types
+- implementation data types
+- application data types
+- compu methods
+- units
+- mode declaration groups
+- system
+
+Nested elements do not carry a `package` field. This includes runnables, ports, connectors, operations, data elements, and individual mode declarations. Those remain nested under their owning packageable element.
+
+### Package layout authoring rules
+
+When defining package layouts and per-element package assignments, ARForge currently enforces these rules:
+
+- package paths are relative to `rootPackage`
+- package paths must not start with `/`
+- package paths must not end with `/`
+- package paths must not contain empty segments such as `Components//Brake`
+- each segment must be a valid AUTOSAR-style short name using letters, digits, and `_`
+- explicit element packages must also appear in `allowedPackages`
+- category defaults should also appear in `allowedPackages`
+
+Example explicit assignments across multiple categories:
+
+```yaml
+interface:
+  name: "If_BrakeTorque"
+  type: "senderReceiver"
+  package: "Interfaces/Brake"
+```
+
+```yaml
+applicationDataTypes:
+  - name: "App_BrakeTorque"
+    implementationTypeRef: "Impl_uint16"
+    package: "DataTypes/Application"
+```
+
+```yaml
+modeDeclarationGroups:
+  - name: "Mdg_BrakeMode"
+    initialMode: "OFF"
+    package: "Modes"
+```
 
 ## What belongs where
 

@@ -22,6 +22,8 @@ def project_yaml(system_name: str) -> str:
         body=f"""autosar:
   version: "4.2"
   rootPackage: "{system_name.upper()}"
+  # Optional: enable an external ARXML package layout file.
+  # packageLayoutRef: "packages/company_layout.yaml"
 
 inputs:
   baseTypes: "types/base_types.yaml"
@@ -54,6 +56,7 @@ def readme_md(system_name: str, *, no_example: bool = False) -> str:
         "- `swcs/` defines the atomic SWC types: a top-level `SystemSupervisor` and the reusable inner `SpeedSensor` and `SpeedReporter` building blocks, including both `modeSwitchEvents` and runnable `modeConditions`.\n"
         "- `subcompositions/subcomposition_speed_path.yaml` defines a reusable subcomposition with boundary ports, internal assembly connectors, and delegation connectors.\n"
         f"- `system.yaml` instantiates the reusable subcomposition together with one standalone atomic SWC in `{system_name}`.\n"
+        "- `autosar.project.yaml` shows the normal manifest shape and includes a commented example of the optional `packageLayoutRef` setting for external ARXML package layouts.\n"
     )
     if no_example:
         example_note = (
@@ -64,12 +67,15 @@ def readme_md(system_name: str, *, no_example: bool = False) -> str:
             "- Add SWC type definitions under `swcs/`.\n"
             "- Add reusable subcomposition types under `subcompositions/` when needed.\n"
             "- Define top-level component instances and connectors in `system.yaml`.\n"
+            "- If you need company-specific ARXML package namespaces later, uncomment `packageLayoutRef` in `autosar.project.yaml` and add an external package layout file.\n"
         )
     return f"""# {system_name}
 
 ARForge project scaffold for AUTOSAR Classic modeling.
 
 {example_note}
+External package layouts are optional. Most new projects can start with the built-in default package structure and add `packageLayoutRef` only when ARXML namespace control becomes important.
+
 Validate the project:
 
 ```bash

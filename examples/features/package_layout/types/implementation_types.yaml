@@ -1,0 +1,3 @@
+implementationDataTypes:
+  - name: "Impl_uint16"
+    baseTypeRef: "uint16"

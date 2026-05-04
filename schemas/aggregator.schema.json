@@ -33,6 +33,14 @@
           "examples": [
             "DEMO"
           ]
+        },
+        "packageLayoutRef": {
+          "type": "string",
+          "description": "Optional external package layout file path, resolved relative to the project file.",
+          "minLength": 1,
+          "examples": [
+            "packages/company_layout.yaml"
+          ]
         }
       },
       "additionalProperties": false,

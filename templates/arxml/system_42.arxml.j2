@@ -7,38 +7,7 @@
     <AR-PACKAGE>
       <SHORT-NAME>{{ root_pkg }}</SHORT-NAME>
       <AR-PACKAGES>
-
-        <AR-PACKAGE>
-          <SHORT-NAME>System</SHORT-NAME>
-          <ELEMENTS>
-            <COMPOSITION-SW-COMPONENT-TYPE>
-              <SHORT-NAME>{{ composition_name }}</SHORT-NAME>
-              <COMPONENTS>
-                {% for c in components %}
-                <SW-COMPONENT-PROTOTYPE>
-                  <SHORT-NAME>{{ c.name }}</SHORT-NAME>
-                  <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
-                </SW-COMPONENT-PROTOTYPE>
-                {% endfor %}
-              </COMPONENTS>
-              <CONNECTORS>
-                {% for c in connections %}
-                {{ arxml.render_assembly_connector(c) }}
-                {% endfor %}
-              </CONNECTORS>
-            </COMPOSITION-SW-COMPONENT-TYPE>
-            <SYSTEM>
-              <SHORT-NAME>{{ system_name }}</SHORT-NAME>
-              <ROOT-SOFTWARE-COMPOSITIONS>
-                <ROOT-SW-COMPOSITION-PROTOTYPE>
-                  <SHORT-NAME>RootComposition</SHORT-NAME>
-                  <SOFTWARE-COMPOSITION-TREF DEST="COMPOSITION-SW-COMPONENT-TYPE">/{{ root_pkg }}/System/{{ composition_name }}</SOFTWARE-COMPOSITION-TREF>
-                </ROOT-SW-COMPOSITION-PROTOTYPE>
-              </ROOT-SOFTWARE-COMPOSITIONS>
-            </SYSTEM>
-          </ELEMENTS>
-        </AR-PACKAGE>
-
+        {{ arxml.render_package_tree(package_tree, paths, type_trefs, cs_interface_errors, {}, {}, {}, {}, system_models, component_type_dests, component_type_refs) }}
       </AR-PACKAGES>
     </AR-PACKAGE>
   </AR-PACKAGES>

@@ -1,0 +1,16 @@
+system:
+  name: "BrakeSystem"
+  composition:
+    name: "Composition_BrakeSystem"
+    components:
+      - name: "BrakeModeProvider_1"
+        typeRef: "BrakeModeProvider"
+      - name: "BrakeController_1"
+        typeRef: "BrakeController"
+      - name: "BrakeDisplay_1"
+        typeRef: "BrakeDisplay"
+    connectors:
+      - from: "BrakeModeProvider_1.Pp_BrakeMode"
+        to: "BrakeController_1.Rp_BrakeMode"
+      - from: "BrakeController_1.Pp_BrakeTorque"
+        to: "BrakeDisplay_1.Rp_BrakeTorque"

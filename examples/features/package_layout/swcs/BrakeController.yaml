@@ -1,0 +1,19 @@
+swc:
+  name: "BrakeController"
+  package: "Components/Brake"
+  ports:
+    - name: "Rp_BrakeMode"
+      direction: "requires"
+      interfaceRef: "If_BrakeMode"
+    - name: "Pp_BrakeTorque"
+      direction: "provides"
+      interfaceRef: "If_BrakeTorque"
+  runnables:
+    - name: "Runnable_ControlBrakeTorque"
+      timingEventMs: 10
+      writes:
+        - port: "Pp_BrakeTorque"
+          dataElement: "BrakeTorque"
+      modeConditions:
+        - port: "Rp_BrakeMode"
+          mode: "NORMAL"

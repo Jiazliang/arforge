@@ -1,0 +1,9 @@
+swc:
+  name: "BrakeModeProvider"
+  ports:
+    - name: "Pp_BrakeMode"
+      direction: "provides"
+      interfaceRef: "If_BrakeMode"
+  runnables:
+    - name: "Runnable_ProvideBrakeMode"
+      timingEventMs: 100

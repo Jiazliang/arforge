@@ -1,0 +1,7 @@
+interface:
+  name: "If_BrakeTorque"
+  type: "senderReceiver"
+  package: "Interfaces/Brake"
+  dataElements:
+    - name: "BrakeTorque"
+      typeRef: "App_BrakeTorque"

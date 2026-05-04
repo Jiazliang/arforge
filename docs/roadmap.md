@@ -14,6 +14,7 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 - `arforge validate` - schema + semantic validation with verbose modes (`-v`, `-vv`)
 - `arforge validate --profile <profile.yaml>` - profile-aware validation with project-specific extension rules and rule filtering
 - `arforge export` - validated ARXML export, monolithic or split by SWC
+- external package layout support via `autosar.packageLayoutRef`
 - `arforge report` - deterministic Markdown architecture summary for reviews, CI artifacts, and handoffs
 - `arforge diff` - deterministic Markdown structural diff between two model versions for PR reviews and architecture change discussions
 - `arforge generate diagram` - PlantUML architecture and behavior diagram generation
@@ -51,12 +52,14 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 - port-level assembly connectors for SR, CS, and mode-switch flows
 - reusable subcomposition types with boundary ports and delegation connectors
 - deterministic connector export ordering
+- packages as export-time namespaces only; package layout does not alter component wiring or behavior
 
 ### Validation
 
 - two-stage validation: JSON Schema + semantic
 - stable `CORE-*` finding codes organized in domain modules
 - three severity levels: `error`, `warning`, `info`
+- package-layout validation for defaults, allowed packages, explicit package assignments, and duplicate resolved ARXML paths
 - connectivity validation for SR, CS, and mode-switch ports
 - port usage analysis - warnings for connected but unused ports
 - sender-receiver multiplicity analysis (`CORE-045`) - warns when multiple providers feed the same SR requires port
@@ -76,6 +79,7 @@ ARForge currently provides a practical SWC design and generation pipeline for an
 - Jinja2-based C code-generation templates
 - deterministic output ordering - repeated exports and generations produce identical output
 - monolithic and split-by-SWC export layouts
+- centralized ARXML path resolution for component, interface, datatype, mode, and system references
 - custom template directory support (`--templates`) for OEM-specific profiles
 
 ---

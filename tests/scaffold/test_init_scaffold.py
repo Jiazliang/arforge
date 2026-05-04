@@ -90,10 +90,14 @@ def test_init_default_creates_valid_project(tmp_path: Path) -> None:
     assert "modeConditions" in readme
     assert "subcompositions/subcomposition_speed_path.yaml" in readme
     assert "internal assembly connectors" in readme
+    assert "External package layouts are optional." in readme
+    assert "commented example of the optional `packageLayoutRef` setting" in readme
     assert "python -m arforge.cli validate autosar.project.yaml" in readme
     assert "python -m arforge.cli export autosar.project.yaml --out build/out --split-by-swc" in readme
     assert "python -m arforge.cli generate code autosar.project.yaml --lang c --out build/code" in readme
 
+    assert '# Optional: enable an external ARXML package layout file.' in project_yaml
+    assert '# packageLayoutRef: "packages/company_layout.yaml"' in project_yaml
     assert 'modeDeclarationGroups:' in project_yaml
     assert '- "modes/*.yaml"' in project_yaml
     assert 'subcompositions:' in project_yaml
@@ -222,8 +226,11 @@ def test_init_no_example_creates_structure_only_project(tmp_path: Path) -> None:
     assert "without example interfaces or SWCs" in readme
     assert "mode declaration groups under `modes/`" in readme
     assert "subcomposition types under `subcompositions/`" in readme
+    assert "If you need company-specific ARXML package namespaces later" in readme
+    assert "External package layouts are optional." in readme
     assert system_yaml.startswith("# ARForge: System composition")
     assert "Example shape:" in system_yaml
+    assert '# packageLayoutRef: "packages/company_layout.yaml"' in project_yaml
     assert 'modeDeclarationGroups:' in project_yaml
     assert modes_yaml.startswith("# ARForge: Mode declaration groups")
 

@@ -1,0 +1,15 @@
+swc:
+  name: "BrakeDisplay"
+  ports:
+    - name: "Rp_BrakeTorque"
+      direction: "requires"
+      interfaceRef: "If_BrakeTorque"
+      comSpec:
+        mode: "explicit"
+        initValue: 0
+  runnables:
+    - name: "Runnable_DisplayBrakeTorque"
+      timingEventMs: 20
+      reads:
+        - port: "Rp_BrakeTorque"
+          dataElement: "BrakeTorque"

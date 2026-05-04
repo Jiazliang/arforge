@@ -7,39 +7,7 @@
     <AR-PACKAGE>
       <SHORT-NAME>{{ root_pkg }}</SHORT-NAME>
       <AR-PACKAGES>
-
-        <AR-PACKAGE>
-          <SHORT-NAME>Components</SHORT-NAME>
-          <ELEMENTS>
-            <COMPOSITION-SW-COMPONENT-TYPE>
-              <SHORT-NAME>{{ composition.name }}</SHORT-NAME>
-              {% if composition.ports %}
-              <PORTS>
-                {% for p in composition.ports %}
-                {{ arxml.render_port(p, root_pkg, {}, {}) }}
-                {% endfor %}
-              </PORTS>
-              {% endif %}
-              <COMPONENTS>
-                {% for c in composition.components %}
-                <SW-COMPONENT-PROTOTYPE>
-                  <SHORT-NAME>{{ c.name }}</SHORT-NAME>
-                  <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
-                </SW-COMPONENT-PROTOTYPE>
-                {% endfor %}
-              </COMPONENTS>
-              <CONNECTORS>
-                {% for c in composition.connections %}
-                {{ arxml.render_assembly_connector(c) }}
-                {% endfor %}
-                {% for c in composition.delegation_connectors %}
-                {{ arxml.render_delegation_connector(c) }}
-                {% endfor %}
-              </CONNECTORS>
-            </COMPOSITION-SW-COMPONENT-TYPE>
-          </ELEMENTS>
-        </AR-PACKAGE>
-
+        {{ arxml.render_package_tree(package_tree, paths, type_trefs, cs_interface_errors, {}, {}, {}, subcomposition_models, {}, component_type_dests, component_type_refs) }}
       </AR-PACKAGES>
     </AR-PACKAGE>
   </AR-PACKAGES>

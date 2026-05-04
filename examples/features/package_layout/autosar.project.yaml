@@ -1,0 +1,21 @@
+# ARForge: External ARXML package layout feature example
+autosar:
+  version: "4.2"
+  rootPackage: "BRAKE_ECU"
+  packageLayoutRef: "packages/company_layout.yaml"
+
+inputs:
+  baseTypes: "types/base_types.yaml"
+  implementationDataTypes: "types/implementation_types.yaml"
+  applicationDataTypes: "types/application_types.yaml"
+  units:
+    - "units/units.yaml"
+  compuMethods:
+    - "compu_methods/compu_methods.yaml"
+  modeDeclarationGroups:
+    - "modes/*.yaml"
+  interfaces:
+    - "interfaces/*.yaml"
+  swcs:
+    - "swcs/*.yaml"
+  system: "system.yaml"

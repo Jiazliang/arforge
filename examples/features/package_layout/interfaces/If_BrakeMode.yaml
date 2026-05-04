@@ -1,0 +1,4 @@
+interface:
+  name: "If_BrakeMode"
+  type: "modeSwitch"
+  modeGroupRef: "Mdg_BrakeMode"

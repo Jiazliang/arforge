@@ -22,6 +22,7 @@ AUTOSAR SWC design in GUI-based tools is expensive, opaque, and hostile to versi
 | **Semantic validation** | Stable finding codes across supported constructs. Catches design problems before export |
 | **Validation profiles** | Optional profile YAML for project-specific rule modules, rule enable/disable control, and extensions-only execution |
 | **Clean ARXML export** | Deterministic, ordered AUTOSAR-aligned output for the currently supported feature set |
+| **External package layout** | Optional company-specific ARXML package namespaces with per-element package assignment and deterministic references |
 | **CI-ready CLI** | Validate, report, and export in a pipeline with no GUI dependency or license server |
 | **VS Code integration** | YAML schema autocomplete, inline diagnostics, and task runner built in |
 
@@ -47,7 +48,7 @@ Current implementation targets a practical AUTOSAR Classic 4.2 subset:
 | **Runnable access** | `reads`, `writes`, `calls`, `raisesErrors` - all validated against port direction and interface kind |
 | **System composition** | Component prototypes, SWC type references, port-level assembly connectors for SR, CS, and mode-switch |
 | **Validation** | Stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
-| **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering, shared rendering logic across both modes |
+| **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering, shared rendering logic across both modes, and external package layout support |
 | **Code skeletons** | Template-driven C `.h` / `.c` starter files generated from validated SWC models |
 | **Diagrams** | Unified `generate diagram` command for PlantUML architecture views |
 | **Reports** | Deterministic Markdown architecture summaries via `arforge report` |

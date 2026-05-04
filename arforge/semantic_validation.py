@@ -13,6 +13,7 @@ from time import perf_counter
 from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple
 
 from .model import ComponentPrototype, Connection, Port, Project, SubcompositionType, Swc
+from .arxml_paths import ArxmlPathResolver
 
 class FindingSeverity(StrEnum):
     ERROR = "error"
@@ -162,6 +163,7 @@ class SrTimingCommunication:
 class ValidationContext:
     def __init__(self, project: Project):
         self.project = project
+        self.path_resolver = ArxmlPathResolver(project)
         self.base_type_by_name = {d.name: d for d in project.baseTypes}
         self.implementation_type_by_name = {d.name: d for d in project.implementationDataTypes}
         self.application_type_by_name = {d.name: d for d in project.applicationDataTypes}
