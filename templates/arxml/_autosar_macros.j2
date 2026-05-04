@@ -5,12 +5,6 @@
 {%- endif -%}
 {%- endmacro %}
 
-{% macro port_dest(direction) -%}
-{%- if direction == "provides" -%}P-PORT-PROTOTYPE
-{%- else -%}R-PORT-PROTOTYPE
-{%- endif -%}
-{%- endmacro %}
-
 {% macro compu_category(category) -%}
 {%- if category == "linear" -%}LINEAR
 {%- elif category == "textTable" -%}TEXTTABLE
@@ -18,7 +12,131 @@
 {%- endif -%}
 {%- endmacro %}
 
-{% macro render_application_primitive_data_type(dt, root_pkg) -%}
+{% macro render_package_tree(package_tree, paths, type_trefs, cs_interface_errors, swc_sr_port_metadata, swc_cs_port_metadata, swc_runnable_disabled_mode_irefs, subcomposition_models, system_models, component_type_dests, component_type_refs) -%}
+{% for node in package_tree %}
+{{ render_package_node(node, paths, type_trefs, cs_interface_errors, swc_sr_port_metadata, swc_cs_port_metadata, swc_runnable_disabled_mode_irefs, subcomposition_models, system_models, component_type_dests, component_type_refs) }}
+{% endfor %}
+{%- endmacro %}
+
+{% macro render_package_node(node, paths, type_trefs, cs_interface_errors, swc_sr_port_metadata, swc_cs_port_metadata, swc_runnable_disabled_mode_irefs, subcomposition_models, system_models, component_type_dests, component_type_refs) -%}
+<AR-PACKAGE>
+  <SHORT-NAME>{{ node.name }}</SHORT-NAME>
+  {% if node.base_types or node.implementation_data_types or node.application_data_types or node.data_constraints or node.units or node.compu_methods or node.mode_declaration_groups or node.interfaces or node.swcs or node.subcompositions or node.systems %}
+  <ELEMENTS>
+    {% for dt in node.base_types %}
+    <SW-BASE-TYPE>
+      <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
+      <CATEGORY>{{ dt.category }}</CATEGORY>
+      {% if dt.bitLength is not none %}
+      <BASE-TYPE-SIZE>{{ dt.bitLength }}</BASE-TYPE-SIZE>
+      {% endif %}
+      {% if dt.signedness == "signed" %}
+      <BASE-TYPE-ENCODING>2C</BASE-TYPE-ENCODING>
+      {% elif dt.signedness == "unsigned" %}
+      <BASE-TYPE-ENCODING>NONE</BASE-TYPE-ENCODING>
+      {% endif %}
+      {% if dt.nativeDeclaration %}
+      <NATIVE-DECLARATION>{{ dt.nativeDeclaration }}</NATIVE-DECLARATION>
+      {% endif %}
+    </SW-BASE-TYPE>
+    {% endfor %}
+    {% for dt in node.implementation_data_types %}
+    <IMPLEMENTATION-DATA-TYPE>
+      <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
+      {% if dt.is_struct %}
+      <CATEGORY>STRUCTURE</CATEGORY>
+      <SUB-ELEMENTS>
+        {% for f in dt.fields %}
+        {% set tref = type_trefs.get(f.typeRef) %}
+        <IMPLEMENTATION-DATA-TYPE-ELEMENT>
+          <SHORT-NAME>{{ f.name }}</SHORT-NAME>
+          <CATEGORY>TYPE_REFERENCE</CATEGORY>
+          <SW-DATA-DEF-PROPS>
+            <SW-DATA-DEF-PROPS-VARIANTS>
+              <SW-DATA-DEF-PROPS-CONDITIONAL>
+                <IMPLEMENTATION-DATA-TYPE-REF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">{{ tref.ref if tref else '' }}</IMPLEMENTATION-DATA-TYPE-REF>
+              </SW-DATA-DEF-PROPS-CONDITIONAL>
+            </SW-DATA-DEF-PROPS-VARIANTS>
+          </SW-DATA-DEF-PROPS>
+        </IMPLEMENTATION-DATA-TYPE-ELEMENT>
+        {% endfor %}
+      </SUB-ELEMENTS>
+      {% elif dt.is_array %}
+      <CATEGORY>ARRAY</CATEGORY>
+      <SUB-ELEMENTS>
+        {% set tref = type_trefs.get(dt.elementTypeRef) %}
+        <IMPLEMENTATION-DATA-TYPE-ELEMENT>
+          <SHORT-NAME>{{ dt.name }}_Element</SHORT-NAME>
+          <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">{{ tref.ref if tref else '' }}</TYPE-TREF>
+          <ARRAY-SIZE>{{ dt.length }}</ARRAY-SIZE>
+        </IMPLEMENTATION-DATA-TYPE-ELEMENT>
+      </SUB-ELEMENTS>
+      {% else %}
+      <CATEGORY>TYPE_REFERENCE</CATEGORY>
+      {% endif %}
+    </IMPLEMENTATION-DATA-TYPE>
+    {% endfor %}
+    {% for dt in node.application_data_types %}
+    {{ render_application_primitive_data_type(dt, paths) }}
+    {% endfor %}
+    {% for dt in node.data_constraints %}
+    <DATA-CONSTR>
+      <SHORT-NAME>DC_{{ dt.name }}</SHORT-NAME>
+      <DATA-CONSTR-RULES>
+        <DATA-CONSTR-RULE>
+          <INTERNAL-CONSTRS>
+            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">{{ dt.constraint.min }}</LOWER-LIMIT>
+            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">{{ dt.constraint.max }}</UPPER-LIMIT>
+          </INTERNAL-CONSTRS>
+        </DATA-CONSTR-RULE>
+      </DATA-CONSTR-RULES>
+    </DATA-CONSTR>
+    {% endfor %}
+    {% for u in node.units %}
+    <UNIT>
+      <SHORT-NAME>{{ u.name }}</SHORT-NAME>
+      {% if u.displayName %}
+      <DISPLAY-NAME>{{ u.displayName }}</DISPLAY-NAME>
+      {% endif %}
+    </UNIT>
+    {% endfor %}
+    {% for c in node.compu_methods %}
+    {{ render_compu_method(c, paths) }}
+    {% endfor %}
+    {% for group in node.mode_declaration_groups %}
+    {{ render_mode_declaration_group(group, paths) }}
+    {% endfor %}
+    {% for itf in node.interfaces %}
+      {% if itf.type == "senderReceiver" %}
+    {{ render_sr_interface(itf, paths, type_trefs) }}
+      {% elif itf.type == "clientServer" %}
+    {{ render_cs_interface(itf, paths, type_trefs, cs_interface_errors) }}
+      {% else %}
+    {{ render_ms_interface(itf, paths) }}
+      {% endif %}
+    {% endfor %}
+    {% for swc in node.swcs %}
+    {{ render_swc_component(swc, paths, swc_sr_port_metadata[swc.name], swc_cs_port_metadata[swc.name], swc_runnable_disabled_mode_irefs[swc.name]) }}
+    {% endfor %}
+    {% for subcomposition in node.subcompositions %}
+    {{ render_subcomposition_component(subcomposition_models[subcomposition.name], paths, component_type_dests, component_type_refs) }}
+    {% endfor %}
+    {% for system in node.systems %}
+    {{ render_system_package_entry(system_models[system.name], paths, component_type_dests, component_type_refs) }}
+    {% endfor %}
+  </ELEMENTS>
+  {% endif %}
+  {% if node.children %}
+  <AR-PACKAGES>
+    {% for child in node.children %}
+    {{ render_package_node(child, paths, type_trefs, cs_interface_errors, swc_sr_port_metadata, swc_cs_port_metadata, swc_runnable_disabled_mode_irefs, subcomposition_models, system_models, component_type_dests, component_type_refs) }}
+    {% endfor %}
+  </AR-PACKAGES>
+  {% endif %}
+</AR-PACKAGE>
+{%- endmacro %}
+
+{% macro render_application_primitive_data_type(dt, paths) -%}
 <APPLICATION-PRIMITIVE-DATA-TYPE>
   <SHORT-NAME>{{ dt.name }}</SHORT-NAME>
   <CATEGORY>VALUE</CATEGORY>
@@ -27,13 +145,13 @@
     <SW-DATA-DEF-PROPS-VARIANTS>
       <SW-DATA-DEF-PROPS-CONDITIONAL>
         {% if dt.compuMethodRef %}
-        <COMPU-METHOD-REF DEST="COMPU-METHOD">/{{ root_pkg }}/CompuMethods/{{ dt.compuMethodRef }}</COMPU-METHOD-REF>
+        <COMPU-METHOD-REF DEST="COMPU-METHOD">{{ paths.compu_method(dt.compuMethodRef) }}</COMPU-METHOD-REF>
         {% endif %}
         {% if dt.constraint %}
-        <DATA-CONSTR-REF DEST="DATA-CONSTR">/{{ root_pkg }}/DataConstrs/DC_{{ dt.name }}</DATA-CONSTR-REF>
+        <DATA-CONSTR-REF DEST="DATA-CONSTR">{{ paths.data_constraint(dt.name) }}</DATA-CONSTR-REF>
         {% endif %}
         {% if dt.unitRef %}
-        <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ dt.unitRef }}</UNIT-REF>
+        <UNIT-REF DEST="UNIT">{{ paths.unit(dt.unitRef) }}</UNIT-REF>
         {% endif %}
       </SW-DATA-DEF-PROPS-CONDITIONAL>
     </SW-DATA-DEF-PROPS-VARIANTS>
@@ -42,12 +160,12 @@
 </APPLICATION-PRIMITIVE-DATA-TYPE>
 {%- endmacro %}
 
-{% macro render_init_value(init_value, unit_ref, root_pkg) -%}
+{% macro render_init_value(init_value, unit_ref, paths) -%}
 <INIT-VALUE>
   <APPLICATION-VALUE-SPECIFICATION>
     <SW-VALUE-CONT>
       {% if unit_ref %}
-      <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ unit_ref }}</UNIT-REF>
+      <UNIT-REF DEST="UNIT">{{ paths.unit(unit_ref) }}</UNIT-REF>
       {% endif %}
       <SW-VALUES-PHYS>
         <V>{% if init_value is boolean %}{{ init_value | string | lower }}{% else %}{{ init_value }}{% endif %}</V>
@@ -57,12 +175,12 @@
 </INIT-VALUE>
 {%- endmacro %}
 
-{% macro render_compu_method(compu, root_pkg) -%}
+{% macro render_compu_method(compu, paths) -%}
 <COMPU-METHOD>
   <SHORT-NAME>{{ compu.name }}</SHORT-NAME>
   <CATEGORY>{{ compu_category(compu.category) }}</CATEGORY>
   {% if compu.unitRef %}
-  <UNIT-REF DEST="UNIT">/{{ root_pkg }}/Units/{{ compu.unitRef }}</UNIT-REF>
+  <UNIT-REF DEST="UNIT">{{ paths.unit(compu.unitRef) }}</UNIT-REF>
   {% endif %}
   {% if compu.category == "linear" %}
   <COMPU-INTERNAL-TO-PHYS>
@@ -104,7 +222,7 @@
 </COMPU-METHOD>
 {%- endmacro %}
 
-{% macro render_sr_interface(itf, root_pkg, type_trefs) -%}
+{% macro render_sr_interface(itf, paths, type_trefs) -%}
 <SENDER-RECEIVER-INTERFACE>
   <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
   <IS-SERVICE>false</IS-SERVICE>
@@ -113,14 +231,14 @@
     {% set tref = type_trefs.get(de.typeRef) %}
     <VARIABLE-DATA-PROTOTYPE>
       <SHORT-NAME>{{ de.name }}</SHORT-NAME>
-      <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ tref.package if tref else 'ImplementationDataTypes' }}/{{ de.typeRef }}</TYPE-TREF>
+      <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">{{ tref.ref if tref else '' }}</TYPE-TREF>
     </VARIABLE-DATA-PROTOTYPE>
     {% endfor %}
   </DATA-ELEMENTS>
 </SENDER-RECEIVER-INTERFACE>
 {%- endmacro %}
 
-{% macro render_cs_interface(itf, root_pkg, type_trefs, cs_interface_errors) -%}
+{% macro render_cs_interface(itf, paths, type_trefs, cs_interface_errors) -%}
 <CLIENT-SERVER-INTERFACE>
   <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
   <IS-SERVICE>false</IS-SERVICE>
@@ -134,7 +252,7 @@
         {% set tref = type_trefs.get(arg.typeRef) %}
         <ARGUMENT-DATA-PROTOTYPE>
           <SHORT-NAME>{{ arg.name }}</SHORT-NAME>
-          <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ tref.package if tref else 'ImplementationDataTypes' }}/{{ arg.typeRef }}</TYPE-TREF>
+          <TYPE-TREF DEST="{{ tref.dest if tref else 'IMPLEMENTATION-DATA-TYPE' }}">{{ tref.ref if tref else '' }}</TYPE-TREF>
           <DIRECTION>{{ arg.direction | upper }}</DIRECTION>
         </ARGUMENT-DATA-PROTOTYPE>
         {% endfor %}
@@ -142,7 +260,7 @@
         {% set return_tref = type_trefs.get(op.returnType) %}
         <ARGUMENT-DATA-PROTOTYPE>
           <SHORT-NAME>ReturnValue</SHORT-NAME>
-          <TYPE-TREF DEST="{{ return_tref.dest if return_tref else 'IMPLEMENTATION-DATA-TYPE' }}">/{{ root_pkg }}/{{ return_tref.package if return_tref else 'ImplementationDataTypes' }}/{{ op.returnType }}</TYPE-TREF>
+          <TYPE-TREF DEST="{{ return_tref.dest if return_tref else 'IMPLEMENTATION-DATA-TYPE' }}">{{ return_tref.ref if return_tref else '' }}</TYPE-TREF>
           <DIRECTION>OUT</DIRECTION>
         </ARGUMENT-DATA-PROTOTYPE>
         {% endif %}
@@ -151,7 +269,7 @@
       {% if op.possibleErrors %}
       <POSSIBLE-ERROR-REFS>
         {% for possible_error in op.possibleErrors %}
-        <POSSIBLE-ERROR-REF DEST="APPLICATION-ERROR">/{{ root_pkg }}/Interfaces/{{ itf.name }}/{{ possible_error.name }}</POSSIBLE-ERROR-REF>
+        <POSSIBLE-ERROR-REF DEST="APPLICATION-ERROR">{{ paths.interface_possible_error(itf.name, possible_error.name) }}</POSSIBLE-ERROR-REF>
         {% endfor %}
       </POSSIBLE-ERROR-REFS>
       {% endif %}
@@ -173,22 +291,22 @@
 </CLIENT-SERVER-INTERFACE>
 {%- endmacro %}
 
-{% macro render_ms_interface(itf, root_pkg) -%}
+{% macro render_ms_interface(itf, paths) -%}
 <MODE-SWITCH-INTERFACE>
   <SHORT-NAME>{{ itf.name }}</SHORT-NAME>
   <IS-SERVICE>false</IS-SERVICE>
   <MODE-GROUP>
     <SHORT-NAME>{{ itf.name }}_ModeGroup</SHORT-NAME>
-    <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/{{ root_pkg }}/Modes/{{ itf.modeGroupRef }}</TYPE-TREF>
+    <TYPE-TREF DEST="MODE-DECLARATION-GROUP">{{ paths.mode_group(itf.modeGroupRef) }}</TYPE-TREF>
   </MODE-GROUP>
 </MODE-SWITCH-INTERFACE>
 {%- endmacro %}
 
-{% macro render_mode_declaration_group(group, root_pkg) -%}
+{% macro render_mode_declaration_group(group, paths) -%}
 <MODE-DECLARATION-GROUP>
   <SHORT-NAME>{{ group.name }}</SHORT-NAME>
   <CATEGORY>{{ group.category }}</CATEGORY>
-  <INITIAL-MODE-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ group.name }}/{{ group.initialMode }}</INITIAL-MODE-REF>
+  <INITIAL-MODE-REF DEST="MODE-DECLARATION">{{ paths.mode_declaration(group.name, group.initialMode) }}</INITIAL-MODE-REF>
   <MODE-DECLARATIONS>
     {% for mode in group.modes %}
     <MODE-DECLARATION>
@@ -205,7 +323,8 @@
 </MODE-DECLARATION-GROUP>
 {%- endmacro %}
 
-{% macro render_port(port, root_pkg, sr_port_metadata, cs_port_metadata) -%}
+{% macro render_port(port, paths, owner_name, owner_kind, sr_port_metadata, cs_port_metadata) -%}
+{% set owner_port_ref = paths.swc_port(owner_name, port.name) if owner_kind == "swc" else paths.composition_port(owner_name, port.name) %}
 {% if port.direction == "provides" %}
 <P-PORT-PROTOTYPE>
   <SHORT-NAME>{{ port.name }}</SHORT-NAME>
@@ -222,7 +341,7 @@
     {% endif %}
   </PROVIDED-COM-SPECS>
   {% endif %}
-  <PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</PROVIDED-INTERFACE-TREF>
+  <PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">{{ paths.interface(port.interfaceRef) }}</PROVIDED-INTERFACE-TREF>
   {% elif port.interfaceType == "clientServer" %}
   {% if port.comSpec and port.comSpec.callMode %}
   <PROVIDED-COM-SPECS>
@@ -234,16 +353,17 @@
     </SERVER-COM-SPEC>
   </PROVIDED-COM-SPECS>
   {% endif %}
-  <PROVIDED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</PROVIDED-INTERFACE-TREF>
+  <PROVIDED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">{{ paths.interface(port.interfaceRef) }}</PROVIDED-INTERFACE-TREF>
   {% elif port.interfaceType == "modeSwitch" %}
-  <PROVIDED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</PROVIDED-INTERFACE-TREF>
+  <PROVIDED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">{{ paths.interface(port.interfaceRef) }}</PROVIDED-INTERFACE-TREF>
   {% endif %}
 </P-PORT-PROTOTYPE>
 {% else %}
+{% set metadata = sr_port_metadata.get(port.name) %}
+{% set operations = cs_port_metadata.get(port.name, []) %}
 <R-PORT-PROTOTYPE>
   <SHORT-NAME>{{ port.name }}</SHORT-NAME>
   {% if port.interfaceType == "senderReceiver" %}
-  {% set metadata = sr_port_metadata.get(port.name) %}
   {% if port.comSpec %}
   <REQUIRED-COM-SPECS>
     {% if port.comSpec.mode == "queued" %}
@@ -264,30 +384,26 @@
       <ENABLE-UPDATE>false</ENABLE-UPDATE>
       {% endif %}
       {% if port.comSpec.initValue is not none %}
-      {{ render_init_value(port.comSpec.initValue, metadata.unit_ref if metadata else none, root_pkg) }}
+      {{ render_init_value(port.comSpec.initValue, metadata.unit_ref if metadata else none, paths) }}
       {% endif %}
     </NONQUEUED-RECEIVER-COM-SPEC>
     {% endif %}
   </REQUIRED-COM-SPECS>
   {% endif %}
-  <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</REQUIRED-INTERFACE-TREF>
+  <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">{{ paths.interface(port.interfaceRef) }}</REQUIRED-INTERFACE-TREF>
   {% elif port.interfaceType == "clientServer" %}
-  {% set operations = cs_port_metadata.get(port.name, []) %}
   {% if operations %}
   <REQUIRED-COM-SPECS>
     {% for operation in operations %}
     <CLIENT-COM-SPEC>
       <OPERATION-REF DEST="CLIENT-SERVER-OPERATION">{{ operation.operation_ref }}</OPERATION-REF>
-      {# AUTOSAR 4.2 CLIENT-COM-SPEC does not accept TIMEOUT-MS here.
-         Keep the modeled timeout in-memory for future supported mappings,
-         but do not emit schema-invalid XML. #}
     </CLIENT-COM-SPEC>
     {% endfor %}
   </REQUIRED-COM-SPECS>
   {% endif %}
-  <REQUIRED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</REQUIRED-INTERFACE-TREF>
+  <REQUIRED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">{{ paths.interface(port.interfaceRef) }}</REQUIRED-INTERFACE-TREF>
   {% elif port.interfaceType == "modeSwitch" %}
-  <REQUIRED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">/{{ root_pkg }}/Interfaces/{{ port.interfaceRef }}</REQUIRED-INTERFACE-TREF>
+  <REQUIRED-INTERFACE-TREF DEST="MODE-SWITCH-INTERFACE">{{ paths.interface(port.interfaceRef) }}</REQUIRED-INTERFACE-TREF>
   {% endif %}
 </R-PORT-PROTOTYPE>
 {% endif %}
@@ -306,21 +422,21 @@
 {% endif %}
 {%- endmacro %}
 
-{% macro render_swc_events(swc, root_pkg, runnable_disabled_mode_irefs) -%}
+{% macro render_swc_events(swc, paths, runnable_disabled_mode_irefs) -%}
 <EVENTS>
   {% for r in swc.runnables %}
   {% set disabled_mode_irefs = runnable_disabled_mode_irefs.get(r.name, []) %}
   {% if r.initEvent %}
   <INIT-EVENT>
     <SHORT-NAME>IE_{{ r.name }}</SHORT-NAME>
-    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
+    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">{{ paths.runnable(swc.name, r.name) }}</START-ON-EVENT-REF>
   </INIT-EVENT>
   {% endif %}
   {% if r.timingEventMs is not none %}
   <TIMING-EVENT>
     <SHORT-NAME>TE_{{ r.name }}</SHORT-NAME>
     {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
-    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
+    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">{{ paths.runnable(swc.name, r.name) }}</START-ON-EVENT-REF>
     <PERIOD>{{ (r.timingEventMs / 1000.0) }}</PERIOD>
   </TIMING-EVENT>
   {% endif %}
@@ -329,10 +445,10 @@
   <OPERATION-INVOKED-EVENT>
     <SHORT-NAME>OIE_{{ r.name }}_{{ oie.port }}_{{ oie.operation }}</SHORT-NAME>
     {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
-    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
+    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">{{ paths.runnable(swc.name, r.name) }}</START-ON-EVENT-REF>
     <OPERATION-IREF>
-      <CONTEXT-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ oie.port }}</CONTEXT-P-PORT-REF>
-      <TARGET-PROVIDED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ oie_port.interfaceRef if oie_port else '' }}/{{ oie.operation }}</TARGET-PROVIDED-OPERATION-REF>
+      <CONTEXT-P-PORT-REF DEST="P-PORT-PROTOTYPE">{{ paths.swc_port(swc.name, oie.port) }}</CONTEXT-P-PORT-REF>
+      <TARGET-PROVIDED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">{{ paths.interface_operation(oie_port.interfaceRef if oie_port else '', oie.operation) }}</TARGET-PROVIDED-OPERATION-REF>
     </OPERATION-IREF>
   </OPERATION-INVOKED-EVENT>
   {% endfor %}
@@ -341,10 +457,10 @@
   <DATA-RECEIVED-EVENT>
     <SHORT-NAME>DRE_{{ r.name }}_{{ dre.port }}_{{ dre.dataElement }}</SHORT-NAME>
     {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
-    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
+    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">{{ paths.runnable(swc.name, r.name) }}</START-ON-EVENT-REF>
     <DATA-IREF>
-      <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ dre.port }}</CONTEXT-R-PORT-REF>
-      <TARGET-DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ dre_port.interfaceRef if dre_port else '' }}/{{ dre.dataElement }}</TARGET-DATA-ELEMENT-REF>
+      <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">{{ paths.swc_port(swc.name, dre.port) }}</CONTEXT-R-PORT-REF>
+      <TARGET-DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">{{ paths.interface_data_element(dre_port.interfaceRef if dre_port else '', dre.dataElement) }}</TARGET-DATA-ELEMENT-REF>
     </DATA-IREF>
   </DATA-RECEIVED-EVENT>
   {% endfor %}
@@ -353,12 +469,12 @@
   <SWC-MODE-SWITCH-EVENT>
     <SHORT-NAME>MSE_{{ r.name }}_{{ mse.port }}_{{ mse.mode }}</SHORT-NAME>
     {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
-    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
+    <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">{{ paths.runnable(swc.name, r.name) }}</START-ON-EVENT-REF>
     <ACTIVATION>ON-ENTRY</ACTIVATION>
     <MODE-IREFS>
       <MODE-IREF>
-        <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ mse_port.interfaceRef if mse_port else '' }}/{{ mse_port.interfaceRef if mse_port else '' }}_ModeGroup</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
-        <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ mse_port.modeGroupRef if mse_port else '' }}/{{ mse.mode }}</TARGET-MODE-DECLARATION-REF>
+        <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">{{ paths.interface_mode_group_prototype(mse_port.interfaceRef if mse_port else '') }}</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
+        <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">{{ paths.mode_declaration(mse_port.modeGroupRef if mse_port else '', mse.mode) }}</TARGET-MODE-DECLARATION-REF>
       </MODE-IREF>
     </MODE-IREFS>
   </SWC-MODE-SWITCH-EVENT>
@@ -367,7 +483,7 @@
 </EVENTS>
 {%- endmacro %}
 
-{% macro render_swc_runnables(swc, root_pkg) -%}
+{% macro render_swc_runnables(swc, paths) -%}
 <RUNNABLES>
   {% for r in swc.runnables %}
   <RUNNABLE-ENTITY>
@@ -381,8 +497,8 @@
         <SHORT-NAME>DRP_{{ read.port }}_{{ read.dataElement }}</SHORT-NAME>
         <ACCESSED-VARIABLE>
           <AUTOSAR-VARIABLE-IREF>
-            <PORT-PROTOTYPE-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ read.port }}</PORT-PROTOTYPE-REF>
-            <TARGET-DATA-PROTOTYPE-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ read_port.interfaceRef if read_port else '' }}/{{ read.dataElement }}</TARGET-DATA-PROTOTYPE-REF>
+            <PORT-PROTOTYPE-REF DEST="R-PORT-PROTOTYPE">{{ paths.swc_port(swc.name, read.port) }}</PORT-PROTOTYPE-REF>
+            <TARGET-DATA-PROTOTYPE-REF DEST="VARIABLE-DATA-PROTOTYPE">{{ paths.interface_data_element(read_port.interfaceRef if read_port else '', read.dataElement) }}</TARGET-DATA-PROTOTYPE-REF>
           </AUTOSAR-VARIABLE-IREF>
         </ACCESSED-VARIABLE>
       </VARIABLE-ACCESS>
@@ -397,8 +513,8 @@
         <SHORT-NAME>DSP_{{ write.port }}_{{ write.dataElement }}</SHORT-NAME>
         <ACCESSED-VARIABLE>
           <AUTOSAR-VARIABLE-IREF>
-            <PORT-PROTOTYPE-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ write.port }}</PORT-PROTOTYPE-REF>
-            <TARGET-DATA-PROTOTYPE-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ write_port.interfaceRef if write_port else '' }}/{{ write.dataElement }}</TARGET-DATA-PROTOTYPE-REF>
+            <PORT-PROTOTYPE-REF DEST="P-PORT-PROTOTYPE">{{ paths.swc_port(swc.name, write.port) }}</PORT-PROTOTYPE-REF>
+            <TARGET-DATA-PROTOTYPE-REF DEST="VARIABLE-DATA-PROTOTYPE">{{ paths.interface_data_element(write_port.interfaceRef if write_port else '', write.dataElement) }}</TARGET-DATA-PROTOTYPE-REF>
           </AUTOSAR-VARIABLE-IREF>
         </ACCESSED-VARIABLE>
       </VARIABLE-ACCESS>
@@ -414,16 +530,16 @@
       <ASYNCHRONOUS-SERVER-CALL-POINT>
         <SHORT-NAME>SCP_{{ call.port }}_{{ call.operation }}</SHORT-NAME>
         <OPERATION-IREF>
-          <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ call.port }}</CONTEXT-R-PORT-REF>
-          <TARGET-REQUIRED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ call_port.interfaceRef if call_port else '' }}/{{ call.operation }}</TARGET-REQUIRED-OPERATION-REF>
+          <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">{{ paths.swc_port(swc.name, call.port) }}</CONTEXT-R-PORT-REF>
+          <TARGET-REQUIRED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">{{ paths.interface_operation(call_port.interfaceRef if call_port else '', call.operation) }}</TARGET-REQUIRED-OPERATION-REF>
         </OPERATION-IREF>
       </ASYNCHRONOUS-SERVER-CALL-POINT>
       {% else %}
       <SYNCHRONOUS-SERVER-CALL-POINT>
         <SHORT-NAME>SCP_{{ call.port }}_{{ call.operation }}</SHORT-NAME>
         <OPERATION-IREF>
-          <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ call.port }}</CONTEXT-R-PORT-REF>
-          <TARGET-REQUIRED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ call_port.interfaceRef if call_port else '' }}/{{ call.operation }}</TARGET-REQUIRED-OPERATION-REF>
+          <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">{{ paths.swc_port(swc.name, call.port) }}</CONTEXT-R-PORT-REF>
+          <TARGET-REQUIRED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">{{ paths.interface_operation(call_port.interfaceRef if call_port else '', call.operation) }}</TARGET-REQUIRED-OPERATION-REF>
         </OPERATION-IREF>
       </SYNCHRONOUS-SERVER-CALL-POINT>
       {% endif %}
@@ -435,22 +551,79 @@
 </RUNNABLES>
 {%- endmacro %}
 
-{% macro render_swc_component(swc, root_pkg, sr_port_metadata, cs_port_metadata, runnable_disabled_mode_irefs) -%}
+{% macro render_swc_component(swc, paths, sr_port_metadata, cs_port_metadata, runnable_disabled_mode_irefs) -%}
 <{{ swc.component_type_tag }}>
   <SHORT-NAME>{{ swc.name }}</SHORT-NAME>
   <PORTS>
     {% for port in swc.ports %}
-    {{ render_port(port, root_pkg, sr_port_metadata, cs_port_metadata) }}
+    {{ render_port(port, paths, swc.name, "swc", sr_port_metadata, cs_port_metadata) }}
     {% endfor %}
   </PORTS>
   <INTERNAL-BEHAVIORS>
     <SWC-INTERNAL-BEHAVIOR>
       <SHORT-NAME>IB_{{ swc.name }}</SHORT-NAME>
-      {{ render_swc_events(swc, root_pkg, runnable_disabled_mode_irefs) }}
-      {{ render_swc_runnables(swc, root_pkg) }}
+      {{ render_swc_events(swc, paths, runnable_disabled_mode_irefs) }}
+      {{ render_swc_runnables(swc, paths) }}
     </SWC-INTERNAL-BEHAVIOR>
   </INTERNAL-BEHAVIORS>
 </{{ swc.component_type_tag }}>
+{%- endmacro %}
+
+{% macro render_subcomposition_component(composition, paths, component_type_dests, component_type_refs) -%}
+<COMPOSITION-SW-COMPONENT-TYPE>
+  <SHORT-NAME>{{ composition.name }}</SHORT-NAME>
+  {% if composition.ports %}
+  <PORTS>
+    {% for p in composition.ports %}
+    {{ render_port(p, paths, composition.name, "composition", {}, {}) }}
+    {% endfor %}
+  </PORTS>
+  {% endif %}
+  <COMPONENTS>
+    {% for c in composition.components %}
+    <SW-COMPONENT-PROTOTYPE>
+      <SHORT-NAME>{{ c.name }}</SHORT-NAME>
+      <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
+    </SW-COMPONENT-PROTOTYPE>
+    {% endfor %}
+  </COMPONENTS>
+  <CONNECTORS>
+    {% for c in composition.connections %}
+    {{ render_assembly_connector(c) }}
+    {% endfor %}
+    {% for c in composition.delegation_connectors %}
+    {{ render_delegation_connector(c) }}
+    {% endfor %}
+  </CONNECTORS>
+</COMPOSITION-SW-COMPONENT-TYPE>
+{%- endmacro %}
+
+{% macro render_system_package_entry(system_model, paths, component_type_dests, component_type_refs) -%}
+<COMPOSITION-SW-COMPONENT-TYPE>
+  <SHORT-NAME>{{ system_model.composition_name }}</SHORT-NAME>
+  <COMPONENTS>
+    {% for c in system_model.components %}
+    <SW-COMPONENT-PROTOTYPE>
+      <SHORT-NAME>{{ c.name }}</SHORT-NAME>
+      <TYPE-TREF DEST="{{ component_type_dests[c.typeRef] }}">{{ component_type_refs[c.typeRef] }}</TYPE-TREF>
+    </SW-COMPONENT-PROTOTYPE>
+    {% endfor %}
+  </COMPONENTS>
+  <CONNECTORS>
+    {% for c in system_model.connections %}
+    {{ render_assembly_connector(c) }}
+    {% endfor %}
+  </CONNECTORS>
+</COMPOSITION-SW-COMPONENT-TYPE>
+<SYSTEM>
+  <SHORT-NAME>{{ system_model.system_name }}</SHORT-NAME>
+  <ROOT-SOFTWARE-COMPOSITIONS>
+    <ROOT-SW-COMPOSITION-PROTOTYPE>
+      <SHORT-NAME>RootComposition</SHORT-NAME>
+      <SOFTWARE-COMPOSITION-TREF DEST="COMPOSITION-SW-COMPONENT-TYPE">{{ paths.system_composition(system_model.composition_name) }}</SOFTWARE-COMPOSITION-TREF>
+    </ROOT-SW-COMPOSITION-PROTOTYPE>
+  </ROOT-SOFTWARE-COMPOSITIONS>
+</SYSTEM>
 {%- endmacro %}
 
 {% macro render_assembly_connector(connector) -%}

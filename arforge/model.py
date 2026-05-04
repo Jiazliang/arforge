@@ -33,6 +33,14 @@ MODE_DECLARATION_GROUP_CATEGORY_ALIASES = {
     MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER: MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER,
 }
 
+
+@dataclass(frozen=True)
+class PackageLayout:
+    name: str
+    defaults: Dict[str, str]
+    allowedPackages: Tuple[str, ...]
+    description: str | None = None
+
 @dataclass(frozen=True)
 class BaseType:
     name: str
@@ -41,6 +49,7 @@ class BaseType:
     signedness: str | None = None
     nativeDeclaration: str | None = None
     category: str = BASE_TYPE_CATEGORY_FIXED_LENGTH
+    package: str | None = None
 
 
 @dataclass(frozen=True)
@@ -59,6 +68,7 @@ class ImplementationDataType:
     fields: List[ImplementationField] = field(default_factory=list)
     elementTypeRef: str | None = None
     length: int | None = None
+    package: str | None = None
 
     @property
     def is_struct(self) -> bool:
@@ -77,6 +87,7 @@ class ApplicationDataType:
     constraint: "ConstraintRange | None" = None
     unitRef: str | None = None
     compuMethodRef: str | None = None
+    package: str | None = None
 
 
 @dataclass(frozen=True)
@@ -90,6 +101,7 @@ class Unit:
     name: str
     description: str | None = None
     displayName: str | None = None
+    package: str | None = None
 
 
 @dataclass(frozen=True)
@@ -109,6 +121,7 @@ class CompuMethod:
     physMin: float | None = None
     physMax: float | None = None
     entries: List[TextTableEntry] = field(default_factory=list)
+    package: str | None = None
 
 
 @dataclass(frozen=True)
@@ -125,6 +138,7 @@ class ModeDeclarationGroup:
     category: str = MODE_DECLARATION_GROUP_CATEGORY_EXPLICIT_ORDER
     onTransitionValue: int | None = None
     modes: List[ModeDeclaration] = field(default_factory=list)
+    package: str | None = None
 
 
 @dataclass(frozen=True)
@@ -164,6 +178,7 @@ class Interface:
     modeGroupRef: str | None = None
     dataElements: List[DataElement] | None = None
     operations: List[Operation] | None = None
+    package: str | None = None
 
 @dataclass(frozen=True)
 class Runnable:
@@ -257,6 +272,7 @@ class Swc:
     ports: List[Port]
     description: str | None = None
     category: str = SWC_CATEGORY_APPLICATION
+    package: str | None = None
 
     @property
     def component_type_tag(self) -> str:
@@ -330,6 +346,7 @@ class SubcompositionType:
     description: str | None = None
     ports: List[Port] = field(default_factory=list)
     delegationConnectors: List[DelegationConnector] = field(default_factory=list)
+    package: str | None = None
 
 
 @dataclass(frozen=True)
@@ -337,6 +354,7 @@ class System:
     name: str
     composition: Composition
     description: str | None = None
+    package: str | None = None
 
     @property
     def instances(self) -> List[ComponentPrototype]:
@@ -350,6 +368,7 @@ class System:
 class Project:
     autosar_version: str
     rootPackage: str
+    packageLayout: PackageLayout
     baseTypes: List[BaseType]
     implementationDataTypes: List[ImplementationDataType]
     applicationDataTypes: List[ApplicationDataType]
@@ -466,6 +485,13 @@ def _normalize_base_type_category(category: str | None) -> str:
 
 def from_dict(d: Dict[str, Any]) -> Project:
     autosar = d["autosar"]
+    package_layout_data = d["packageLayout"]
+    package_layout = PackageLayout(
+        name=package_layout_data["name"],
+        description=package_layout_data.get("description"),
+        defaults=dict(package_layout_data.get("defaults", {})),
+        allowedPackages=tuple(package_layout_data.get("allowedPackages", [])),
+    )
     base_types = [
         BaseType(
             **{
@@ -486,6 +512,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                 fields=[ImplementationField(**f) for f in idt.get("fields", [])],
                 elementTypeRef=idt.get("elementTypeRef"),
                 length=idt.get("length"),
+                package=idt.get("package"),
             )
         )
     app_types = []
@@ -500,6 +527,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                 constraint=constraint,
                 unitRef=adt.get("unitRef"),
                 compuMethodRef=adt.get("compuMethodRef"),
+                package=adt.get("package"),
             )
         )
     units = [Unit(**u) for u in d.get("units", [])]
@@ -516,6 +544,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                 physMin=cm.get("physMin"),
                 physMax=cm.get("physMax"),
                 entries=[TextTableEntry(**entry) for entry in cm.get("entries", [])],
+                package=cm.get("package"),
             )
         )
     mode_declaration_groups = []
@@ -540,6 +569,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                     else ModeDeclaration(name=mode)
                     for mode in mdg.get("modes", [])
                 ],
+                package=mdg.get("package"),
             )
         )
 
@@ -555,6 +585,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                     modeGroupRef=None,
                     dataElements=des,
                     operations=None,
+                    package=itf.get("package"),
                 )
             )
         elif itf["type"] == "clientServer":
@@ -578,6 +609,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                     modeGroupRef=None,
                     dataElements=None,
                     operations=ops,
+                    package=itf.get("package"),
                 )
             )
         else:
@@ -589,6 +621,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                     modeGroupRef=itf.get("modeGroupRef"),
                     dataElements=None,
                     operations=None,
+                    package=itf.get("package"),
                 )
             )
 
@@ -648,6 +681,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                 ports=_parse_ports(s.get("ports", []), iface_by_name),
                 description=s.get("description"),
                 category=s.get("category", SWC_CATEGORY_APPLICATION),
+                package=s.get("package"),
             )
         )
 
@@ -661,6 +695,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
                 components=_parse_components(subcomposition_data.get("components", [])),
                 connectors=_parse_connectors(subcomposition_data.get("connectors", [])),
                 delegationConnectors=_parse_delegation_connectors(subcomposition_data.get("delegationConnectors", [])),
+                package=subcomposition_data.get("package"),
             )
         )
 
@@ -677,6 +712,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
             name=system_data["name"],
             composition=composition,
             description=system_data.get("description"),
+            package=system_data.get("package"),
         )
     else:
         raise KeyError("Missing required 'system' model.")
@@ -684,6 +720,7 @@ def from_dict(d: Dict[str, Any]) -> Project:
     return Project(
         autosar_version=autosar["version"],
         rootPackage=autosar["rootPackage"],
+        packageLayout=package_layout,
         baseTypes=base_types,
         implementationDataTypes=impl_types,
         applicationDataTypes=app_types,

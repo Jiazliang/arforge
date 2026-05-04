@@ -4,6 +4,10 @@
   "description": "Schema for AUTOSAR ModeDeclarationGroup definitions.",
   "type": "object",
   "$defs": {
+    "packagePath": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+(?:\\/[A-Za-z0-9_]+)*$"
+    },
     "descriptionProperty": {
       "type": "string",
       "description": "Optional human-readable documentation for this modeled object."
@@ -88,6 +92,10 @@
         },
         "description": {
           "$ref": "#/$defs/descriptionProperty"
+        },
+        "package": {
+          "$ref": "#/$defs/packagePath",
+          "description": "Optional ARXML package path below the project root package."
         },
         "category": {
           "$ref": "#/$defs/modeDeclarationGroupCategory",

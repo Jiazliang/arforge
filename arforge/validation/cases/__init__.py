@@ -21,6 +21,7 @@ from .connectivity import (
     SrPortUsageCase,
 )
 from .interfaces import InterfaceSemanticCase
+from .package_layout import PackageLayoutCase
 from .modes import (
     ModeDeclarationGroupInitialModeCase,
     ModeDeclarationGroupStructureCase,
@@ -67,6 +68,7 @@ __all__ = [
     "ModeSwitchEventCase",
     "ModeSwitchUsageCase",
     "OperationInvokedEventCase",
+    "PackageLayoutCase",
     "RunnableAccessSemanticCase",
     "RunnableRaisedErrorCase",
     "RunnableTriggerPolicyCase",
@@ -91,6 +93,7 @@ def core_validation_cases() -> List[ValidationCase]:
     return [
         DuplicateNameCase(),
         BaseTypeMetadataCase(),
+        PackageLayoutCase(),
         InterfaceSemanticCase(),
         ModeDeclarationGroupStructureCase(),
         ModeDeclarationGroupInitialModeCase(),

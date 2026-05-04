@@ -1,0 +1,11 @@
+modeDeclarationGroups:
+  - name: "Mdg_BrakeMode"
+    category: "explicitOrder"
+    initialMode: "OFF"
+    onTransitionValue: 255
+    package: "Modes"
+    modes:
+      - name: "OFF"
+        value: 0
+      - name: "NORMAL"
+        value: 1

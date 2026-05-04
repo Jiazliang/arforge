@@ -1,0 +1,9 @@
+applicationDataTypes:
+  - name: "App_BrakeTorque"
+    implementationTypeRef: "Impl_uint16"
+    unitRef: "Nm"
+    compuMethodRef: "CM_BrakeTorque"
+    constraint:
+      min: 0
+      max: 5000
+    package: "DataTypes/Application"

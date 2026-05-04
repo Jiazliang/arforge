@@ -222,3 +222,74 @@ def test_system_schema_rejects_connector_selectors() -> None:
     errors = "\n".join(excinfo.value.errors)
     assert "operation" in errors
     assert "additional properties" in errors.lower()
+
+
+def test_project_schema_accepts_package_layout_ref() -> None:
+    errors = _schema_errors(
+        "aggregator.schema.json",
+        {
+            "autosar": {
+                "version": "4.2",
+                "rootPackage": "BRAKE_ECU",
+                "packageLayoutRef": "packages/company_layout.yaml",
+            },
+            "inputs": {
+                "baseTypes": "types/base_types.yaml",
+                "implementationDataTypes": "types/implementation_types.yaml",
+                "applicationDataTypes": "types/application_types.yaml",
+                "interfaces": ["interfaces/*.yaml"],
+                "swcs": ["swcs/*.yaml"],
+                "system": "system.yaml",
+            },
+        },
+    )
+
+    assert errors == []
+
+
+def test_schema_accepts_nested_package_assignment_on_packageable_element() -> None:
+    errors = _schema_errors(
+        "swc.schema.json",
+        {
+            "swc": {
+                "name": "BrakeController",
+                "package": "Components/Brake",
+                "runnables": [
+                    {
+                        "name": "Runnable_ControlBrakeTorque",
+                        "timingEventMs": 10,
+                    }
+                ],
+                "ports": [
+                    {
+                        "name": "Pp_BrakeTorque",
+                        "direction": "provides",
+                        "interfaceRef": "If_BrakeTorque",
+                    }
+                ],
+            }
+        },
+    )
+
+    assert errors == []
+
+
+def test_schema_rejects_invalid_package_path_on_packageable_element() -> None:
+    errors = _schema_errors(
+        "interface.schema.json",
+        {
+            "interface": {
+                "name": "If_BrakeTorque",
+                "type": "senderReceiver",
+                "package": "/Interfaces/Brake",
+                "dataElements": [
+                    {
+                        "name": "BrakeTorque",
+                        "typeRef": "App_BrakeTorque",
+                    }
+                ],
+            }
+        },
+    )
+
+    assert any("package" in error and "does not match" in error for error in errors)

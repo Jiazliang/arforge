@@ -15,12 +15,14 @@ import sys
 
 import pytest
 
+from arforge.arxml_paths import default_package_layout
 from arforge.diagrams import build_diagram_views, write_diagram_outputs
 from arforge.model import (
     ComponentPrototype,
     Composition,
     Interface,
     OperationInvokedEvent,
+    PackageLayout,
     Port,
     Project,
     Runnable,
@@ -173,6 +175,7 @@ def test_behavior_diagram_places_server_trigger_ports_in_incoming_lane() -> None
     project = Project(
         autosar_version="4.2",
         rootPackage="DEMO",
+        packageLayout=PackageLayout(**default_package_layout()),
         baseTypes=[],
         implementationDataTypes=[],
         applicationDataTypes=[],

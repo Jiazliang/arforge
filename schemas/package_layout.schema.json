@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ARForge Package Layout",
+  "description": "Schema for external ARXML package layout definitions.",
+  "type": "object",
+  "$defs": {
+    "packagePath": {
+      "type": "string",
+      "description": "Relative ARXML package path below the project root package.",
+      "pattern": "^[A-Za-z0-9_]+(?:\\/[A-Za-z0-9_]+)*$",
+      "examples": [
+        "Components",
+        "DataTypes/Application"
+      ]
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "swc": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "composition": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "interface": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "applicationDataType": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "implementationDataType": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "baseType": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "compuMethod": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "unit": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "modeDeclarationGroup": {
+          "$ref": "#/$defs/packagePath"
+        },
+        "system": {
+          "$ref": "#/$defs/packagePath"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "packageLayout"
+  ],
+  "properties": {
+    "packageLayout": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "defaults": {
+          "$ref": "#/$defs/defaults"
+        },
+        "allowedPackages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/packagePath"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

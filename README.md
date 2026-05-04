@@ -22,6 +22,7 @@ AUTOSAR SWC design in GUI-based tools is expensive, opaque, and hostile to versi
 | **Semantic validation** | Stable finding codes across supported constructs. Catches design problems before export |
 | **Validation profiles** | Optional profile YAML for project-specific rule modules, rule enable/disable control, and extensions-only execution |
 | **Clean ARXML export** | Deterministic, ordered AUTOSAR-aligned output for the currently supported feature set |
+| **External package layout** | Optional company-specific ARXML package namespaces with per-element package assignment and deterministic references |
 | **CI-ready CLI** | Validate, report, and export in a pipeline with no GUI dependency or license server |
 | **VS Code integration** | YAML schema autocomplete, inline diagnostics, and task runner built in |
 

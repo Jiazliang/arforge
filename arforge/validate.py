@@ -16,6 +16,7 @@ import yaml
 from jsonschema import Draft202012Validator
 
 from .model import Project, from_dict
+from .arxml_paths import default_package_layout
 from .semantic_validation import (
     Finding,
     FindingSeverity,
@@ -38,6 +39,7 @@ class InputPatternReport:
 class AggregatorLoadReport:
     project_path: Path
     autosar_version: str
+    package_layout_file: Optional[Path]
     base_types_file: Optional[Path]
     implementation_types_file: Optional[Path]
     application_types_file: Optional[Path]
@@ -120,6 +122,7 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
 
     merged: Dict[str, Any] = {
         "autosar": agg["autosar"],
+        "packageLayout": default_package_layout(),
         "baseTypes": [],
         "implementationDataTypes": [],
         "applicationDataTypes": [],
@@ -133,6 +136,7 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
     }
 
     base_types_file: Optional[Path] = None
+    package_layout_file: Optional[Path] = None
     implementation_types_file: Optional[Path] = None
     application_types_file: Optional[Path] = None
     unit_patterns: List[InputPatternReport] = []
@@ -148,6 +152,16 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
                 f"'baseTypes' + 'implementationDataTypes' + 'applicationDataTypes'."
             ]
         )
+
+    package_layout_ref = agg["autosar"].get("packageLayoutRef")
+    if package_layout_ref:
+        package_layout_file = (base_dir / package_layout_ref).resolve()
+        package_layout_data = _load_yaml(package_layout_file)
+        package_layout_schema = _load_json(_schema_dir() / "package_layout.schema.json")
+        errs = _validate_with_schema(package_layout_data, package_layout_schema, str(package_layout_file))
+        if errs:
+            raise ValidationError(errs)
+        merged["packageLayout"] = package_layout_data["packageLayout"]
 
     base_types_file = (base_dir / inputs["baseTypes"]).resolve()
     base_types_data = _load_yaml(base_types_file)
@@ -253,6 +267,7 @@ def load_aggregator_with_report(agg_path: Path, schema_path: Optional[Path] = No
     report = AggregatorLoadReport(
         project_path=agg_path,
         autosar_version=project.autosar_version,
+        package_layout_file=package_layout_file,
         base_types_file=base_types_file,
         implementation_types_file=implementation_types_file,
         application_types_file=application_types_file,

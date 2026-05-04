@@ -1,0 +1,8 @@
+compuMethods:
+  - name: "CM_BrakeTorque"
+    category: "linear"
+    unitRef: "Nm"
+    factor: 1.0
+    offset: 0.0
+    physMin: 0
+    physMax: 5000

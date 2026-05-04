@@ -411,6 +411,13 @@ runnables:
 
 ## System composition and subcompositions
 
+Before diving into reusable compositions, it helps to separate two concepts that are easy to conflate:
+
+- AUTOSAR packages are ARXML containers and namespaces. They exist to group packageable elements and define stable reference paths.
+- compositions and subcompositions are architecture concepts. They define component instances, connectors, and delegation across boundaries.
+
+Changing a package layout changes where an element is exported in ARXML. It does not create connections, change behavior, or replace a subcomposition boundary.
+
 The system file defines the top-level composition. Subcomposition files define reusable inner compositions that can be instantiated from the system.
 
 ### The type vs. instance distinction

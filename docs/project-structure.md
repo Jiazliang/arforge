@@ -42,6 +42,7 @@ The manifest is the single entry point for all ARForge commands. It declares the
 autosar:
   version: "4.2"
   rootPackage: "MY_PROJECT"
+  packageLayoutRef: "packages/company_layout.yaml"
 
 inputs:
   baseTypes: "types/base_types.yaml"
@@ -63,6 +64,54 @@ inputs:
 ```
 
 All paths are resolved relative to the manifest file. This means the manifest and its inputs can live anywhere in a repository as long as the relative paths are correct.
+
+`rootPackage` is always the top-level AUTOSAR package emitted by the exporter. `packageLayoutRef` is optional and points to an external package-layout file that controls the subpackage structure below that root package.
+
+## External package layouts
+
+ARForge treats AUTOSAR packages as export-time containers and namespaces for packageable elements. They affect ARXML reference paths and tool compatibility, but they do not define runtime behavior, instance wiring, or architecture semantics.
+
+Use an external package layout file when you need company-specific ARXML package paths:
+
+```yaml
+packageLayout:
+  name: "CompanyLayout"
+  defaults:
+    swc: "Components/Common"
+    interface: "Interfaces/Common"
+    applicationDataType: "DataTypes/Application"
+    implementationDataType: "DataTypes/Implementation"
+    baseType: "DataTypes/Base"
+    compuMethod: "DataTypes/CompuMethods"
+    unit: "DataTypes/Units"
+    modeDeclarationGroup: "Modes"
+    composition: "Components/Compositions"
+    system: "System"
+  allowedPackages:
+    - "Components"
+    - "Components/Common"
+    - "Components/Brake"
+    - "Interfaces"
+    - "Interfaces/Common"
+    - "Interfaces/Brake"
+    - "DataTypes/Application"
+    - "DataTypes/Implementation"
+    - "DataTypes/Base"
+    - "DataTypes/CompuMethods"
+    - "DataTypes/Units"
+    - "Modes"
+    - "System"
+```
+
+Packageable top-level elements may then opt into an explicit package:
+
+```yaml
+swc:
+  name: "BrakeController"
+  package: "Components/Brake"
+```
+
+Unassigned elements fall back to the category default from the external layout. Nested elements such as runnables, ports, connectors, operations, and data elements do not carry a `package` field. They stay nested under their owning packageable element.
 
 ## What belongs where
 

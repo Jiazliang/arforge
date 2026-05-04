@@ -29,6 +29,7 @@ from .model import (
     SubcompositionType,
     Swc,
 )
+from .arxml_paths import ArxmlPathResolver, build_package_tree, join_arxml_path
 
 SHARED_TEMPLATE = "arxml/shared_42.arxml.j2"
 SWC_TEMPLATE = "arxml/swc_42.arxml.j2"
@@ -143,19 +144,13 @@ CompositionOwnerKind = Literal["component_type", "root_system"]
 
 @dataclass(frozen=True)
 class CompositionArxmlContext:
-    root_package: str
-    owner_kind: CompositionOwnerKind
-    owner_name: str
+    owner_path: str
 
     def component_prototype_ref(self, prototype_name: str) -> str:
-        if self.owner_kind == "component_type":
-            return f"/{self.root_package}/Components/{self.owner_name}/{prototype_name}"
-        return f"/{self.root_package}/System/{self.owner_name}/{prototype_name}"
+        return join_arxml_path(self.owner_path, prototype_name)
 
     def composition_outer_port_ref(self, port_name: str) -> str:
-        if self.owner_kind != "component_type":
-            raise ValueError("Outer composition ports are only valid on reusable composition types.")
-        return f"/{self.root_package}/Components/{self.owner_name}/{port_name}"
+        return join_arxml_path(self.owner_path, port_name)
 
 
 def _env(template_dir: Path) -> Environment:
@@ -308,21 +303,19 @@ def _sort_subcomposition(subcomposition: SubcompositionType) -> SubcompositionTy
     )
 
 
-def _component_type_dests(project: Project) -> Dict[str, str]:
-    dests = {swc.name: swc.component_type_dest for swc in project.swcs}
-    dests.update({subcomposition.name: "COMPOSITION-SW-COMPONENT-TYPE" for subcomposition in project.subcompositions})
+def _component_type_dests(project: Project, resolver: ArxmlPathResolver) -> Dict[str, str]:
+    dests = {swc.name: resolver.component_type_dest(swc.name) for swc in project.swcs}
+    dests.update({subcomposition.name: resolver.component_type_dest(subcomposition.name) for subcomposition in project.subcompositions})
     return dests
 
 
-def _component_type_refs(project: Project) -> Dict[str, str]:
-    refs = {swc.name: f"/{project.rootPackage}/Components/{swc.name}" for swc in project.swcs}
-    refs.update(
-        {subcomposition.name: f"/{project.rootPackage}/Components/{subcomposition.name}" for subcomposition in project.subcompositions}
-    )
+def _component_type_refs(project: Project, resolver: ArxmlPathResolver) -> Dict[str, str]:
+    refs = {swc.name: resolver.component_type_ref(swc.name) for swc in project.swcs}
+    refs.update({subcomposition.name: resolver.component_type_ref(subcomposition.name) for subcomposition in project.subcompositions})
     return refs
 
 
-def _build_sr_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, SrPortComSpecMetadata]:
+def _build_sr_port_comspec_metadata(project: Project, swc: Swc, resolver: ArxmlPathResolver) -> dict[str, SrPortComSpecMetadata]:
     interfaces_by_name = {interface.name: interface for interface in project.interfaces}
     application_types_by_name = {data_type.name: data_type for data_type in project.applicationDataTypes}
     metadata: dict[str, SrPortComSpecMetadata] = {}
@@ -336,13 +329,13 @@ def _build_sr_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, SrP
         application_type = application_types_by_name.get(data_element.typeRef)
         metadata[port.name] = SrPortComSpecMetadata(
             data_element_name=data_element.name,
-            data_element_ref=f"/{project.rootPackage}/Interfaces/{interface.name}/{data_element.name}",
+            data_element_ref=resolver.interface_data_element(interface.name, data_element.name),
             unit_ref=application_type.unitRef if application_type is not None else None,
         )
     return metadata
 
 
-def _build_cs_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, list[CsOperationComSpecMetadata]]:
+def _build_cs_port_comspec_metadata(project: Project, swc: Swc, resolver: ArxmlPathResolver) -> dict[str, list[CsOperationComSpecMetadata]]:
     interfaces_by_name = {interface.name: interface for interface in project.interfaces}
     metadata: dict[str, list[CsOperationComSpecMetadata]] = {}
     for port in swc.ports:
@@ -354,14 +347,14 @@ def _build_cs_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, lis
         metadata[port.name] = [
             CsOperationComSpecMetadata(
                 operation_name=operation.name,
-                operation_ref=f"/{project.rootPackage}/Interfaces/{interface.name}/{operation.name}",
+                operation_ref=resolver.interface_operation(interface.name, operation.name),
             )
             for operation in interface.operations
         ]
     return metadata
 
 
-def _build_runnable_disabled_mode_irefs(project: Project, swc: Swc) -> dict[str, list[ArxmlDisabledModeIref]]:
+def _build_runnable_disabled_mode_irefs(project: Project, swc: Swc, resolver: ArxmlPathResolver) -> dict[str, list[ArxmlDisabledModeIref]]:
     ports_by_name = {port.name: port for port in swc.ports}
     mode_groups_by_name = {group.name: group for group in project.modeDeclarationGroups}
     runnable_disabled_mode_irefs: dict[str, list[ArxmlDisabledModeIref]] = {}
@@ -387,11 +380,9 @@ def _build_runnable_disabled_mode_irefs(project: Project, swc: Swc) -> dict[str,
                     continue
                 disabled_mode_irefs.append(
                     ArxmlDisabledModeIref(
-                        context_port_ref=f"/{project.rootPackage}/Components/{swc.name}/{port.name}",
-                        context_mode_declaration_group_prototype_ref=(
-                            f"/{project.rootPackage}/Interfaces/{port.interfaceRef}/{port.interfaceRef}_ModeGroup"
-                        ),
-                        target_mode_declaration_ref=f"/{project.rootPackage}/Modes/{mode_group.name}/{mode.name}",
+                        context_port_ref=resolver.swc_port(swc.name, port.name),
+                        context_mode_declaration_group_prototype_ref=resolver.interface_mode_group_prototype(port.interfaceRef),
+                        target_mode_declaration_ref=resolver.mode_declaration(mode_group.name, mode.name),
                     )
                 )
 
@@ -407,12 +398,8 @@ def _build_runnable_disabled_mode_irefs(project: Project, swc: Swc) -> dict[str,
     return runnable_disabled_mode_irefs
 
 
-def _component_type_path(root_package: str, component_type_name: str) -> str:
-    return f"/{root_package}/Components/{component_type_name}"
-
-
 def _component_type_port_ref(
-    root_package: str,
+    resolver: ArxmlPathResolver,
     component_type_name: str,
     port_name: str,
     direction: str,
@@ -425,7 +412,7 @@ def _component_type_port_ref(
         raise ValueError(f"Unsupported port direction: {direction}")
     return ArxmlPortRef(
         dest=dest,
-        ref=f"{_component_type_path(root_package, component_type_name)}/{port_name}",
+        ref=join_arxml_path(resolver.component_type_ref(component_type_name), port_name),
     )
 
 
@@ -445,6 +432,7 @@ def _build_component_ports_by_type(project: Project) -> dict[str, dict[str, obje
 def _resolve_prototype_port_ref(
     *,
     context: CompositionArxmlContext,
+    resolver: ArxmlPathResolver,
     instance_by_name: dict[str, ComponentPrototype],
     component_ports_by_type: dict[str, dict[str, object]],
     instance_name: str,
@@ -470,7 +458,7 @@ def _resolve_prototype_port_ref(
     return ArxmlPrototypePortRef(
         context_component_ref=context.component_prototype_ref(instance_name),
         port=_component_type_port_ref(
-            context.root_package,
+            resolver,
             component_type_name=instance.typeRef,
             port_name=port_name,
             direction=port.direction,
@@ -563,6 +551,7 @@ def _model_summary(project: Project) -> ExportModelSummary:
 def _build_connections_for_composition(
     project: Project,
     context: CompositionArxmlContext,
+    resolver: ArxmlPathResolver,
     components: List[ComponentPrototype],
     connectors: List[Connection],
 ) -> List[ArxmlAssemblyConnector]:
@@ -600,6 +589,7 @@ def _build_connections_for_composition(
             short_name=f"Conn_{idx}",
             provider=_resolve_prototype_port_ref(
                 context=context,
+                resolver=resolver,
                 instance_by_name=instance_by_name,
                 component_ports_by_type=component_ports_by_type,
                 instance_name=c.from_instance,
@@ -608,6 +598,7 @@ def _build_connections_for_composition(
             ),
             requester=_resolve_prototype_port_ref(
                 context=context,
+                resolver=resolver,
                 instance_by_name=instance_by_name,
                 component_ports_by_type=component_ports_by_type,
                 instance_name=c.to_instance,
@@ -620,23 +611,33 @@ def _build_connections_for_composition(
 
 
 def _build_connections(project: Project) -> List[ArxmlAssemblyConnector]:
+    resolver = ArxmlPathResolver(project)
     return _build_connections_for_composition(
         project,
         CompositionArxmlContext(
-            root_package=project.rootPackage,
-            owner_kind="root_system",
-            owner_name=project.system.composition.name,
+            owner_path=resolver.system_composition(project.system.composition.name),
         ),
+        resolver,
         project.system.composition.components,
         project.system.composition.connectors,
     )
 
 
+def _type_trefs(project: Project, resolver: ArxmlPathResolver) -> Dict[str, object]:
+    refs: Dict[str, object] = {}
+    for data_type in project.baseTypes:
+        refs[data_type.name] = resolver.type_ref_target(data_type.name)
+    for data_type in project.implementationDataTypes:
+        refs[data_type.name] = resolver.type_ref_target(data_type.name)
+    for data_type in project.applicationDataTypes:
+        refs[data_type.name] = resolver.type_ref_target(data_type.name)
+    return refs
+
+
 def _build_delegation_connectors(project: Project, subcomposition: SubcompositionType) -> List[ArxmlDelegationConnector]:
+    resolver = ArxmlPathResolver(project)
     context = CompositionArxmlContext(
-        root_package=project.rootPackage,
-        owner_kind="component_type",
-        owner_name=subcomposition.name,
+        owner_path=resolver.composition(subcomposition.name),
     )
     instance_by_name = {instance.name: instance for instance in subcomposition.components}
     component_ports_by_type = _build_component_ports_by_type(project)
@@ -646,6 +647,7 @@ def _build_delegation_connectors(project: Project, subcomposition: Subcompositio
             short_name=f"DelegationConn_{idx}",
             inner=_resolve_prototype_port_ref(
                 context=context,
+                resolver=resolver,
                 instance_by_name=instance_by_name,
                 component_ports_by_type=component_ports_by_type,
                 instance_name=connector.inner_instance,
@@ -653,7 +655,7 @@ def _build_delegation_connectors(project: Project, subcomposition: Subcompositio
                 expected_direction=outer_ports_by_name[connector.outer_port].direction,
             ),
             outer=_component_type_port_ref(
-                project.rootPackage,
+                resolver,
                 component_type_name=subcomposition.name,
                 port_name=connector.outer_port,
                 direction=outer_ports_by_name[connector.outer_port].direction,
@@ -667,35 +669,23 @@ def render_shared(project: Project, template_dir: Path, template_name: str = SHA
     env = _env(template_dir)
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
-    base_types = project.baseTypes
-    implementation_types = project.implementationDataTypes
-    application_types = project.applicationDataTypes
-    units = project.units
-    compu_methods = project.compuMethods
-    mode_declaration_groups = project.modeDeclarationGroups
-    type_trefs: Dict[str, Dict[str, str]] = {
-        d.name: {"package": "BaseTypes", "dest": "SW-BASE-TYPE"} for d in base_types
-    }
-    type_trefs.update(
-        {d.name: {"package": "ImplementationDataTypes", "dest": "IMPLEMENTATION-DATA-TYPE"} for d in implementation_types}
-    )
-    type_trefs.update(
-        {d.name: {"package": "ApplicationDataTypes", "dest": "APPLICATION-PRIMITIVE-DATA-TYPE"} for d in application_types}
-    )
+    resolver = ArxmlPathResolver(project)
     sr, cs, ms = _split_interfaces(project)
     return _pretty_print_xml(
         tpl.render(
             root_pkg=project.rootPackage,
-            base_types=base_types,
-            implementation_types=implementation_types,
-            application_types=application_types,
-            units=units,
-            compu_methods=compu_methods,
-            mode_declaration_groups=mode_declaration_groups,
-            type_trefs=type_trefs,
-            sr_interfaces=sr,
-            cs_interfaces=cs,
-            ms_interfaces=ms,
+            package_tree=build_package_tree(
+                resolver,
+                base_types=project.baseTypes,
+                implementation_data_types=project.implementationDataTypes,
+                application_data_types=project.applicationDataTypes,
+                units=project.units,
+                compu_methods=project.compuMethods,
+                mode_declaration_groups=project.modeDeclarationGroups,
+                interfaces=project.interfaces,
+            ),
+            paths=resolver,
+            type_trefs=_type_trefs(project, resolver),
             cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
         )
     )
@@ -706,13 +696,17 @@ def render_swc(project: Project, swc: Swc, template_dir: Path, template_name: st
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
     swc = next(candidate for candidate in project.swcs if candidate.name == swc.name)
+    resolver = ArxmlPathResolver(project)
     return _pretty_print_xml(
         tpl.render(
             root_pkg=project.rootPackage,
-            swc=swc,
-            sr_port_metadata=_build_sr_port_comspec_metadata(project, swc),
-            cs_port_metadata=_build_cs_port_comspec_metadata(project, swc),
-            runnable_disabled_mode_irefs=_build_runnable_disabled_mode_irefs(project, swc),
+            package_tree=build_package_tree(resolver, swcs=[swc]),
+            paths=resolver,
+            type_trefs=_type_trefs(project, resolver),
+            swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc, resolver)},
+            swc_cs_port_metadata={swc.name: _build_cs_port_comspec_metadata(project, swc, resolver)},
+            swc_runnable_disabled_mode_irefs={swc.name: _build_runnable_disabled_mode_irefs(project, swc, resolver)},
+            cs_interface_errors={},
         )
     )
 
@@ -727,8 +721,9 @@ def render_composition_type(
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
     subcomposition = next(candidate for candidate in project.subcompositions if candidate.name == subcomposition.name)
-    component_type_dests = _component_type_dests(project)
-    component_type_refs = _component_type_refs(project)
+    resolver = ArxmlPathResolver(project)
+    component_type_dests = _component_type_dests(project, resolver)
+    component_type_refs = _component_type_refs(project, resolver)
     composition_model = {
         "name": subcomposition.name,
         "description": subcomposition.description,
@@ -736,11 +731,8 @@ def render_composition_type(
         "components": subcomposition.components,
         "connections": _build_connections_for_composition(
             project,
-            CompositionArxmlContext(
-                root_package=project.rootPackage,
-                owner_kind="component_type",
-                owner_name=subcomposition.name,
-            ),
+            CompositionArxmlContext(owner_path=resolver.composition(subcomposition.name)),
+            resolver,
             subcomposition.components,
             subcomposition.connectors,
         ),
@@ -749,9 +741,13 @@ def render_composition_type(
     return _pretty_print_xml(
         tpl.render(
             root_pkg=project.rootPackage,
-            composition=composition_model,
+            package_tree=build_package_tree(resolver, subcompositions=[subcomposition]),
+            paths=resolver,
+            type_trefs=_type_trefs(project, resolver),
+            subcomposition_models={subcomposition.name: composition_model},
             component_type_dests=component_type_dests,
             component_type_refs=component_type_refs,
+            cs_interface_errors={},
         )
     )
 
@@ -760,18 +756,27 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
     env = _env(template_dir)
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
+    resolver = ArxmlPathResolver(project)
     connections = _build_connections(project)
-    component_type_dests = _component_type_dests(project)
-    component_type_refs = _component_type_refs(project)
+    component_type_dests = _component_type_dests(project, resolver)
+    component_type_refs = _component_type_refs(project, resolver)
     return _pretty_print_xml(
         tpl.render(
             root_pkg=project.rootPackage,
-            system_name=project.system.name,
-            composition_name=project.system.composition.name,
-            components=project.system.composition.components,
-            connections=connections,
+            package_tree=build_package_tree(resolver, systems=[project.system]),
+            paths=resolver,
+            type_trefs=_type_trefs(project, resolver),
+            system_models={
+                project.system.name: {
+                    "system_name": project.system.name,
+                    "composition_name": project.system.composition.name,
+                    "components": project.system.composition.components,
+                    "connections": connections,
+                }
+            },
             component_type_dests=component_type_dests,
             component_type_refs=component_type_refs,
+            cs_interface_errors={},
         )
     )
 
@@ -795,26 +800,12 @@ def write_outputs_with_report(
     if not split_by_swc:
         env = _env(template_dir)
         tpl = env.get_template(MONOLITHIC_TEMPLATE)
-        base_types = project.baseTypes
-        implementation_types = project.implementationDataTypes
-        application_types = project.applicationDataTypes
-        units = project.units
-        compu_methods = project.compuMethods
-        mode_declaration_groups = project.modeDeclarationGroups
-        type_trefs: Dict[str, Dict[str, str]] = {
-            d.name: {"package": "BaseTypes", "dest": "SW-BASE-TYPE"} for d in base_types
-        }
-        type_trefs.update(
-            {d.name: {"package": "ImplementationDataTypes", "dest": "IMPLEMENTATION-DATA-TYPE"} for d in implementation_types}
-        )
-        type_trefs.update(
-            {d.name: {"package": "ApplicationDataTypes", "dest": "APPLICATION-PRIMITIVE-DATA-TYPE"} for d in application_types}
-        )
+        resolver = ArxmlPathResolver(project)
         swcs = project.swcs
         sr, cs, ms = _split_interfaces(project)
         connections = _build_connections(project)
-        component_type_dests = _component_type_dests(project)
-        component_type_refs = _component_type_refs(project)
+        component_type_dests = _component_type_dests(project, resolver)
+        component_type_refs = _component_type_refs(project, resolver)
         subcompositions = [
             {
                 "name": subcomposition.name,
@@ -823,11 +814,8 @@ def write_outputs_with_report(
                 "components": subcomposition.components,
                 "connections": _build_connections_for_composition(
                     project,
-                    CompositionArxmlContext(
-                        root_package=project.rootPackage,
-                        owner_kind="component_type",
-                        owner_name=subcomposition.name,
-                    ),
+                    CompositionArxmlContext(owner_path=resolver.composition(subcomposition.name)),
+                    resolver,
                     subcomposition.components,
                     subcomposition.connectors,
                 ),
@@ -839,28 +827,36 @@ def write_outputs_with_report(
             out: _pretty_print_xml(
                 tpl.render(
                     root_pkg=project.rootPackage,
-                    base_types=base_types,
-                    implementation_types=implementation_types,
-                    application_types=application_types,
-                    units=units,
-                    compu_methods=compu_methods,
-                    mode_declaration_groups=mode_declaration_groups,
-                    type_trefs=type_trefs,
-                    sr_interfaces=sr,
-                    cs_interfaces=cs,
-                    ms_interfaces=ms,
+                    package_tree=build_package_tree(
+                        resolver,
+                        base_types=project.baseTypes,
+                        implementation_data_types=project.implementationDataTypes,
+                        application_data_types=project.applicationDataTypes,
+                        units=project.units,
+                        compu_methods=project.compuMethods,
+                        mode_declaration_groups=project.modeDeclarationGroups,
+                        interfaces=project.interfaces,
+                        swcs=project.swcs,
+                        subcompositions=project.subcompositions,
+                        systems=[project.system],
+                    ),
+                    paths=resolver,
+                    type_trefs=_type_trefs(project, resolver),
                     cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
-                    swcs=swcs,
-                    swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc) for swc in swcs},
-                    swc_cs_port_metadata={swc.name: _build_cs_port_comspec_metadata(project, swc) for swc in swcs},
+                    swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc, resolver) for swc in swcs},
+                    swc_cs_port_metadata={swc.name: _build_cs_port_comspec_metadata(project, swc, resolver) for swc in swcs},
                     swc_runnable_disabled_mode_irefs={
-                        swc.name: _build_runnable_disabled_mode_irefs(project, swc) for swc in swcs
+                        swc.name: _build_runnable_disabled_mode_irefs(project, swc, resolver) for swc in swcs
                     },
-                    subcompositions=subcompositions,
-                    system_name=project.system.name,
-                    composition_name=project.system.composition.name,
-                    instances=project.system.composition.components,
-                    connections=connections,
+                    subcomposition_models={item["name"]: item for item in subcompositions},
+                    system_models={
+                        project.system.name: {
+                            "system_name": project.system.name,
+                            "composition_name": project.system.composition.name,
+                            "components": project.system.composition.components,
+                            "connections": connections,
+                        }
+                    },
                     component_type_dests=component_type_dests,
                     component_type_refs=component_type_refs,
                 )
