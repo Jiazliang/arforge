@@ -293,6 +293,19 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro render_disabled_mode_irefs(disabled_mode_irefs) -%}
+{% if disabled_mode_irefs %}
+<DISABLED-MODE-IREFS>
+  {% for disabled_mode_iref in disabled_mode_irefs %}
+  <DISABLED-MODE-IREF>
+    <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">{{ disabled_mode_iref.context_mode_declaration_group_prototype_ref }}</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
+    <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">{{ disabled_mode_iref.target_mode_declaration_ref }}</TARGET-MODE-DECLARATION-REF>
+  </DISABLED-MODE-IREF>
+  {% endfor %}
+</DISABLED-MODE-IREFS>
+{% endif %}
+{%- endmacro %}
+
 {% macro render_swc_events(swc, root_pkg, runnable_disabled_mode_irefs) -%}
 <EVENTS>
   {% for r in swc.runnables %}
@@ -306,18 +319,8 @@
   {% if r.timingEventMs is not none %}
   <TIMING-EVENT>
     <SHORT-NAME>TE_{{ r.name }}</SHORT-NAME>
+    {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
     <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-    {% if disabled_mode_irefs %}
-    <DISABLED-MODE-IREFS>
-      {% for disabled_mode_iref in disabled_mode_irefs %}
-      <DISABLED-MODE-IREF>
-        <CONTEXT-PORT-REF DEST="R-PORT-PROTOTYPE">{{ disabled_mode_iref.context_port_ref }}</CONTEXT-PORT-REF>
-        <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">{{ disabled_mode_iref.context_mode_declaration_group_prototype_ref }}</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
-        <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">{{ disabled_mode_iref.target_mode_declaration_ref }}</TARGET-MODE-DECLARATION-REF>
-      </DISABLED-MODE-IREF>
-      {% endfor %}
-    </DISABLED-MODE-IREFS>
-    {% endif %}
     <PERIOD>{{ (r.timingEventMs / 1000.0) }}</PERIOD>
   </TIMING-EVENT>
   {% endif %}
@@ -325,18 +328,8 @@
   {% set oie_port = (swc.ports | selectattr("name", "equalto", oie.port) | list | first) %}
   <OPERATION-INVOKED-EVENT>
     <SHORT-NAME>OIE_{{ r.name }}_{{ oie.port }}_{{ oie.operation }}</SHORT-NAME>
+    {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
     <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-    {% if disabled_mode_irefs %}
-    <DISABLED-MODE-IREFS>
-      {% for disabled_mode_iref in disabled_mode_irefs %}
-      <DISABLED-MODE-IREF>
-        <CONTEXT-PORT-REF DEST="R-PORT-PROTOTYPE">{{ disabled_mode_iref.context_port_ref }}</CONTEXT-PORT-REF>
-        <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">{{ disabled_mode_iref.context_mode_declaration_group_prototype_ref }}</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
-        <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">{{ disabled_mode_iref.target_mode_declaration_ref }}</TARGET-MODE-DECLARATION-REF>
-      </DISABLED-MODE-IREF>
-      {% endfor %}
-    </DISABLED-MODE-IREFS>
-    {% endif %}
     <OPERATION-IREF>
       <CONTEXT-P-PORT-REF DEST="P-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ oie.port }}</CONTEXT-P-PORT-REF>
       <TARGET-PROVIDED-OPERATION-REF DEST="CLIENT-SERVER-OPERATION">/{{ root_pkg }}/Interfaces/{{ oie_port.interfaceRef if oie_port else '' }}/{{ oie.operation }}</TARGET-PROVIDED-OPERATION-REF>
@@ -347,18 +340,8 @@
   {% set dre_port = (swc.ports | selectattr("name", "equalto", dre.port) | list | first) %}
   <DATA-RECEIVED-EVENT>
     <SHORT-NAME>DRE_{{ r.name }}_{{ dre.port }}_{{ dre.dataElement }}</SHORT-NAME>
+    {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
     <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-    {% if disabled_mode_irefs %}
-    <DISABLED-MODE-IREFS>
-      {% for disabled_mode_iref in disabled_mode_irefs %}
-      <DISABLED-MODE-IREF>
-        <CONTEXT-PORT-REF DEST="R-PORT-PROTOTYPE">{{ disabled_mode_iref.context_port_ref }}</CONTEXT-PORT-REF>
-        <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">{{ disabled_mode_iref.context_mode_declaration_group_prototype_ref }}</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
-        <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">{{ disabled_mode_iref.target_mode_declaration_ref }}</TARGET-MODE-DECLARATION-REF>
-      </DISABLED-MODE-IREF>
-      {% endfor %}
-    </DISABLED-MODE-IREFS>
-    {% endif %}
     <DATA-IREF>
       <CONTEXT-R-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ dre.port }}</CONTEXT-R-PORT-REF>
       <TARGET-DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ dre_port.interfaceRef if dre_port else '' }}/{{ dre.dataElement }}</TARGET-DATA-ELEMENT-REF>
@@ -369,21 +352,11 @@
   {% set mse_port = (swc.ports | selectattr("name", "equalto", mse.port) | list | first) %}
   <SWC-MODE-SWITCH-EVENT>
     <SHORT-NAME>MSE_{{ r.name }}_{{ mse.port }}_{{ mse.mode }}</SHORT-NAME>
+    {{ render_disabled_mode_irefs(disabled_mode_irefs) }}
     <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">/{{ root_pkg }}/Components/{{ swc.name }}/IB_{{ swc.name }}/{{ r.name }}</START-ON-EVENT-REF>
-    {% if disabled_mode_irefs %}
-    <DISABLED-MODE-IREFS>
-      {% for disabled_mode_iref in disabled_mode_irefs %}
-      <DISABLED-MODE-IREF>
-        <CONTEXT-PORT-REF DEST="R-PORT-PROTOTYPE">{{ disabled_mode_iref.context_port_ref }}</CONTEXT-PORT-REF>
-        <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">{{ disabled_mode_iref.context_mode_declaration_group_prototype_ref }}</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
-        <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">{{ disabled_mode_iref.target_mode_declaration_ref }}</TARGET-MODE-DECLARATION-REF>
-      </DISABLED-MODE-IREF>
-      {% endfor %}
-    </DISABLED-MODE-IREFS>
-    {% endif %}
+    <ACTIVATION>ON-ENTRY</ACTIVATION>
     <MODE-IREFS>
       <MODE-IREF>
-        <CONTEXT-PORT-REF DEST="R-PORT-PROTOTYPE">/{{ root_pkg }}/Components/{{ swc.name }}/{{ mse.port }}</CONTEXT-PORT-REF>
         <CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF DEST="MODE-DECLARATION-GROUP-PROTOTYPE">/{{ root_pkg }}/Interfaces/{{ mse_port.interfaceRef if mse_port else '' }}/{{ mse_port.interfaceRef if mse_port else '' }}_ModeGroup</CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF>
         <TARGET-MODE-DECLARATION-REF DEST="MODE-DECLARATION">/{{ root_pkg }}/Modes/{{ mse_port.modeGroupRef if mse_port else '' }}/{{ mse.mode }}</TARGET-MODE-DECLARATION-REF>
       </MODE-IREF>

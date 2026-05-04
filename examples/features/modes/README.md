@@ -21,6 +21,7 @@ Semantics used in this example:
 Current export behavior:
 
 - `modeSwitchEvents` are exported to ARXML.
-- runnable `modeConditions` are exported as AUTOSAR event-level `DISABLED-MODE-IREFS`.
+- runnable `modeConditions` are exported as AUTOSAR event-level `DISABLED-MODE-IREFS` on supported runnable event types by disabling the complement of the allowed modes.
+- `modeConditions` are not supported on `initEvent` runnables.
 
 Entry point: `examples/features/modes/autosar.project.yaml`

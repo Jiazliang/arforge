@@ -363,8 +363,10 @@ Semantics:
 
 Current export scope:
 
-- `modeSwitchEvents` are exported as ARXML events
-- runnable `modeConditions` are exported as event-level `DISABLED-MODE-IREFS` on the runnable trigger event
+- `modeSwitchEvents` are exported as `SWC-MODE-SWITCH-EVENT` with `ACTIVATION` set to `ON-ENTRY`
+- runnable `modeConditions` are exported on supported runnable event types as event-level `DISABLED-MODE-IREFS`
+- supported event types are `TIMING-EVENT`, `DATA-RECEIVED-EVENT`, `OPERATION-INVOKED-EVENT`, and `SWC-MODE-SWITCH-EVENT`
+- `modeConditions` are not supported on `INIT-EVENT`
 - because AUTOSAR models this as disabled modes, ARForge exports the complement of the allowed set for each referenced mode-switch port
 
 ### Runnable access definitions
