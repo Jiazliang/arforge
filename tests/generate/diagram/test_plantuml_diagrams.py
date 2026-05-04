@@ -28,7 +28,7 @@ from arforge.model import (
     System,
 )
 from arforge.validate import load_and_validate_aggregator
-from tests._shared import PLANTUML_DIAGRAM_OUTPUTS, REPO_ROOT, TEMPLATE_DIR, VALID_PROJECT
+from tests._shared import MODES_FEATURE_PROJECT, PLANTUML_DIAGRAM_OUTPUTS, REPO_ROOT, TEMPLATE_DIR, VALID_PROJECT
 
 @pytest.mark.parametrize(
     ("diagram_format", "expected_names"),
@@ -266,3 +266,15 @@ def test_behavior_diagram_keeps_small_runnable_sets_in_one_row() -> None:
     assert len(view.runnables) == 4
     assert view.runnable_columns == 4
     assert [len(row.runnables) for row in view.runnable_rows] == [4]
+
+def test_behavior_diagram_includes_mode_condition_metadata() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+
+    view = next(behavior for behavior in build_diagram_views(project).behaviors if behavior.swc_name == "PowerStateUser")
+    process_when_active = next(runnable for runnable in view.runnables if runnable.name == "Runnable_ProcessWhenActive")
+    on_power_on = next(runnable for runnable in view.runnables if runnable.name == "Runnable_OnPowerOn")
+
+    assert "(cyclic, 10 ms)" in process_when_active.metadata_lines
+    assert "(allowed, Rp_PowerState: ON | SLEEP)" in process_when_active.metadata_lines
+    assert "(mode, Rp_PowerState: ON)" in on_power_on.metadata_lines
+    assert "(allowed, Rp_PowerState: ON)" in on_power_on.metadata_lines

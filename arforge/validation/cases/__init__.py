@@ -29,6 +29,7 @@ from .modes import (
 from .swc import (
     ComSpecSemanticCase,
     DataReceiveEventCase,
+    ModeConditionCase,
     ModeSwitchEventCase,
     OperationInvokedEventCase,
     RunnableAccessSemanticCase,
@@ -59,6 +60,7 @@ __all__ = [
     "DeclaredPortUsageCase",
     "DuplicateNameCase",
     "InterfaceSemanticCase",
+    "ModeConditionCase",
     "ModeDeclarationGroupInitialModeCase",
     "ModeDeclarationGroupStructureCase",
     "ModeSwitchConnectivityCase",
@@ -103,6 +105,7 @@ def core_validation_cases() -> List[ValidationCase]:
         RunnableRaisedErrorCase(),
         DataReceiveEventCase(),
         ModeSwitchEventCase(),
+        ModeConditionCase(),
         SystemInstanceTypeCase(),
         SubcompositionTypeCase(),
         SubcompositionPortDefinitionCase(),

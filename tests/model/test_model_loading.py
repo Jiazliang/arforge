@@ -7,7 +7,7 @@ defaults from the main example project are present in the model IR.
 from __future__ import annotations
 
 from arforge.validate import load_and_validate_aggregator
-from tests._shared import VALID_PROJECT
+from tests._shared import MODES_FEATURE_PROJECT, VALID_PROJECT
 
 def test_main_example_descriptions_are_loaded_into_model_ir() -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)
@@ -142,3 +142,20 @@ def test_main_example_omitted_swc_category_defaults_to_application() -> None:
 
     assert next(swc for swc in project.swcs if swc.name == "SpeedSensor").category == "application"
     assert next(swc for swc in project.swcs if swc.name == "SpeedDisplay").category == "application"
+
+def test_modes_example_mode_conditions_are_loaded_into_model_ir() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+
+    power_state_user = next(swc for swc in project.swcs if swc.name == "PowerStateUser")
+    on_power_on = next(runnable for runnable in power_state_user.runnables if runnable.name == "Runnable_OnPowerOn")
+    assert [(event.port, event.mode) for event in on_power_on.modeSwitchEvents] == [("Rp_PowerState", "ON")]
+    assert [(condition.port, condition.mode) for condition in on_power_on.modeConditions] == [("Rp_PowerState", "ON")]
+
+    process_when_active = next(
+        runnable for runnable in power_state_user.runnables if runnable.name == "Runnable_ProcessWhenActive"
+    )
+    assert process_when_active.timingEventMs == 10
+    assert [(condition.port, condition.mode) for condition in process_when_active.modeConditions] == [
+        ("Rp_PowerState", "ON"),
+        ("Rp_PowerState", "SLEEP"),
+    ]

@@ -177,6 +177,7 @@ class Runnable:
     operationInvokedEvents: List["OperationInvokedEvent"] = field(default_factory=list)
     dataReceiveEvents: List["DataReceiveEvent"] = field(default_factory=list)
     modeSwitchEvents: List["ModeSwitchEvent"] = field(default_factory=list)
+    modeConditions: List["ModeCondition"] = field(default_factory=list)
     raisesErrors: List["OperationErrorRaise"] = field(default_factory=list)
 
 
@@ -209,6 +210,13 @@ class DataReceiveEvent:
 
 @dataclass(frozen=True)
 class ModeSwitchEvent:
+    port: str
+    mode: str
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class ModeCondition:
     port: str
     mode: str
     description: str | None = None
@@ -621,6 +629,10 @@ def from_dict(d: Dict[str, Any]) -> Project:
                 modeSwitchEvents=sorted(
                     [ModeSwitchEvent(**e) for e in r.get("modeSwitchEvents", [])],
                     key=lambda e: (e.port, e.mode),
+                ),
+                modeConditions=sorted(
+                    [ModeCondition(**condition) for condition in r.get("modeConditions", [])],
+                    key=lambda condition: (condition.port, condition.mode),
                 ),
                 raisesErrors=sorted(
                     [OperationErrorRaise(**e) for e in r.get("raisesErrors", [])],

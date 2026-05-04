@@ -11,15 +11,17 @@ import hashlib
 from pathlib import Path
 
 from arforge.exporter import write_outputs, write_outputs_with_report
-from arforge.model import Composition
+from arforge.model import Composition, DataReceiveEvent, ModeCondition
 from arforge.validate import load_and_validate_aggregator
 from tests._shared import (
+    MODES_FEATURE_PROJECT,
     REPO_ROOT,
     SHARED_EXAMPLE_OUTPUT,
     SUBCOMPOSITION_EXAMPLE_OUTPUT,
     SYSTEM_EXAMPLE_OUTPUT,
     TEMPLATE_DIR,
     VALID_PROJECT,
+    extract_internal_behavior_fragment,
     extract_mode_declaration_group_fragment,
     extract_r_port_fragment,
     parse_xml_fragment,
@@ -254,6 +256,117 @@ def test_split_export_swc_files_contain_aligned_runnables_and_ports(tmp_path: Pa
     assert "<TARGET-MODE-DECLARATION-REF DEST=\"MODE-DECLARATION\">/DEMO/Modes/Mdg_PowerState/ON</TARGET-MODE-DECLARATION-REF>" in speed_display_xml
     assert "<DATA-ELEMENT-REF DEST=\"VARIABLE-DATA-PROTOTYPE\">/DEMO/Interfaces/If_VehicleSpeed/VehicleSpeed</DATA-ELEMENT-REF>" in speed_display_xml
     assert "<INIT-VALUE>" in speed_display_xml
+
+def test_split_modes_example_exports_mode_conditions_before_start_on_event_ref(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    out_dir = tmp_path / "out"
+    written = write_outputs(project, template_dir=REPO_ROOT / "templates", out=out_dir, split_by_swc=True)
+
+    power_state_user_path = next(path for path in written if path.name == "PowerStateUser.arxml")
+    power_state_user_xml = power_state_user_path.read_text(encoding="utf-8")
+    behavior_xml = extract_internal_behavior_fragment(power_state_user_xml, "PowerStateUser")
+
+    assert "<SWC-MODE-SWITCH-EVENT>" in power_state_user_xml
+    assert "Runnable_ProcessWhenActive" in power_state_user_xml
+    assert "<DISABLED-MODE-IREFS>" in power_state_user_xml
+    on_power_on_event = behavior_xml.split("<SHORT-NAME>MSE_Runnable_OnPowerOn_Rp_PowerState_ON</SHORT-NAME>", 1)[1].split(
+        "</SWC-MODE-SWITCH-EVENT>",
+        1,
+    )[0]
+    timing_event = behavior_xml.split("<SHORT-NAME>TE_Runnable_ProcessWhenActive</SHORT-NAME>", 1)[1].split(
+        "</TIMING-EVENT>",
+        1,
+    )[0]
+
+    assert "<ACTIVATION>ON-ENTRY</ACTIVATION>" in on_power_on_event
+    assert on_power_on_event.index("<DISABLED-MODE-IREFS>") < on_power_on_event.index("<START-ON-EVENT-REF")
+    assert on_power_on_event.index("<ACTIVATION>ON-ENTRY</ACTIVATION>") < on_power_on_event.index("<MODE-IREFS>")
+    assert (
+        on_power_on_event.index("<CONTEXT-MODE-DECLARATION-GROUP-PROTOTYPE-REF")
+        < on_power_on_event.index("<TARGET-MODE-DECLARATION-REF DEST=\"MODE-DECLARATION\">/FEATURE_MODES/Modes/Mdg_PowerState/OFF")
+    )
+    assert "<CONTEXT-PORT-REF" not in on_power_on_event
+    assert timing_event.index("<DISABLED-MODE-IREFS>") < timing_event.index("<START-ON-EVENT-REF")
+    assert "/FEATURE_MODES/Modes/Mdg_PowerState/OFF</TARGET-MODE-DECLARATION-REF>" in timing_event
+    assert "/FEATURE_MODES/Modes/Mdg_PowerState/ON</TARGET-MODE-DECLARATION-REF>" not in timing_event
+    assert "/FEATURE_MODES/Modes/Mdg_PowerState/SLEEP</TARGET-MODE-DECLARATION-REF>" not in timing_event
+
+
+def test_split_export_omits_disabled_modes_when_all_modes_are_allowed(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = replace(
+        project,
+        swcs=[
+            replace(
+                swc,
+                runnables=[
+                    replace(
+                        runnable,
+                        modeConditions=[
+                            ModeCondition(port="Rp_PowerState", mode="OFF"),
+                            ModeCondition(port="Rp_PowerState", mode="ON"),
+                            ModeCondition(port="Rp_PowerState", mode="SLEEP"),
+                        ],
+                    )
+                    if swc.name == "PowerStateUser" and runnable.name == "Runnable_ProcessWhenActive"
+                    else runnable
+                    for runnable in swc.runnables
+                ],
+            )
+            if swc.name == "PowerStateUser"
+            else swc
+            for swc in project.swcs
+        ],
+    )
+
+    out_dir = tmp_path / "out"
+    _ = write_outputs(project, template_dir=REPO_ROOT / "templates", out=out_dir, split_by_swc=True)
+
+    xml = (out_dir / "PowerStateUser.arxml").read_text(encoding="utf-8")
+    timing_event = xml.split("<SHORT-NAME>TE_Runnable_ProcessWhenActive</SHORT-NAME>", 1)[1].split("</TIMING-EVENT>", 1)[0]
+
+    assert "<PERIOD>0.01</PERIOD>" in timing_event
+    assert "<DISABLED-MODE-IREFS>" not in timing_event
+
+
+def test_split_export_data_received_event_places_mode_conditions_before_start_on_event_ref(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    project = replace(
+        project,
+        swcs=[
+            replace(
+                swc,
+                runnables=[
+                    replace(
+                        runnable,
+                        timingEventMs=None,
+                        reads=[],
+                        writes=[],
+                        dataReceiveEvents=[DataReceiveEvent(port="Rp_VehicleSpeed", dataElement="VehicleSpeed")],
+                        modeConditions=[ModeCondition(port="Rp_PowerState", mode="ON")],
+                    )
+                    if swc.name == "SpeedDisplay" and runnable.name == "Runnable_ReadVehicleSpeed"
+                    else runnable
+                    for runnable in swc.runnables
+                ],
+            )
+            for swc in project.swcs
+        ],
+    )
+    out_dir = tmp_path / "out"
+    _ = write_outputs(project, template_dir=REPO_ROOT / "templates", out=out_dir, split_by_swc=True)
+
+    xml = (out_dir / "SpeedDisplay.arxml").read_text(encoding="utf-8")
+    event = xml.split("<SHORT-NAME>DRE_Runnable_ReadVehicleSpeed_Rp_VehicleSpeed_VehicleSpeed</SHORT-NAME>", 1)[1].split(
+        "</DATA-RECEIVED-EVENT>",
+        1,
+    )[0]
+
+    assert event.index("<DISABLED-MODE-IREFS>") < event.index("<START-ON-EVENT-REF")
+    assert "<CONTEXT-PORT-REF" not in event
+    assert "/DEMO/Modes/Mdg_PowerState/OFF</TARGET-MODE-DECLARATION-REF>" in event
+    assert "/DEMO/Modes/Mdg_PowerState/ON</TARGET-MODE-DECLARATION-REF>" not in event
+    assert "/DEMO/Modes/Mdg_PowerState/SLEEP</TARGET-MODE-DECLARATION-REF>" in event
 
 def test_split_export_preserves_explicit_sr_receiver_semantics(tmp_path: Path) -> None:
     project = load_and_validate_aggregator(VALID_PROJECT)

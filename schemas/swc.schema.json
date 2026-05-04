@@ -155,6 +155,34 @@
         }
       ]
     },
+    "modeCondition": {
+      "type": "object",
+      "description": "Runnable-level mode constraint evaluated against a required mode-switch port.",
+      "required": [
+        "port",
+        "mode"
+      ],
+      "properties": {
+        "port": {
+          "$ref": "#/$defs/namedRef",
+          "description": "Requires port that supplies the mode state consumed by the runnable."
+        },
+        "description": {
+          "$ref": "#/$defs/descriptionProperty"
+        },
+        "mode": {
+          "$ref": "#/$defs/namedRef",
+          "description": "Mode declared by the referenced ModeDeclarationGroup that allows this runnable."
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "port": "Rp_PowerState",
+          "mode": "ON"
+        }
+      ]
+    },
     "raisesError": {
       "type": "object",
       "description": "Error raised by a runnable while serving a specific client-server operation.",
@@ -309,6 +337,22 @@
             ]
           ]
         },
+        "modeConditions": {
+          "type": "array",
+          "description": "Mode-dependent activation constraints for this runnable. Multiple modes on the same port are interpreted as OR.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/modeCondition"
+          },
+          "examples": [
+            [
+              {
+                "port": "Rp_PowerState",
+                "mode": "ON"
+              }
+            ]
+          ]
+        },
         "raisesErrors": {
           "type": "array",
           "description": "Possible client-server errors this runnable can raise while serving incoming operations.",
@@ -326,6 +370,22 @@
           ]
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "initEvent"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "modeConditions"
+              ]
+            }
+          }
+        }
+      ],
       "oneOf": [
         {
           "required": [

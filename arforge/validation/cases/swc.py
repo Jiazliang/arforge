@@ -6,9 +6,80 @@ component definition before instantiated system connectivity is considered.
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import List
 
 from ...semantic_validation import Finding, ValidationCase, ValidationContext
+
+
+def _resolve_mode_switch_group(
+    ctx: ValidationContext,
+    swc_name: str,
+    port_name: str,
+    location_base: str,
+    usage_label: str,
+    unknown_port_code: str,
+    direction_code: str,
+    interface_type_code: str,
+    missing_mode_group_code: str,
+    unknown_mode_group_code: str,
+) -> tuple[object | None, List[Finding]]:
+    findings: List[Finding] = []
+    port = ctx.find_swc_port(swc_name, port_name)
+    if port is None:
+        findings.append(
+            Finding(
+                code=unknown_port_code,
+                message=f"{location_base} {usage_label} references unknown port '{port_name}'.",
+            )
+        )
+        return None, findings
+
+    if port.direction != "requires":
+        findings.append(
+            Finding(
+                code=direction_code,
+                message=(
+                    f"{location_base} {usage_label} on port '{port_name}' requires direction 'requires', "
+                    f"found '{port.direction}'."
+                ),
+            )
+        )
+
+    itf = ctx.iface_by_name.get(port.interfaceRef)
+    if itf is None:
+        return None, findings
+    if itf.type != "modeSwitch":
+        findings.append(
+            Finding(
+                code=interface_type_code,
+                message=f"{location_base} {usage_label} on port '{port_name}' requires modeSwitch interface, found '{itf.type}'.",
+            )
+        )
+        return None, findings
+    if not itf.modeGroupRef:
+        findings.append(
+            Finding(
+                code=missing_mode_group_code,
+                message=f"{location_base} {usage_label} on interface '{itf.name}' requires modeGroupRef.",
+            )
+        )
+        return None, findings
+
+    group = ctx.mode_declaration_group_by_name.get(itf.modeGroupRef)
+    if group is None:
+        findings.append(
+            Finding(
+                code=unknown_mode_group_code,
+                message=(
+                    f"{location_base} {usage_label} interface '{itf.name}' references unknown "
+                    f"ModeDeclarationGroup '{itf.modeGroupRef}'."
+                ),
+            )
+        )
+        return None, findings
+
+    return group, findings
 
 
 class SwcStructureCase(ValidationCase):
@@ -776,49 +847,20 @@ class ModeSwitchEventCase(ValidationCase):
 
                 location_base = f"SWC '{swc.name}' runnable '{runnable.name}'"
                 for event in sorted(runnable.modeSwitchEvents, key=lambda e: (e.port, e.mode)):
-                    port = ctx.find_swc_port(swc.name, event.port)
-                    if port is None:
-                        findings.append(
-                            self.finding(
-                                f"{location_base} modeSwitchEvents references unknown port '{event.port}'.",
-                                code="CORE-028-MSE-UNKNOWN-PORT",
-                            )
-                        )
-                        continue
-                    if port.direction != "requires":
-                        findings.append(
-                            self.finding(
-                                f"{location_base} modeSwitchEvents on port '{event.port}' requires direction 'requires', found '{port.direction}'.",
-                                code="CORE-028-MSE-DIRECTION",
-                            )
-                        )
-                    itf = ctx.iface_by_name.get(port.interfaceRef)
-                    if itf is None:
-                        continue
-                    if itf.type != "modeSwitch":
-                        findings.append(
-                            self.finding(
-                                f"{location_base} modeSwitchEvents on port '{event.port}' requires modeSwitch interface, found '{itf.type}'.",
-                                code="CORE-028-MSE-INTERFACE-TYPE",
-                            )
-                        )
-                        continue
-                    if not itf.modeGroupRef:
-                        findings.append(
-                            self.finding(
-                                f"{location_base} modeSwitchEvents on interface '{itf.name}' requires modeGroupRef.",
-                                code="CORE-028-MSE-MISSING-MODE-GROUP",
-                            )
-                        )
-                        continue
-                    group = ctx.mode_declaration_group_by_name.get(itf.modeGroupRef)
+                    group, resolution_findings = _resolve_mode_switch_group(
+                        ctx,
+                        swc.name,
+                        event.port,
+                        location_base,
+                        "modeSwitchEvents",
+                        "CORE-028-MSE-UNKNOWN-PORT",
+                        "CORE-028-MSE-DIRECTION",
+                        "CORE-028-MSE-INTERFACE-TYPE",
+                        "CORE-028-MSE-MISSING-MODE-GROUP",
+                        "CORE-028-MSE-UNKNOWN-MODE-GROUP",
+                    )
+                    findings.extend(resolution_findings)
                     if group is None:
-                        findings.append(
-                            self.finding(
-                                f"{location_base} modeSwitchEvents interface '{itf.name}' references unknown ModeDeclarationGroup '{itf.modeGroupRef}'.",
-                                code="CORE-028-MSE-UNKNOWN-MODE-GROUP",
-                            )
-                        )
                         continue
                     mode_names = {mode.name for mode in group.modes}
                     if event.mode not in mode_names:
@@ -826,6 +868,85 @@ class ModeSwitchEventCase(ValidationCase):
                             self.finding(
                                 f"{location_base} modeSwitchEvents references unknown mode '{event.mode}' on ModeDeclarationGroup '{group.name}'.",
                                 code="CORE-028-MSE-UNKNOWN-MODE",
+                            )
+                        )
+
+        return findings
+
+
+class ModeConditionCase(ValidationCase):
+    case_id = "CORE-029"
+    name = "ModeConditions"
+    description = (
+        "Checks runnable modeConditions bindings for required mode-switch ports and declared modes. "
+        "Multiple modes on the same port are interpreted as OR; different ports are interpreted as AND."
+    )
+    tags = ("core", "swc", "runnables", "interfaces", "mode-switch")
+    default_severity = "error"
+
+    def applicability(self, ctx: ValidationContext) -> tuple[bool, str | None]:
+        if not ctx.project.swcs:
+            return False, "no SWCs defined"
+        has_conditions = any(
+            runnable.modeConditions
+            for swc in ctx.project.swcs
+            for runnable in swc.runnables
+        )
+        if not has_conditions:
+            return False, "no modeConditions declarations"
+        return True, None
+
+    def run(self, ctx: ValidationContext) -> List[Finding]:
+        findings: List[Finding] = []
+
+        for swc in sorted(ctx.project.swcs, key=lambda s: s.name):
+            for runnable in sorted(swc.runnables, key=lambda r: r.name):
+                if not runnable.modeConditions:
+                    continue
+
+                location_base = f"SWC '{swc.name}' runnable '{runnable.name}'"
+                duplicates = Counter((condition.port, condition.mode) for condition in runnable.modeConditions)
+                for port_name, mode_name in sorted(key for key, count in duplicates.items() if count > 1):
+                    findings.append(
+                        self.finding(
+                            f"{location_base} modeConditions contains duplicate condition '{port_name}.{mode_name}'.",
+                            code="CORE-029-MODE-CONDITION-DUPLICATE",
+                            severity="warning",
+                        )
+                    )
+
+                if runnable.initEvent:
+                    findings.append(
+                        self.finding(
+                            f"{location_base} modeConditions are not supported on initEvent runnables because InitEvent has no AUTOSAR mode-disabling dependency mapping.",
+                            code="CORE-029-MODE-CONDITION-INIT-EVENT-UNSUPPORTED",
+                        )
+                    )
+
+                for condition in sorted(runnable.modeConditions, key=lambda c: (c.port, c.mode)):
+                    group, resolution_findings = _resolve_mode_switch_group(
+                        ctx,
+                        swc.name,
+                        condition.port,
+                        location_base,
+                        "modeConditions",
+                        "CORE-029-MODE-CONDITION-PORT-UNKNOWN",
+                        "CORE-029-MODE-CONDITION-DIRECTION",
+                        "CORE-029-MODE-CONDITION-INTERFACE-TYPE",
+                        "CORE-029-MODE-CONDITION-MISSING-MODE-GROUP",
+                        "CORE-029-MODE-CONDITION-UNKNOWN-MODE-GROUP",
+                    )
+                    findings.extend(resolution_findings)
+                    if group is None:
+                        continue
+
+                    mode_names = {mode.name for mode in group.modes}
+                    if condition.mode not in mode_names:
+                        findings.append(
+                            self.finding(
+                                f"{location_base} modeConditions references unknown mode '{condition.mode}' "
+                                f"on ModeDeclarationGroup '{group.name}'.",
+                                code="CORE-029-MODE-CONDITION-UNKNOWN-MODE",
                             )
                         )
 

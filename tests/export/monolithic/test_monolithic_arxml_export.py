@@ -6,13 +6,16 @@ fragments and verify deterministic single-file export results.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 from pathlib import Path
 import re
 
 from arforge.exporter import write_outputs
+from arforge.model import ModeCondition
 from arforge.validate import load_and_validate_aggregator
 from tests._shared import (
+    MODES_FEATURE_PROJECT,
     SHARED_EXAMPLE_OUTPUT,
     SUBCOMPOSITION_EXAMPLE_OUTPUT,
     TEMPLATE_DIR,
@@ -154,3 +157,73 @@ def test_monolithic_export_is_deterministic(tmp_path: Path) -> None:
     data2 = out2.read_bytes()
     assert data1 == data2
     assert hashlib.sha256(data1).hexdigest() == hashlib.sha256(data2).hexdigest()
+
+def test_monolithic_modes_example_exports_disabled_modes(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    out = tmp_path / "FeatureModes.arxml"
+
+    _ = write_outputs(project, template_dir=TEMPLATE_DIR, out=out, split_by_swc=False)
+
+    xml = out.read_text(encoding="utf-8")
+    assert "<SWC-MODE-SWITCH-EVENT>" in xml
+    assert "Runnable_ProcessWhenActive" in xml
+    assert "<DISABLED-MODE-IREFS>" in xml
+    assert "/FEATURE_MODES/Modes/Mdg_PowerState/OFF</TARGET-MODE-DECLARATION-REF>" in xml
+    assert "TE_Runnable_ProcessWhenActive" in xml
+    assert "<ACTIVATION>ON-ENTRY</ACTIVATION>" in xml
+    timing_event = xml.split("<SHORT-NAME>TE_Runnable_ProcessWhenActive</SHORT-NAME>", 1)[1].split("</TIMING-EVENT>", 1)[0]
+    assert timing_event.index("<DISABLED-MODE-IREFS>") < timing_event.index("<START-ON-EVENT-REF")
+
+
+def test_monolithic_modes_example_matches_split_event_ordering(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    mono_out = tmp_path / "FeatureModes.arxml"
+    split_out = tmp_path / "split"
+
+    _ = write_outputs(project, template_dir=TEMPLATE_DIR, out=mono_out, split_by_swc=False)
+    _ = write_outputs(project, template_dir=TEMPLATE_DIR, out=split_out, split_by_swc=True)
+
+    monolithic_xml = mono_out.read_text(encoding="utf-8")
+    split_xml = (split_out / "PowerStateUser.arxml").read_text(encoding="utf-8")
+
+    mono_behavior = extract_internal_behavior_fragment(monolithic_xml, "PowerStateUser")
+    split_behavior = extract_internal_behavior_fragment(split_xml, "PowerStateUser")
+
+    assert normalize_xml_fragment(mono_behavior) == normalize_xml_fragment(split_behavior)
+
+
+def test_monolithic_export_omits_disabled_modes_when_all_modes_are_allowed(tmp_path: Path) -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = replace(
+        project,
+        swcs=[
+            replace(
+                swc,
+                runnables=[
+                    replace(
+                        runnable,
+                        modeConditions=[
+                            ModeCondition(port="Rp_PowerState", mode="OFF"),
+                            ModeCondition(port="Rp_PowerState", mode="ON"),
+                            ModeCondition(port="Rp_PowerState", mode="SLEEP"),
+                        ],
+                    )
+                    if swc.name == "PowerStateUser" and runnable.name == "Runnable_ProcessWhenActive"
+                    else runnable
+                    for runnable in swc.runnables
+                ],
+            )
+            if swc.name == "PowerStateUser"
+            else swc
+            for swc in project.swcs
+        ],
+    )
+    out = tmp_path / "FeatureModesAllModesAllowed.arxml"
+
+    _ = write_outputs(project, template_dir=TEMPLATE_DIR, out=out, split_by_swc=False)
+
+    xml = out.read_text(encoding="utf-8")
+    timing_event = xml.split("<SHORT-NAME>TE_Runnable_ProcessWhenActive</SHORT-NAME>", 1)[1].split("</TIMING-EVENT>", 1)[0]
+
+    assert "<PERIOD>0.01</PERIOD>" in timing_event
+    assert "<DISABLED-MODE-IREFS>" not in timing_event

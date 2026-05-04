@@ -55,7 +55,7 @@ ARForge targets a practical AUTOSAR Classic 4.2 subset:
 - client-server interfaces with operations, arguments, return types, possible errors, and sync/async ComSpec
 - mode-switch interfaces with `ModeDeclarationGroup` references
 - `ModeDeclarationGroup` definitions as first-class model artifacts
-- SWC types with provides/requires ports, runnables, and all standard AUTOSAR event kinds
+- SWC types with provides/requires ports, runnables, all standard AUTOSAR event kinds, and runnable-level mode conditions
 - runnable access definitions - reads, writes, calls, raised errors - validated against port and interface semantics
 - system compositions with component prototypes and port-level assembly connectors for SR, CS, and mode-switch flows
 - semantic validation with stable finding codes across three severity levels
@@ -76,3 +76,5 @@ Stable finding codes. Every semantic rule has a stable `CORE-XXX` identifier. Fi
 Explicit scope. ARForge covers the SWC design layer. It deliberately does not model OS configuration, memory mapping, BSW modules, or RTE internals. Staying in scope keeps the tool maintainable and the outputs trustworthy.
 
 Current AUTOSAR support is intentionally scoped. ARForge aims for clean, checker-friendly export for the supported subset, but some completeness details outside that subset may still remain open and are tracked in the roadmap rather than hidden behind stronger compliance claims.
+
+Runnable `modeConditions` are exported conservatively as AUTOSAR event-level mode-disabling dependencies, rather than as a guessed runnable-level XML structure.

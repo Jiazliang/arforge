@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from arforge.model import ModeDeclaration
+from arforge.model import ModeCondition, ModeDeclaration
 from arforge.semantic_validation import Finding, FindingSeverity
 from arforge.validate import ValidationError, build_semantic_report, load_aggregator, load_and_validate_aggregator
 from tests._shared import (
@@ -20,12 +20,29 @@ from tests._shared import (
     ERROR_PROJECT,
     INVALID_DIR,
     MIXED_PROJECT,
+    MODES_FEATURE_PROJECT,
     SR_N_TO_1_PROJECT,
     SR_ONE_TO_MANY_PROJECT,
     UNUSED_MODE_GROUP_PROJECT,
     VALID_PROJECT,
     WARNING_ONLY_PROJECT,
 )
+
+
+def _replace_runnable(project, swc_name: str, runnable_name: str, **changes):
+    return replace(
+        project,
+        swcs=[
+            replace(
+                swc,
+                runnables=[
+                    replace(runnable, **changes) if swc.name == swc_name and runnable.name == runnable_name else runnable
+                    for runnable in swc.runnables
+                ],
+            )
+            for swc in project.swcs
+        ],
+    )
 
 def test_finding_defaults_to_error_severity() -> None:
     finding = Finding(code="CORE-999", message="Compatibility default.")
@@ -204,8 +221,132 @@ def test_connected_unused_mode_switch_project_passes_validation_and_reports_warn
     assert len(connected_findings) == 1
     assert connected_findings[0].severity == FindingSeverity.WARNING
     assert connected_findings[0].message == (
-        "Connected modeSwitch requires port 'SpeedDisplay_1.Rp_PowerState' is not used by any runnable modeSwitchEvents."
+        "Connected modeSwitch requires port 'SpeedDisplay_1.Rp_PowerState' is not used by any runnable modeSwitchEvents or modeConditions."
     )
+
+def test_mode_conditions_unknown_port_emits_error() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = _replace_runnable(
+        project,
+        "PowerStateUser",
+        "Runnable_ProcessWhenActive",
+        modeConditions=[ModeCondition(port="Rp_UnknownMode", mode="ON")],
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+
+    assert "CORE-029-MODE-CONDITION-PORT-UNKNOWN" in {finding.code for finding in report.error_findings()}
+
+def test_mode_conditions_non_mode_switch_port_emits_error() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    project = _replace_runnable(
+        project,
+        "SpeedDisplay",
+        "Runnable_ReadVehicleSpeed",
+        modeConditions=[ModeCondition(port="Rp_VehicleSpeed", mode="ON")],
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+
+    assert "CORE-029-MODE-CONDITION-INTERFACE-TYPE" in {finding.code for finding in report.error_findings()}
+
+def test_mode_conditions_provides_port_emits_error() -> None:
+    project = load_and_validate_aggregator(VALID_PROJECT)
+    project = _replace_runnable(
+        project,
+        "SpeedSensor",
+        "Runnable_PublishVehicleSpeed",
+        modeConditions=[ModeCondition(port="Pp_PowerState", mode="ON")],
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+
+    assert "CORE-029-MODE-CONDITION-DIRECTION" in {finding.code for finding in report.error_findings()}
+
+def test_mode_conditions_unknown_mode_emits_error() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = _replace_runnable(
+        project,
+        "PowerStateUser",
+        "Runnable_ProcessWhenActive",
+        modeConditions=[ModeCondition(port="Rp_PowerState", mode="DIAG")],
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+
+    assert "CORE-029-MODE-CONDITION-UNKNOWN-MODE" in {finding.code for finding in report.error_findings()}
+
+def test_mode_conditions_duplicate_emits_single_warning_deterministically() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = _replace_runnable(
+        project,
+        "PowerStateUser",
+        "Runnable_ProcessWhenActive",
+        modeConditions=[
+            ModeCondition(port="Rp_PowerState", mode="ON"),
+            ModeCondition(port="Rp_PowerState", mode="ON"),
+        ],
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+
+    duplicate_findings = [
+        finding for finding in report.findings if finding.code == "CORE-029-MODE-CONDITION-DUPLICATE"
+    ]
+    assert len(duplicate_findings) == 1
+    assert duplicate_findings[0].severity == FindingSeverity.WARNING
+
+def test_declared_unused_mode_switch_port_counts_mode_conditions_as_usage() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = _replace_runnable(project, "PowerStateUser", "Runnable_OnPowerOn", modeSwitchEvents=[], modeConditions=[])
+    project = _replace_runnable(project, "PowerStateUser", "Runnable_OnSleep", modeSwitchEvents=[])
+
+    report = build_semantic_report(project, ruleset="core")
+    warning_codes = {finding.code for finding in report.findings if finding.severity == FindingSeverity.WARNING}
+
+    assert "CORE-047-MS-REQUIRES-DECLARED-UNUSED" not in warning_codes
+
+def test_connected_mode_switch_port_counts_mode_conditions_as_usage() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = _replace_runnable(project, "PowerStateUser", "Runnable_OnPowerOn", modeSwitchEvents=[], modeConditions=[])
+    project = _replace_runnable(project, "PowerStateUser", "Runnable_OnSleep", modeSwitchEvents=[])
+
+    report = build_semantic_report(project, ruleset="core")
+    warning_codes = {finding.code for finding in report.findings if finding.severity == FindingSeverity.WARNING}
+
+    assert "CORE-048-MS-CONNECTED-REQUIRES-UNUSED" not in warning_codes
+
+def test_mode_conditions_on_unconnected_mode_switch_port_emit_warning() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = replace(
+        project,
+        system=replace(
+            project.system,
+            composition=replace(project.system.composition, connectors=[]),
+        ),
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+    warning_codes = {finding.code for finding in report.findings if finding.severity == FindingSeverity.WARNING}
+
+    assert "CORE-048-MS-MODE-CONDITION-UNCONNECTED" in warning_codes
+
+def test_mode_conditions_on_init_event_emit_error() -> None:
+    project = load_and_validate_aggregator(MODES_FEATURE_PROJECT)
+    project = _replace_runnable(
+        project,
+        "PowerStateUser",
+        "Runnable_OnSleep",
+        initEvent=True,
+        modeSwitchEvents=[],
+        modeConditions=[ModeCondition(port="Rp_PowerState", mode="SLEEP")],
+    )
+
+    report = build_semantic_report(project, ruleset="core")
+
+    assert "CORE-029-MODE-CONDITION-INIT-EVENT-UNSUPPORTED" in {
+        finding.code for finding in report.error_findings()
+    }
 
 @pytest.mark.parametrize(
     ("fixture_name", "expected_code"),

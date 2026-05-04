@@ -471,11 +471,11 @@ class DeclaredPortUsageCase(ValidationCase):
 
                 if port.interfaceType == "modeSwitch" and port.direction == "requires":
                     analysis = mode_switch_requires_analysis.get(port.name)
-                    if analysis is None or analysis.usage.mode_switch_events:
+                    if analysis is None or analysis.usage.mode_switch_events or analysis.usage.mode_conditions:
                         continue
                     findings.append(
                         self.finding(
-                            f"ModeSwitch requires port '{port_ref}' is declared but no runnable modeSwitchEvents uses it.",
+                            f"ModeSwitch requires port '{port_ref}' is declared but no runnable modeSwitchEvents or modeConditions uses it.",
                             code="CORE-047-MS-REQUIRES-DECLARED-UNUSED",
                         )
                     )
@@ -488,13 +488,16 @@ class DeclaredPortUsageCase(ValidationCase):
 class ModeSwitchUsageCase(ValidationCase):
     case_id = "CORE-048"
     name = "ModeSwitchUsage"
-    description = "Checks whether connected mode-switch requires ports are actually used by runnable modeSwitchEvents."
+    description = (
+        "Checks whether connected mode-switch requires ports are actually used by runnable "
+        "modeSwitchEvents or modeConditions."
+    )
     tags = ("core", "system", "connections", "runnables", "mode-switch", "usage")
     default_severity = "warning"
 
     def applicability(self, ctx: ValidationContext) -> tuple[bool, str | None]:
-        if not ctx.project.system.composition.connectors:
-            return False, "no system connectors defined"
+        if not ctx.project.system.composition.components:
+            return False, "no system component prototypes defined"
         has_mode_switch_requires_ports = any(
             ctx.iter_mode_switch_requires_port_analysis(swc.name)
             for swc in ctx.project.swcs
@@ -508,14 +511,26 @@ class ModeSwitchUsageCase(ValidationCase):
 
         for swc in sorted(ctx.project.swcs, key=lambda s: s.name):
             for analysis in ctx.iter_mode_switch_requires_port_analysis(swc.name):
-                if analysis.usage.mode_switch_events:
+                if analysis.usage.mode_switch_events or analysis.usage.mode_conditions:
+                    if analysis.usage.mode_conditions:
+                        for instance in sorted(ctx.instances_by_swc_name.get(swc.name, []), key=lambda item: item.name):
+                            connectivity = ctx.find_instance_port_connectivity(instance.name, analysis.port.name)
+                            if connectivity is None or connectivity.incoming_connectors:
+                                continue
+                            findings.append(
+                                self.finding(
+                                    f"SWC instance '{instance.name}' uses modeConditions on unconnected "
+                                    f"modeSwitch requires port '{analysis.port.name}'.",
+                                    code="CORE-048-MS-MODE-CONDITION-UNCONNECTED",
+                                )
+                            )
                     continue
 
                 for connectivity in analysis.connected_instances:
                     findings.append(
                         self.finding(
                             f"Connected modeSwitch requires port '{connectivity.instance_name}.{analysis.port.name}' "
-                            "is not used by any runnable modeSwitchEvents.",
+                            "is not used by any runnable modeSwitchEvents or modeConditions.",
                             code="CORE-048-MS-CONNECTED-REQUIRES-UNUSED",
                         )
                     )

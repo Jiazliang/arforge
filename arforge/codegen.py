@@ -168,6 +168,7 @@ def _build_runnable_model(
     type_resolver: CTypeResolver,
 ) -> dict[str, object]:
     trigger_lines: list[str] = []
+    mode_condition_lines: list[str] = []
     if runnable.initEvent:
         trigger_lines.append("Trigger: InitEvent")
     if runnable.timingEventMs is not None:
@@ -178,6 +179,13 @@ def _build_runnable_model(
         trigger_lines.append(f"Trigger: ModeSwitchEvent({event.port} -> {event.mode})")
     for event in runnable.operationInvokedEvents:
         trigger_lines.append(f"Trigger: OperationInvokedEvent({event.port}.{event.operation})")
+    mode_conditions_by_port: dict[str, list[str]] = {}
+    for condition in runnable.modeConditions:
+        mode_conditions_by_port.setdefault(condition.port, []).append(condition.mode)
+    for port_name in sorted(mode_conditions_by_port):
+        modes = sorted(set(mode_conditions_by_port[port_name]))
+        joined_modes = " | ".join(modes)
+        mode_condition_lines.append(f"ModeCondition: {port_name} in [{joined_modes}]")
 
     read_entries: list[dict[str, object]] = []
     for access in runnable.reads:
@@ -284,6 +292,7 @@ def _build_runnable_model(
             write_entries,
             call_entries,
             runnable.modeSwitchEvents,
+            runnable.modeConditions,
             server_bindings,
             runnable.raisesErrors,
         ]
@@ -292,8 +301,9 @@ def _build_runnable_model(
     return {
         "name": runnable.name,
         "description": runnable.description,
-        "trigger_lines": trigger_lines,
+        "trigger_lines": trigger_lines + mode_condition_lines,
         "has_mode_switch_events": bool(runnable.modeSwitchEvents),
+        "has_mode_conditions": bool(runnable.modeConditions),
         "reads": read_entries,
         "writes": write_entries,
         "calls": call_entries,

@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 from time import perf_counter
 from typing import Dict, List, Literal, Optional
+from xml.etree import ElementTree as ET
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -34,6 +35,8 @@ SWC_TEMPLATE = "arxml/swc_42.arxml.j2"
 COMPOSITION_TEMPLATE = "arxml/composition_42.arxml.j2"
 SYSTEM_TEMPLATE = "arxml/system_42.arxml.j2"
 MONOLITHIC_TEMPLATE = "arxml/all_42.arxml.j2"
+AUTOSAR_XML_NAMESPACE = "http://autosar.org/schema/r4.0"
+XSI_XML_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance"
 
 
 @dataclass(frozen=True)
@@ -128,6 +131,13 @@ class CsOperationComSpecMetadata:
     operation_ref: str
 
 
+@dataclass(frozen=True)
+class ArxmlDisabledModeIref:
+    context_port_ref: str
+    context_mode_declaration_group_prototype_ref: str
+    target_mode_declaration_ref: str
+
+
 CompositionOwnerKind = Literal["component_type", "root_system"]
 
 
@@ -155,6 +165,17 @@ def _env(template_dir: Path) -> Environment:
         trim_blocks=True,
         lstrip_blocks=True,
     )
+
+
+ET.register_namespace("", AUTOSAR_XML_NAMESPACE)
+ET.register_namespace("xsi", XSI_XML_NAMESPACE)
+
+
+def _pretty_print_xml(xml: str) -> str:
+    root = ET.fromstring(xml)
+    ET.indent(root, space="  ")
+    body = ET.tostring(root, encoding="unicode", short_empty_elements=False)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + body
 
 
 def _split_interfaces(project: Project):
@@ -247,6 +268,10 @@ def _sort_runnable(runnable: Runnable) -> Runnable:
             runnable.modeSwitchEvents,
             key=lambda event: (event.port, event.mode),
         ),
+        modeConditions=sorted(
+            runnable.modeConditions,
+            key=lambda condition: (condition.port, condition.mode),
+        ),
         raisesErrors=sorted(
             runnable.raisesErrors,
             key=lambda raised_error: (raised_error.operation, raised_error.error),
@@ -334,6 +359,52 @@ def _build_cs_port_comspec_metadata(project: Project, swc: Swc) -> dict[str, lis
             for operation in interface.operations
         ]
     return metadata
+
+
+def _build_runnable_disabled_mode_irefs(project: Project, swc: Swc) -> dict[str, list[ArxmlDisabledModeIref]]:
+    ports_by_name = {port.name: port for port in swc.ports}
+    mode_groups_by_name = {group.name: group for group in project.modeDeclarationGroups}
+    runnable_disabled_mode_irefs: dict[str, list[ArxmlDisabledModeIref]] = {}
+
+    for runnable in swc.runnables:
+        allowed_modes_by_port: dict[str, set[str]] = {}
+        for condition in runnable.modeConditions:
+            allowed_modes_by_port.setdefault(condition.port, set()).add(condition.mode)
+
+        disabled_mode_irefs: list[ArxmlDisabledModeIref] = []
+        for port_name in sorted(allowed_modes_by_port):
+            port = ports_by_name.get(port_name)
+            if port is None or not port.modeGroupRef:
+                continue
+
+            mode_group = mode_groups_by_name.get(port.modeGroupRef)
+            if mode_group is None:
+                continue
+
+            allowed_modes = allowed_modes_by_port[port_name]
+            for mode in mode_group.modes:
+                if mode.name in allowed_modes:
+                    continue
+                disabled_mode_irefs.append(
+                    ArxmlDisabledModeIref(
+                        context_port_ref=f"/{project.rootPackage}/Components/{swc.name}/{port.name}",
+                        context_mode_declaration_group_prototype_ref=(
+                            f"/{project.rootPackage}/Interfaces/{port.interfaceRef}/{port.interfaceRef}_ModeGroup"
+                        ),
+                        target_mode_declaration_ref=f"/{project.rootPackage}/Modes/{mode_group.name}/{mode.name}",
+                    )
+                )
+
+        runnable_disabled_mode_irefs[runnable.name] = sorted(
+            disabled_mode_irefs,
+            key=lambda item: (
+                item.context_port_ref,
+                item.context_mode_declaration_group_prototype_ref,
+                item.target_mode_declaration_ref,
+            ),
+        )
+
+    return runnable_disabled_mode_irefs
 
 
 def _component_type_path(root_package: str, component_type_name: str) -> str:
@@ -612,19 +683,21 @@ def render_shared(project: Project, template_dir: Path, template_name: str = SHA
         {d.name: {"package": "ApplicationDataTypes", "dest": "APPLICATION-PRIMITIVE-DATA-TYPE"} for d in application_types}
     )
     sr, cs, ms = _split_interfaces(project)
-    return tpl.render(
-        root_pkg=project.rootPackage,
-        base_types=base_types,
-        implementation_types=implementation_types,
-        application_types=application_types,
-        units=units,
-        compu_methods=compu_methods,
-        mode_declaration_groups=mode_declaration_groups,
-        type_trefs=type_trefs,
-        sr_interfaces=sr,
-        cs_interfaces=cs,
-        ms_interfaces=ms,
-        cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
+    return _pretty_print_xml(
+        tpl.render(
+            root_pkg=project.rootPackage,
+            base_types=base_types,
+            implementation_types=implementation_types,
+            application_types=application_types,
+            units=units,
+            compu_methods=compu_methods,
+            mode_declaration_groups=mode_declaration_groups,
+            type_trefs=type_trefs,
+            sr_interfaces=sr,
+            cs_interfaces=cs,
+            ms_interfaces=ms,
+            cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
+        )
     )
 
 
@@ -633,11 +706,14 @@ def render_swc(project: Project, swc: Swc, template_dir: Path, template_name: st
     tpl = env.get_template(template_name)
     project = _sort_project_for_export(project)
     swc = next(candidate for candidate in project.swcs if candidate.name == swc.name)
-    return tpl.render(
-        root_pkg=project.rootPackage,
-        swc=swc,
-        sr_port_metadata=_build_sr_port_comspec_metadata(project, swc),
-        cs_port_metadata=_build_cs_port_comspec_metadata(project, swc),
+    return _pretty_print_xml(
+        tpl.render(
+            root_pkg=project.rootPackage,
+            swc=swc,
+            sr_port_metadata=_build_sr_port_comspec_metadata(project, swc),
+            cs_port_metadata=_build_cs_port_comspec_metadata(project, swc),
+            runnable_disabled_mode_irefs=_build_runnable_disabled_mode_irefs(project, swc),
+        )
     )
 
 
@@ -670,11 +746,13 @@ def render_composition_type(
         ),
         "delegation_connectors": _build_delegation_connectors(project, subcomposition),
     }
-    return tpl.render(
-        root_pkg=project.rootPackage,
-        composition=composition_model,
-        component_type_dests=component_type_dests,
-        component_type_refs=component_type_refs,
+    return _pretty_print_xml(
+        tpl.render(
+            root_pkg=project.rootPackage,
+            composition=composition_model,
+            component_type_dests=component_type_dests,
+            component_type_refs=component_type_refs,
+        )
     )
 
 
@@ -685,14 +763,16 @@ def render_system(project: Project, template_dir: Path, template_name: str = SYS
     connections = _build_connections(project)
     component_type_dests = _component_type_dests(project)
     component_type_refs = _component_type_refs(project)
-    return tpl.render(
-        root_pkg=project.rootPackage,
-        system_name=project.system.name,
-        composition_name=project.system.composition.name,
-        components=project.system.composition.components,
-        connections=connections,
-        component_type_dests=component_type_dests,
-        component_type_refs=component_type_refs,
+    return _pretty_print_xml(
+        tpl.render(
+            root_pkg=project.rootPackage,
+            system_name=project.system.name,
+            composition_name=project.system.composition.name,
+            components=project.system.composition.components,
+            connections=connections,
+            component_type_dests=component_type_dests,
+            component_type_refs=component_type_refs,
+        )
     )
 
 
@@ -756,29 +836,34 @@ def write_outputs_with_report(
             for subcomposition in project.subcompositions
         ]
         rendered = {
-            out: tpl.render(
-                root_pkg=project.rootPackage,
-                base_types=base_types,
-                implementation_types=implementation_types,
-                application_types=application_types,
-                units=units,
-                compu_methods=compu_methods,
-                mode_declaration_groups=mode_declaration_groups,
-                type_trefs=type_trefs,
-                sr_interfaces=sr,
-                cs_interfaces=cs,
-                ms_interfaces=ms,
-                cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
-                swcs=swcs,
-                swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc) for swc in swcs},
-                swc_cs_port_metadata={swc.name: _build_cs_port_comspec_metadata(project, swc) for swc in swcs},
-                subcompositions=subcompositions,
-                system_name=project.system.name,
-                composition_name=project.system.composition.name,
-                instances=project.system.composition.components,
-                connections=connections,
-                component_type_dests=component_type_dests,
-                component_type_refs=component_type_refs,
+            out: _pretty_print_xml(
+                tpl.render(
+                    root_pkg=project.rootPackage,
+                    base_types=base_types,
+                    implementation_types=implementation_types,
+                    application_types=application_types,
+                    units=units,
+                    compu_methods=compu_methods,
+                    mode_declaration_groups=mode_declaration_groups,
+                    type_trefs=type_trefs,
+                    sr_interfaces=sr,
+                    cs_interfaces=cs,
+                    ms_interfaces=ms,
+                    cs_interface_errors={interface.name: _collect_interface_errors(interface) for interface in cs},
+                    swcs=swcs,
+                    swc_sr_port_metadata={swc.name: _build_sr_port_comspec_metadata(project, swc) for swc in swcs},
+                    swc_cs_port_metadata={swc.name: _build_cs_port_comspec_metadata(project, swc) for swc in swcs},
+                    swc_runnable_disabled_mode_irefs={
+                        swc.name: _build_runnable_disabled_mode_irefs(project, swc) for swc in swcs
+                    },
+                    subcompositions=subcompositions,
+                    system_name=project.system.name,
+                    composition_name=project.system.composition.name,
+                    instances=project.system.composition.components,
+                    connections=connections,
+                    component_type_dests=component_type_dests,
+                    component_type_refs=component_type_refs,
+                )
             )
         }
         layout = "monolithic"

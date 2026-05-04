@@ -340,6 +340,35 @@ The `port` must be a required mode-switch port. The `mode` must be declared in t
 
 In exported ARXML, these are rendered as `SWC-MODE-SWITCH-EVENT`.
 
+**Mode conditions** - constrain when a runnable is considered active or allowed:
+
+```yaml
+runnables:
+  - name: "Runnable_Control"
+    timingEventMs: 10
+    modeConditions:
+      - port: "Rp_PowerState"
+        mode: "ON"
+      - port: "Rp_PowerState"
+        mode: "SLEEP"
+```
+
+The `port` must be a required mode-switch port. The `mode` must be declared in the referenced `ModeDeclarationGroup`.
+
+Semantics:
+
+- multiple `modeConditions` entries for the same port mean OR
+- `modeConditions` across different ports mean AND
+- exact duplicates are allowed but reported as redundant warnings
+
+Current export scope:
+
+- `modeSwitchEvents` are exported as `SWC-MODE-SWITCH-EVENT` with `ACTIVATION` set to `ON-ENTRY`
+- runnable `modeConditions` are exported on supported runnable event types as event-level `DISABLED-MODE-IREFS`
+- supported event types are `TIMING-EVENT`, `DATA-RECEIVED-EVENT`, `OPERATION-INVOKED-EVENT`, and `SWC-MODE-SWITCH-EVENT`
+- `modeConditions` are not supported on `INIT-EVENT`
+- because AUTOSAR models this as disabled modes, ARForge exports the complement of the allowed set for each referenced mode-switch port
+
 ### Runnable access definitions
 
 Runnable access definitions describe what a runnable reads, writes, calls, or raises. These are validated against the port direction and interface kind.

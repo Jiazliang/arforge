@@ -873,20 +873,27 @@ def _build_interface_views(project: Project) -> tuple[InterfaceDiagramView, Inte
 
 def _runnable_metadata_lines(swc: Swc, runnable_name: str) -> List[str]:
     runnable = next(r for r in swc.runnables if r.name == runnable_name)
+    mode_condition_lines: list[str] = []
+    mode_conditions_by_port: dict[str, list[str]] = {}
+    for condition in sorted(runnable.modeConditions, key=lambda item: (item.port, item.mode)):
+        mode_conditions_by_port.setdefault(condition.port, []).append(condition.mode)
+    for port_name in sorted(mode_conditions_by_port):
+        modes = " | ".join(sorted(set(mode_conditions_by_port[port_name])))
+        mode_condition_lines.append(f"(allowed, {port_name}: {modes})")
     if runnable.initEvent:
-        return ["(init)"]
+        return ["(init)", *mode_condition_lines]
     if runnable.timingEventMs is not None:
-        return [f"(cyclic, {runnable.timingEventMs} ms)"]
+        return [f"(cyclic, {runnable.timingEventMs} ms)", *mode_condition_lines]
     if runnable.modeSwitchEvents:
         event = sorted(runnable.modeSwitchEvents, key=lambda item: (item.port, item.mode))[0]
-        return [f"(mode, {event.port}: {event.mode})"]
+        return [f"(mode, {event.port}: {event.mode})", *mode_condition_lines]
     if runnable.dataReceiveEvents:
         event = sorted(runnable.dataReceiveEvents, key=lambda item: (item.port, item.dataElement))[0]
-        return [f"(receive, {event.port}: {event.dataElement})"]
+        return [f"(receive, {event.port}: {event.dataElement})", *mode_condition_lines]
     if runnable.operationInvokedEvents:
         event = sorted(runnable.operationInvokedEvents, key=lambda item: (item.port, item.operation))[0]
-        return [f"(invoked, {event.port}: {event.operation})"]
-    return []
+        return [f"(invoked, {event.port}: {event.operation})", *mode_condition_lines]
+    return mode_condition_lines
 
 
 def _behavior_edge(
