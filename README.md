@@ -48,7 +48,7 @@ Current implementation targets a practical AUTOSAR Classic 4.2 subset:
 | **Runnable access** | `reads`, `writes`, `calls`, `raisesErrors` - all validated against port direction and interface kind |
 | **System composition** | Component prototypes, SWC type references, port-level assembly connectors for SR, CS, and mode-switch |
 | **Validation** | Stable finding codes, three severity levels (error/warning/info), verbose diagnostics |
-| **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering, shared rendering logic across both modes |
+| **Export** | Jinja2-based ARXML, monolithic or split-by-SWC, deterministic ordering, shared rendering logic across both modes, and external package layout support |
 | **Code skeletons** | Template-driven C `.h` / `.c` starter files generated from validated SWC models |
 | **Diagrams** | Unified `generate diagram` command for PlantUML architecture views |
 | **Reports** | Deterministic Markdown architecture summaries via `arforge report` |

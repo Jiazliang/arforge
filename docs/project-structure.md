@@ -111,7 +111,57 @@ swc:
   package: "Components/Brake"
 ```
 
-Unassigned elements fall back to the category default from the external layout. Nested elements such as runnables, ports, connectors, operations, and data elements do not carry a `package` field. They stay nested under their owning packageable element.
+Unassigned elements fall back to the category default from the external layout.
+
+Supported explicit `package` targets:
+
+- SWCs
+- reusable subcomposition types
+- interfaces
+- base types
+- implementation data types
+- application data types
+- compu methods
+- units
+- mode declaration groups
+- system
+
+Nested elements do not carry a `package` field. This includes runnables, ports, connectors, operations, data elements, and individual mode declarations. Those remain nested under their owning packageable element.
+
+### Package layout authoring rules
+
+When defining package layouts and per-element package assignments, ARForge currently enforces these rules:
+
+- package paths are relative to `rootPackage`
+- package paths must not start with `/`
+- package paths must not end with `/`
+- package paths must not contain empty segments such as `Components//Brake`
+- each segment must be a valid AUTOSAR-style short name using letters, digits, and `_`
+- explicit element packages must also appear in `allowedPackages`
+- category defaults should also appear in `allowedPackages`
+
+Example explicit assignments across multiple categories:
+
+```yaml
+interface:
+  name: "If_BrakeTorque"
+  type: "senderReceiver"
+  package: "Interfaces/Brake"
+```
+
+```yaml
+applicationDataTypes:
+  - name: "App_BrakeTorque"
+    implementationTypeRef: "Impl_uint16"
+    package: "DataTypes/Application"
+```
+
+```yaml
+modeDeclarationGroups:
+  - name: "Mdg_BrakeMode"
+    initialMode: "OFF"
+    package: "Modes"
+```
 
 ## What belongs where
 
